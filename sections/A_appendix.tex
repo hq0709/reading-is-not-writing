@@ -18,12 +18,31 @@
 \section{Prompts, Scores, and Notation}
 \label{app:protocol}
 
+The appendix develops the evidence behind the reader--writer comparison in
+six stages. This section specifies the endpoint and notation;
+Appendix~\ref{app:runs} identifies the cohorts and computation behind each
+experiment. Appendices~\ref{app:ownership} and~\ref{app:specificity-closure}
+examine semantic competition and paired input closure in detail.
+Appendix~\ref{app:implementation} checks that the interventions enter the
+consumed forward path and that their results replay. Finally,
+Appendix~\ref{app:decoding} compares reader selectivity across the original
+cells to clarify what the different intervention outcomes imply.
+
+\subsection{A common question and answer endpoint}
+
 At the first answer position, let $\ell_{\mathrm{yes}}$ and
 $\ell_{\mathrm{no}}$ denote the maximum log probabilities among the valid
 single-token case and leading-space variants of each answer.  The registered
-score is $P(\mathrm{yes})=\sigma(\ell_{\mathrm{yes}}-\ell_{\mathrm{no}})$.
-Figure~\ref{fig:prompt-score} displays the fixed prompt family and scoring
-pipeline after these quantities have been defined.
+score is $P(\mathrm{yes})=\sigma(\ell_{\mathrm{yes}}-\ell_{\mathrm{no}})$,
+where $\sigma$ is the logistic sigmoid. Figure~\ref{fig:prompt-score} shows
+how the six ownership questions share their wording and scoring pipeline:
+only the finding phrase changes. The original Edema cell uses ``pulmonary
+edema,'' and the closure experiment uses ``consolidation'' in the same
+template. Taking the best valid token variant for each answer makes the
+endpoint insensitive to which listed capitalization or leading-space form
+receives the highest score. This endpoint measures the relative support for
+yes versus no at the first answer position; it does not measure the accuracy
+of a generated clinical report.
 
 \begin{figure}[H]
 \centering
@@ -59,6 +78,23 @@ model uses the same first-answer-position scoring sequence.}
 \label{fig:prompt-score}
 \end{figure}
 
+The shared interface makes the question--direction grid interpretable:
+changing a clinical direction does not change the question being scored.
+Differences across columns still reflect different clinical questions, so
+the ownership test compares directions within each column before drawing
+a conclusion about the named concept.
+
+\subsection{Reading the intervention notation}
+
+Table~\ref{tab:notation} collects the notation introduced in the article.
+The distinction between question $q$ and direction $d$ is central: a large
+$W_{q,d}$ shows that a direction moves an answer, while $O_q$ asks whether
+the direction bearing that answer's clinical name moves it more than its
+competitors. A positive ownership margin alone is not the full confirmation
+rule; the uncertainty and non-semantic control comparisons must also pass.
+Keeping these roles separate allows the following analyses to distinguish
+readability, intervention strength, and semantic attribution.
+
 \begin{table}[H]
 \centering
 \footnotesize
@@ -81,9 +117,28 @@ $\gamma_i$ & Positive-minus-negative paired representation displacement along th
 \end{tabular}
 \end{table}
 
+The notation separates three levels of evidence: $S$ describes label
+availability, $W_{q,d}$ describes an intervention effect, and $O_q$ compares
+the named direction with clinical alternatives. The remaining appendix
+follows this progression while keeping the evaluation cohorts explicit.
+
 \FloatBarrier
 
 \section{Registered Runs and Provenance}
+\label{app:runs}
+
+\subsection{Evaluation units and computation}
+
+Table~\ref{tab:run-ledger} connects each experimental question to its
+evaluation units and computational budget. R1--R3 evaluate probes on the
+held-out patient split and interventions on 200 images per cell; these are
+different evaluation sets. R4 tests the locked Effusion dose on 400
+independent patients, R5 crosses questions and clinical directions on a
+further 400-patient cohort, and R6 uses paired studies from 50 fresh patients.
+The ownership experiment accounts for 9,211 of the 20,939 recorded GPU
+seconds because it evaluates the full question--direction surface with 119
+random directions. These are recorded run times, including registered reuse
+of existing artifacts, rather than a hardware-normalized cost comparison.
 
 \begin{table}[H]
 \centering
@@ -104,6 +159,23 @@ R6 & Qwen & Consolidation closure & 50 patient pairs & 119 & 5,000 & 445 \\
 \bottomrule
 \end{tabular}
 \end{table}
+
+The progression from single cells to the full clinical grid broadens the
+competitor family without changing the basic answer endpoint. The final
+paired experiment then asks a different question: whether the direction
+tracks and closes a within-patient input difference. Its 50 pairs must
+therefore be interpreted separately from the unpaired 400-patient tests.
+
+\subsection{Cohort identity and fixed settings}
+
+Table~\ref{tab:run-identifiers} links the run labels to immutable executions
+and gives the accepted row or pair receipts for the prospective cohorts.
+The specificity cohort excludes patients in the original intervention set,
+and ownership uses a third label-blind cohort. Closure excludes the earlier
+Qwen evaluation rows and selects one positive and one negative study for
+each eligible patient. The receipts identify the exact evaluation units
+used in those comparisons, so a replay can be tied to the same cohort as the
+reported result.
 
 \begin{table}[H]
 \centering
@@ -126,6 +198,22 @@ R6 & \nolinkurl{20260904T162317Z-8a55a4c2f6b6-consolidation-closure}; pair SHA-2
 \bottomrule
 \end{tabular}
 \end{table}
+
+These identifiers preserve the link between an estimate and the patients
+who produced it. They also distinguish the two 400-patient experiments:
+specificity evaluates the Effusion endpoint, whereas ownership evaluates
+all six questions on its own cohort. Similar sample sizes do not make
+their numerical effects interchangeable.
+
+Table~\ref{tab:registered-settings} records which choices remain fixed when
+moving from decoding to intervention. The model revisions, projection, and
+readout settings determine the clinical normals; the dose grids and control
+families determine the perturbation comparisons. In particular, the
+original target curve has nine doses, whereas random and sham comparisons
+use six nonzero doses. The prospective ownership test fixes the dose at
+$\alpha=+0.25$, while closure derives a dose from each measured input pair.
+Those designs address different questions and should be read with their
+corresponding control rules.
 
 \begin{table}[H]
 \centering
@@ -154,6 +242,23 @@ Input closure & 50 pairs; displacement-matched dose; 119 random directions; seed
 \end{tabular}
 \end{table}
 
+Fixing the readout construction makes the clinical directions comparable
+as candidates, but it does not guarantee their specificity as writers.
+The larger random family in ownership and closure also imposes a stronger
+maximum-control comparison than the original p95 rule. The next analyses
+interpret each result against the rule registered for that experiment.
+
+\subsection{From execution to accepted evidence}
+
+Figure~\ref{fig:provenance-chain} summarizes how an execution becomes a
+reported result. The code snapshot and environment identify the computation;
+accepted outputs supply the observations; replay checks reproduce the
+decision summaries. The 304,800 ownership outcomes and 6,450 closure outcomes
+count evaluated perturbation conditions, not independent patients.
+Reproducing all 257 closure decision arrays verifies the computational
+trace, while statistical uncertainty continues to use patients as the
+resampling unit.
+
 \begin{figure}[H]
 \centering
 \begin{tabular}{@{}c@{\hspace{5pt}$\longrightarrow$\hspace{5pt}}c@{\hspace{5pt}$\longrightarrow$\hspace{5pt}}c@{}}
@@ -174,16 +279,29 @@ the mechanism-route replay is byte-identical.}
 \label{fig:provenance-chain}
 \end{figure}
 
+This chain supports tracing every reported decision back to a fixed
+execution. It does not increase the effective sample size or supply new
+causal evidence: scientific conclusions come from the patient-level
+comparisons, whose full response surface is examined next.
+
 \FloatBarrier
 
 \section{Complete Causal-Ownership Surface}
 \label{app:ownership}
+
+\subsection{Question-specific effects and clinical competitors}
 
 Here $q$ indexes a clinical question, $d$ indexes a steering direction, and
 $W_{q,d}$ retains its definition from Section~\ref{sec:protocol}.  Rows in
 Figure~\ref{fig:ownership-matrix} are directions and columns are questions, so
 the named comparison lies on the diagonal.  The column-wise ownership margin
 $O_q$ is positive only when that diagonal exceeds every clinical competitor.
+The off-diagonal maxima reveal why a strong write effect does not identify
+its clinical owner. For example, the Mass answer changes by 0.511 under the
+Effusion direction versus 0.359 under its own direction, and the Effusion
+answer changes by 0.245 under Nodule versus 0.181 under Effusion. All six
+columns have an off-diagonal winner, so the mismatch extends beyond the
+original Effusion comparison.
 
 \begin{figure}[H]
 \centering
@@ -216,6 +334,23 @@ magnitude while the printed values remain authoritative.}
 \label{fig:ownership-matrix}
 \end{figure}
 
+The surface shows substantial answer movement alongside a systematic
+failure of diagonal dominance. Several questions share the same strongest
+direction, which motivates both the per-question ownership test below and
+the subsequent test for a shared alias. A visually strong row alone cannot
+settle either claim.
+
+Table~\ref{tab:ownership-statistics} quantifies these comparisons with
+patient-bootstrap uncertainty. ``Best other'' is the strongest alternative
+clinical effect for the question in that row; ``Sim. LCB'' reports the
+simultaneous lower confidence bound for $O_q$, using the max-$T$ procedure
+over the clinical contrasts. The reported margins range from $-0.230$ to
+$-0.064$, and every descriptive 95\% interval lies below zero. The named
+diagonals also fall below their corresponding random maxima. Thus neither
+clinical competition nor the random-control comparison supports a named
+owner. The displayed effects and margins are rounded independently from
+the full-precision estimates.
+
 \begin{table}[H]
 \centering
 \scriptsize
@@ -236,6 +371,29 @@ Pneumothorax & .086 & .194 & Effusion    & $-.109$ & $[-.116,-.102]$ & $-.119$ &
 \bottomrule
 \end{tabular}
 \end{table}
+
+All six named ownership tests fail. The point-estimate winners identify
+where the largest observed clinical effects lie, but the table does not
+establish those alternative directions as semantic owners. A direction
+that moves several answers could instead reflect a shared response axis,
+which requires its own control comparison.
+
+\subsection{Testing a shared answer-sensitive direction}
+
+Figure~\ref{fig:shared-alias} asks whether a direction that lacks a specific
+clinical owner nevertheless acts as a shared answer-sensitive alias. The
+left panel compares signed mean off-diagonal effects across directions; the
+right panel places the strongest candidate against the global controls.
+Effusion has mean effect 0.2909 and positive simultaneous lower bounds for
+effect and relative dominance, 0.2808 and 0.1332. Its candidate effect still
+falls below the global random alias maximum of 0.3402. This control first
+averages each random direction's effect over each five-question
+off-diagonal set, then takes the maximum over all 119 directions and six
+sets. It is therefore distinct from the individual-question maxima in
+Table~\ref{tab:ownership-statistics}. The sham control is the maximum
+absolute mean effect across individual questions. Because alias
+confirmation requires all of these comparisons to pass, the broad response
+pattern does not confirm the shared-alias hypothesis.
 
 \begin{figure}[H]
 \centering
@@ -282,9 +440,29 @@ bounds are reported separately.}
 \label{fig:shared-alias}
 \end{figure}
 
+Effusion's broad effect therefore remains a candidate pattern rather than
+a confirmed alias. The random family contains a stronger effect under the
+registered comparison, so the matrix supports neither named ownership nor
+the proposed shared alias. The following section relates this result to
+the earlier specificity test and the paired-input fallback.
+
 \FloatBarrier
 
 \section{Direction Specificity and Input Closure}
+\label{app:specificity-closure}
+
+\subsection{Replication under a fixed clinical competitor family}
+
+Table~\ref{tab:specificity-controls} separates a reproducible write effect
+from its semantic attribution. On the independent 400-patient cohort,
+Effusion's effect of 0.1945 exceeds random p95 and the absolute sham effect,
+but Nodule reaches 0.2519 at the same locked dose. The resulting ownership
+contrast is $-0.0573$, with its entire two-sided interval below zero. The
+bottom group records the original 200-image cohort, where Nodule also had
+the larger descriptive effect; those values motivated the prospective test
+and are not pooled with its estimates. This comparison supports replication
+of a non-generic intervention effect while rejecting Effusion-specific
+attribution under the registered competitor family.
 
 \begin{table}[H]
 \centering
@@ -310,12 +488,28 @@ Nodule at the same dose & 0.2863 & Effusion target & 0.2343 \\
 \end{tabular}
 \end{table}
 
+The independent cohort preserves the intervention's strength while
+exposing its attribution problem: the named Effusion direction is not
+privileged for the Effusion answer. This distinction motivates testing
+whether an eligible clinical direction aligns with an actual paired input
+change, rather than inferring that alignment from a large write effect.
+
+\subsection{From paired input displacement to closure}
+
 For the paired closure gate, $\gamma_i$ is the positive-minus-negative
 representation displacement for patient $i$, and $\alpha_i$ is the
 displacement-matched dose applied to that patient's negative study.  The
 closure gain measures the reduction in the absolute paired
 $P(\mathrm{yes})$ gap.  These quantities are separated into distinct panels
 in Figure~\ref{fig:input-closure} because they have different scales.
+Panel A establishes that Consolidation is readable before pair selection.
+Panel B shows a positive mean input displacement, but its lower confidence
+bound is below zero. Panel C shows that the concept's closure gain of 0.00220
+is below the random maximum of 0.00246; panel D adds a negative lower bound
+for the clinical contrast. The random-rank $p$-value of 0.025 is descriptive
+and does not replace the registered requirement to exceed every random
+direction. The joint closure criterion therefore remains unmet despite the
+eligible reader and positive point estimates.
 
 \begin{figure}[H]
 \centering
@@ -371,6 +565,19 @@ decision.}
 \label{fig:input-closure}
 \end{figure}
 
+The failure occurs at the link between readable information and a reliable
+paired causal effect. A positive reader-selectivity interval establishes
+availability, but neither the displacement uncertainty nor the registered
+gain comparisons confirms input closure. The dose diagnostics below help
+interpret this outcome under the measured-displacement design.
+
+Table~\ref{tab:closure-diagnostics} checks how the displacement-matched doses
+relate to the registered cap. The minimum, median, and maximum describe
+the signed dose distribution, while the clipped fraction tests whether
+the allowed $[-0.25,0.25]$ interval truncates the measured displacements.
+The final row identifies the strongest alternative clinical gain and
+the sham response, completing the control comparison in Figure~\ref{fig:input-closure}.
+
 \begin{table}[H]
 \centering
 \scriptsize
@@ -389,9 +596,29 @@ Maximum unrelated gain & .000238 (Effusion) & Sham gain & $-.000461$ \\
 \end{tabular}
 \end{table}
 
+All doses lie between approximately $-3.65\times10^{-4}$ and
+$4.07\times10^{-4}$, with no clipping, so the cap does not explain the
+failed conjunction. Effusion yields the largest alternative clinical gain,
+and the sham gain is negative. These small doses characterize the measured
+displacement; they do not establish what a larger, separately selected
+write would do. The next section checks that the implemented write reaches
+the answer computation.
+
 \FloatBarrier
 
 \section{Forward-Path and Replay Checks}
+\label{app:implementation}
+
+\subsection{Does the write reach the consumed pathway?}
+
+Figure~\ref{fig:forward-path} locates the intervention relative to the
+connector or merger and answer logits. A captured activation must be
+consumed downstream for its modification to test the model's behavior.
+The zero-dose check tests whether installing the hook changes the
+unperturbed computation; the nonzero-dose checks test whether a write
+propagates beyond the captured block. The diagram locates both checks
+along the forward path and shows where their downstream witnesses are
+measured.
 
 \begin{figure}[H]
 \centering
@@ -414,6 +641,21 @@ before its scientific outcomes are interpreted.}
 \label{fig:forward-path}
 \end{figure}
 
+The path checks distinguish a valid manipulation from a change to an
+unused activation. They make the observed answer effects attributable to
+the implemented write operation, while leaving the direction's semantic
+meaning to the experimental controls. The model-specific witnesses provide
+the corresponding implementation evidence.
+
+Table~\ref{tab:hook-witnesses} gives the corresponding model-specific
+witnesses. Here the maximum absolute change is taken elementwise between
+the perturbed and unperturbed downstream tensors or logits. LLaVA's hook
+fires once at the accepted block and produces nonzero connector and logit
+changes; Qwen's final visual block likewise affects both the merger and
+answer logits at $\alpha=+0.1$. The zero-dose column tests baseline
+preservation, and the final two columns test propagation through the
+model-specific connector and answer computation.
+
 \begin{table}[H]
 \centering
 \small
@@ -430,6 +672,23 @@ Qwen & \texttt{model.visual.}\newline\texttt{blocks.31};\newline 32 blocks verif
 \end{tabular}
 \end{table}
 
+For both models, the write reaches the answer computation and the
+zero-dose operation preserves its baseline. Thus a disconnected hook or
+an altered zero-dose baseline does not explain the reported reader--writer
+mismatch. Having established that the manipulation reaches the model
+output, the remaining computational check is whether its saved outcomes
+reproduce the reported decisions.
+
+\subsection{Can the accepted decisions be reproduced?}
+
+Table~\ref{tab:replay-completeness} reports replay at the decision level for
+the two prospective mechanism gates. Ownership reproduces the mechanism
+route byte for byte, and closure reproduces all 257 decision arrays from
+its accepted outcomes and bootstrap calculation. This agreement connects
+the reported conclusions to their saved evidence and complements the
+forward-path checks. It is a reproducibility check on the accepted
+experiments, rather than an additional independent cohort or replication.
+
 \begin{table}[H]
 \centering
 \small
@@ -445,9 +704,26 @@ Input closure & 6,450 & 5,000 & 257/257 decision arrays exact \\
 \end{tabular}
 \end{table}
 
+Exact replay preserves the negative mechanism conclusions under the
+saved analysis: no named ownership, no detected shared alias, and no
+confirmed input closure. It closes the computational evidence chain;
+the paired reader contrasts below address the remaining possibility that
+the writer differences simply mirror a resolved reader ranking.
+
 \FloatBarrier
 
 \section{Paired Decoding Contrasts}
+\label{app:decoding}
+
+Table~\ref{tab:paired-decoding} tests whether the different writer outcomes
+are accompanied by a resolved ordering of reader selectivity. Within
+LLaVA, Edema exceeds Effusion by 0.0221 in the point estimate; across models,
+Qwen exceeds LLaVA on Effusion by 0.0026. Both paired patient-bootstrap
+intervals span zero, so these data do not resolve either ordering. This
+does not establish equivalence of the readers. It shows that the observed
+separation in intervention outcomes occurs without a statistically resolved
+selectivity ranking in these two comparisons, reinforcing the distinction
+between what a probe can read and what its direction causally controls.
 
 \begin{table}[H]
 \centering
@@ -464,5 +740,11 @@ Qwen Effusion $-$ LLaVA Effusion & 0.0026 & $[-0.0155,0.0215]$ \\
 \bottomrule
 \end{tabular}
 \end{table}
+
+The reader comparisons therefore do not explain away the writer outcomes
+through a demonstrated ordering of decoding quality. Taken together, the
+appendix supports a limited but coherent conclusion: label availability,
+non-generic answer movement, and concept-specific causal control are
+distinct empirical properties and require distinct evidence.
 
 \FloatBarrier
