@@ -1,3 +1,4 @@
+\raggedbottom
 \setcounter{figure}{0}
 \renewcommand{\thefigure}{A\arabic{figure}}
 \renewcommand{\theHfigure}{appendix.A.\arabic{figure}}
@@ -322,9 +323,9 @@ which requires its own control comparison.
 \subsection{Testing a shared answer-sensitive direction}
 
 Figure~\ref{fig:shared-alias} asks whether a direction that lacks a specific
-clinical owner nevertheless acts as a shared answer-sensitive alias. The
-left panel compares signed mean off-diagonal effects across directions; the
-right panel places the strongest candidate against the global controls.
+clinical owner nevertheless acts as a shared answer-sensitive alias. Panel
+(a) compares signed mean off-diagonal effects across directions; panel (b)
+places the strongest candidate against the global controls.
 Effusion has mean effect 0.2909 and positive simultaneous lower bounds for
 effect and relative dominance, 0.2808 and 0.1332. Its candidate effect still
 falls below the global random alias maximum of 0.3402. This control first
@@ -409,11 +410,12 @@ displacement-matched dose applied to that patient's negative study.  The
 closure gain measures the reduction in the absolute paired
 $P(\mathrm{yes})$ gap.  These quantities are separated into distinct panels
 in Figure~\ref{fig:input-closure} because they have different scales.
-Panel A establishes that Consolidation is readable before pair selection.
-Panel B shows a positive mean input displacement, but its lower confidence
-bound is below zero. Panel C shows that the concept's closure gain of 0.00220
-is below the random maximum of 0.00246; panel D adds a negative lower bound
-for the clinical contrast. The random-rank $p$-value of 0.025 is descriptive
+Panel (a), reader eligibility, establishes that Consolidation is readable
+before pair selection. Panel (b), paired displacement, shows a positive mean
+input displacement, but its lower confidence bound is below zero. The
+closure-gains panel (c) shows that the concept's gain of 0.00220 is below the
+random maximum of 0.00246; the clinical-margin panel (d) adds a negative lower
+bound for the clinical contrast. The random-rank $p$-value of 0.025 is descriptive
 and does not replace the registered requirement to exceed every random
 direction. The joint closure criterion therefore remains unmet despite the
 eligible reader and positive point estimates.
@@ -422,11 +424,12 @@ eligible reader and positive point estimates.
 \centering
 \includegraphics[width=\linewidth]{figures/figA5_input_closure.pdf}
 \caption{\textbf{The Consolidation direction is readable, but its measured
-write does not reliably close the paired input gap.} Panel A shows the reader
-estimate and two-sided 95\% interval. Panels B and D show point estimates
-and one-sided 95\% lower bounds; arrows extend toward larger values rather
-than indicating a finite upper confidence limit. Panel C compares gains on
-a common axis with a zero baseline. Panels C and D display values in units of
+write does not reliably close the paired input gap.} Panel (a) shows the reader
+estimate and two-sided 95\% interval. Panels (b) and (d) show point estimates
+and one-sided 95\% lower bounds; arrows extend
+toward larger values rather than indicating a finite upper confidence limit.
+Panel (c) compares closure gains on a common axis with a zero baseline.
+Panels (c) and (d) display values in units of
 $10^{-3}$; the descriptive random-rank result does not replace the joint
 confirmation rule.}
 \label{fig:input-closure}

@@ -8,8 +8,8 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 ROOT = Path(__file__).resolve().parents[1]
-INK = "#25364A"
-MUTED = "#637487"
+INK = "#222222"
+MUTED = "#4A4A4A"
 BLUE = "#326A91"
 TEAL = "#25878A"
 ORANGE = "#C57731"
@@ -21,20 +21,20 @@ GRID = "#DEE5EB"
 def apply_style():
     plt.rcParams.update({
         "font.family": "DejaVu Sans",
-        "font.size": 9,
-        "axes.titlesize": 10,
-        "axes.titleweight": "semibold",
-        "axes.labelsize": 9,
+        "font.size": 7.5,
+        "axes.titlesize": 8.5,
+        "axes.titleweight": "bold",
+        "axes.labelsize": 7.8,
         "axes.labelcolor": INK,
         "axes.edgecolor": GRID,
         "axes.linewidth": 0.7,
         "axes.spines.top": False,
         "axes.spines.right": False,
         "text.color": INK,
-        "xtick.color": MUTED,
-        "ytick.color": MUTED,
-        "xtick.labelsize": 8,
-        "ytick.labelsize": 8,
+        "xtick.color": INK,
+        "ytick.color": INK,
+        "xtick.labelsize": 7.2,
+        "ytick.labelsize": 7.2,
         "grid.color": GRID,
         "grid.linewidth": 0.6,
         "figure.facecolor": "white",
