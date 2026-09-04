@@ -35,19 +35,3 @@ Supplement & $\alpha=+0.25$; 400 patients; 5,000 patient bootstraps \\
 
 \paragraph{Hook witnesses.}
 For LLaVA, the accepted hook captures \texttt{encoder.layers.22} once, preserves a bitwise no-op at $\alpha=0$, and yields maximum absolute changes of 1.1875 at the downstream connector and 0.1875 in the final logits under a nonzero relative-token intervention. For Qwen, the accepted hook verifies 32 visual blocks, captures \texttt{model.visual.blocks.31}, preserves the $\alpha=0$ no-op, and changes both \texttt{model.visual.merger} and final logits under $\alpha=+0.1$.
-
-\section{Paired Decoding Contrasts}
-
-\begin{table}[h]
-\centering
-\small
-\caption{Paired controlled-decoding contrasts. Both intervals span zero.}
-\begin{tabular}{lcc}
-\toprule
-Contrast & Estimate & 95\% patient-bootstrap CI \\
-\midrule
-LLaVA Edema $-$ LLaVA Effusion & 0.0221 & $[-0.0175,0.0590]$ \\
-Qwen Effusion $-$ LLaVA Effusion & 0.0026 & $[-0.0155,0.0215]$ \\
-\bottomrule
-\end{tabular}
-\end{table}

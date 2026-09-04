@@ -1,7 +1,7 @@
 \section{Results: Availability, Selectivity, and Specificity}
 \label{sec:results}
 
-\subsection{Controlled decodability is robust in every cell}
+\subsection{Every cell establishes robust linear availability}
 \label{sec:decoding-results}
 
 \input{tables/table_decoding}
@@ -10,7 +10,7 @@ All three final-block representations make the target label available to the fix
 
 The paired decoding contrasts do not resolve a concept or architecture ordering. Within LLaVA, Edema-minus-Effusion selectivity is 0.0221 with a paired 95\% CI of $[-0.0175,0.0590]$. For Effusion, Qwen-minus-LLaVA selectivity is 0.0026 with a paired CI of $[-0.0155,0.0215]$. The cells therefore provide similarly strong availability evidence without supporting a rank claim.
 
-\subsection{Similar availability produces different random/sham outcomes}
+\subsection{Matched generic controls reveal a causal split}
 \label{sec:generic-results}
 
 \begin{figure*}[t]
@@ -24,11 +24,11 @@ Figure~\ref{fig:dose} shows the complete target dose curves and matched controls
 
 LLaVA Edema attains 0.0659 at $\alpha=-1$. It lies inside the same-dose random interval $[-0.1304,0.1470]$ and below the maximum absolute sham effect of 0.0913. Its descriptive dose monotonicity is $\rho=-0.4286$. Edema's point estimate for controlled decoding is higher but statistically indistinguishable from Effusion's, and it does not clear the generic intervention rule.
 
-Qwen Effusion clears the original random/sham rung. Its maximum concept-consistent change is 0.2343 at $\alpha=+0.25$, above random p95 0.0963 and the maximum absolute sham effect 0.0852. The response is nearly monotone over the registered central range ($\rho=0.9643$). This original rule establishes selectivity against generic perturbation controls. The same-dose Nodule effect of 0.2863 is descriptive at this stage and motivates the separate prospective specificity endpoint.
+Qwen Effusion clears the original random/sham rung. Its maximum concept-consistent change is 0.2343 at $\alpha=+0.25$, above random p95 0.0963 and the maximum absolute sham effect 0.0852. The response is nearly monotone over the registered central range ($\rho=0.9643$). This original rule establishes selectivity against generic perturbation controls. The same-dose Nodule effect of 0.2863 then exposes the missing semantic test and motivates the separate prospective specificity endpoint.
 
 \input{tables/table_gates}
 
-\subsection{Independent rows separate generic selectivity from clinical specificity}
+\subsection{Clinical competition changes the meaning of the generic pass}
 \label{sec:specificity-results}
 
 \begin{figure*}[t]
@@ -40,8 +40,8 @@ Qwen Effusion clears the original random/sham rung. Its maximum concept-consiste
 
 The independent cohort reproduces Qwen's generic response (Figure~\ref{fig:specificity}). Effusion changes mean $P(yes)$ by 0.1945, above random p95 0.0878 and absolute sham 0.0157. This result uses 400 distinct patients, all absent from the original intervention cohort, and retains the discovery-locked dose.
 
-The clinical comparison reverses the interpretation of that generic pass. Nodule changes mean $P(yes)$ by 0.2519 and realizes the maximum unrelated-direction effect. The reported Effusion-minus-maximum-unrelated margin is $-0.0573$. When the maximum over all five fixed clinical directions is recomputed in each bootstrap replicate, its two-sided 95\% CI is $[-0.0694,-0.0450]$ and its one-sided 95\% lower bound is $-0.0678$. The direction-specific conjunction therefore fails despite replicated random/sham selectivity.
+The clinical comparison changes the scientific meaning of that generic pass. Nodule changes mean $P(yes)$ by 0.2519 and realizes the maximum unrelated-direction effect. The reported Effusion-minus-maximum-unrelated margin is $-0.0573$. When the maximum over all five fixed clinical directions is recomputed in each bootstrap replicate, its two-sided 95\% CI is $[-0.0694,-0.0450]$ and its one-sided 95\% lower bound is $-0.0678$. The replicated effect is causally non-generic, but the named Effusion direction does not own it under the registered specificity criterion.
 
-\subsection{The three-rung finding chain}
+\subsection{The evidence ladder localizes each supported interpretation}
 
-The results form one ordered finding. First, every target is robustly available to the same-capacity linear readout. Second, the two LLaVA probe normals stop at the random/sham rung, showing that availability does not determine generic intervention selectivity. Third, Qwen Effusion passes generic controls twice but stops at the clinical-direction rung, showing that generic selectivity does not determine clinical specificity. The location, dose, controls, and uncertainty calculation identify the rung at which each interpretation is supported.
+The results form one ordered finding. First, every target is robustly available to the same-capacity linear readout. Second, matched generic controls distinguish the two LLaVA cells from Qwen Effusion, so availability alone does not determine intervention selectivity. Third, Qwen's replicated generic-control pass meets a fixed family of clinical alternatives and yields a stronger Nodule response, separating non-generic causal influence from clinical identity. The shared location, dose, rows, controls, and uncertainty calculation make each rung an explicit claim boundary rather than an informal interpretation.
