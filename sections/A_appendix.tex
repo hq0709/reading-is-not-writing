@@ -1,56 +1,460 @@
-\section{Registered Protocol and Provenance}
+\setcounter{figure}{0}
+\renewcommand{\thefigure}{A\arabic{figure}}
+\renewcommand{\theHfigure}{appendix.A.\arabic{figure}}
+\setcounter{table}{0}
+\renewcommand{\thetable}{A\arabic{table}}
+\renewcommand{\theHtable}{appendix.A.\arabic{table}}
+
+\definecolor{cfblue}{RGB}{24,78,141}
+\definecolor{cflightblue}{RGB}{232,241,249}
+\definecolor{cforange}{RGB}{230,104,24}
+\definecolor{cflightorange}{RGB}{253,237,224}
+\definecolor{cfteal}{RGB}{16,119,128}
+\definecolor{cfgray}{RGB}{235,237,240}
+
+\newcommand{\diagcell}[1]{\cellcolor{cflightblue}\textbf{\underline{#1}}}
+\newcommand{\winnercell}[1]{\cellcolor{cflightorange}\textbf{#1}}
+
+\section{Prompts, Scores, and Notation}
 \label{app:protocol}
 
-\paragraph{Prompts.}
-The Effusion prompt is ``Is there a pleural effusion in this chest radiograph? Answer yes or no.'' The Edema prompt is ``Is there pulmonary edema in this chest radiograph? Answer yes or no.'' The Consolidation prompt substitutes ``consolidation'' in the same template. The ownership matrix likewise uses one fixed yes/no prompt for each of its six named findings. LLaVA uses \texttt{llava-hf/llava-1.5-7b-hf} at revision \texttt{b234b804b114d9e37bb655e11cbbb5f5e971b7a9}. Qwen uses \texttt{Qwen/Qwen2.5-VL-7B-Instruct} at revision \texttt{cc594898137f460bfe9f0759e9844b3ce807cfb5}, with processor resolution fixed at $336^2$ pixels.
+At the first answer position, let $\ell_{\mathrm{yes}}$ and
+$\ell_{\mathrm{no}}$ denote the maximum log probabilities among the valid
+single-token case and leading-space variants of each answer.  The registered
+score is $P(\mathrm{yes})=\sigma(\ell_{\mathrm{yes}}-\ell_{\mathrm{no}})$.
+Figure~\ref{fig:prompt-score} displays the fixed prompt family and scoring
+pipeline after these quantities have been defined.
 
-\paragraph{Ownership prompts and answer score.}
-The six matrix prompts ask ``Is there [finding] in this chest radiograph? Answer yes or no.'' with [finding] instantiated as ``a pleural effusion,'' ``atelectasis,'' ``a pneumothorax,'' ``cardiomegaly,'' ``a lung mass,'' and ``a lung nodule.'' At the first generated position, the scorer takes the maximum log probability among each tokenizer's single-token forms of \texttt{yes}, \texttt{Yes}, or \texttt{YES} (with and without a leading space), does the same for \texttt{no}, and applies a two-class logistic normalization to their difference.
+\begin{figure}[H]
+\centering
+\setlength{\fboxsep}{4pt}
+\fcolorbox{cfblue}{cflightblue}{%
+\begin{minipage}{0.94\linewidth}
+\textbf{Fixed clinical question template}\par\smallskip
+\centering\ttfamily\small
+Is there <finding> in this chest radiograph? Answer yes or no.
+\end{minipage}}
 
-\paragraph{Rows and seeds.}
-The deterministic NIH split hashes patient identity. Probe projection and fitting use seed 0. Type-to-label controls use seeds 0--19. Probe intervals use 2,000 patient-cluster draws with seed 20260827. The independent Qwen cohort excludes every patient in the original intervention set, chooses one row per remaining patient with SHA-256 of \texttt{qwen-direction-specificity-row-v1\textbackslash0<row\_id>}, ranks patients with SHA-256 of \texttt{qwen-direction-specificity-patient-v1\textbackslash0<patient\_id>}, and takes the first 400. Its canonical row-list SHA-256 is \texttt{76be1da9659973d44a0898fa69c579afc4649f329ee227b19d1216efaa1c8bda}; supplement bootstraps use seed 20260903. The ownership matrix selects a third label-blind 400-patient cohort with row-list SHA-256 \texttt{e657a9bd1707f13695b02a341047af6f53981295b840376eb0ea5bbebfe2d312} and bootstrap seed 20260904. The Consolidation cohort excludes all 1,000 earlier Qwen rows and hash-selects one positive/negative pair for 50 patients; its pair-list SHA-256 is \texttt{20dcc8cc3aaa8c65a6f7f759a0ff6bf3b0cf4f1b87f4b65cdc6a15a46c6d85e2}, with bootstrap seed 20260905.
+\vspace{0.8em}
+\begin{tabular}{@{}p{0.30\linewidth}p{0.30\linewidth}p{0.30\linewidth}@{}}
+\fcolorbox{cfblue!70}{white}{\parbox{0.25\textwidth}{\centering\footnotesize\textbf{Effusion}\\\ttfamily a pleural effusion}} &
+\fcolorbox{cfblue!70}{white}{\parbox{0.25\textwidth}{\centering\footnotesize\textbf{Atelectasis}\\\ttfamily atelectasis}} &
+\fcolorbox{cfblue!70}{white}{\parbox{0.25\textwidth}{\centering\footnotesize\textbf{Pneumothorax}\\\ttfamily a pneumothorax}} \\
+\noalign{\vskip 5pt}
+\fcolorbox{cfteal!70}{white}{\parbox{0.25\textwidth}{\centering\footnotesize\textbf{Cardiomegaly}\\\ttfamily cardiomegaly}} &
+\fcolorbox{cfteal!70}{white}{\parbox{0.25\textwidth}{\centering\footnotesize\textbf{Mass}\\\ttfamily a lung mass}} &
+\fcolorbox{cfteal!70}{white}{\parbox{0.25\textwidth}{\centering\footnotesize\textbf{Nodule}\\\ttfamily a lung nodule}} \\
+\end{tabular}
 
-\paragraph{Immutable runs.}
-The accepted full runs are \texttt{20260902T191411Z-ffd523c464c8-f99e2f39} (LLaVA Effusion), \texttt{20260902T221534Z-110b84618d1b-edema} (LLaVA Edema), \texttt{20260903T000321Z-caaae3ef346d-qwen-full} (Qwen Effusion), \texttt{20260903T103508Z-456c81bad460-7a3edc4b} (Qwen direction specificity), \texttt{20260904T125710Z-a3bd883540eb-causal-ownership} (Qwen ownership), and \texttt{20260904T162317Z-8a55a4c2f6b6-consolidation-closure} (Qwen input closure). Their recorded GPU wall times are 7,022, 1,823, 2,077, 361, 9,211, and 445 seconds, respectively, for 20,939 seconds total on one A100 per run. Downstream gates reuse accepted activations or directions where registered.
-
-Every accepted run uses an immutable commit snapshot and records commands, environment, timings, outputs, and terminal checksums. Internal validation replays decision summaries from accepted artifacts. The ownership run contains 304,800 outcomes and 5,000 bootstrap draws; its mechanism-route replay is byte-identical. The closure run contains 6,450 outcomes; deterministic replay reproduces all 257 decision arrays exactly.
-
-\section{Complete Registered Settings}
+\vspace{0.9em}
+\begin{tabular}{@{}c@{\hspace{1pt}$\longrightarrow$\hspace{1pt}}c@{\hspace{1pt}$\longrightarrow$\hspace{1pt}}c@{\hspace{1pt}$\longrightarrow$\hspace{1pt}}c@{}}
+\fcolorbox{cfblue}{white}{\parbox{0.15\textwidth}{\centering\footnotesize image + fixed question}} &
+\fcolorbox{cfblue}{white}{\parbox{0.15\textwidth}{\centering\footnotesize first-position logits}} &
+\fcolorbox{cfteal}{white}{\parbox{0.19\textwidth}{\centering\footnotesize max score over valid yes/no token variants}} &
+\fcolorbox{cforange}{white}{\parbox{0.17\textwidth}{\centering\footnotesize $P(\mathrm{yes})=\sigma(\ell_{\mathrm{yes}}-\ell_{\mathrm{no}})$}}
+\end{tabular}
+\caption{\textbf{The registered prompts share one template and one answer score.}
+The six findings instantiate an otherwise fixed yes/no question, and every
+model uses the same first-answer-position scoring sequence.}
+\label{fig:prompt-score}
+\end{figure}
 
 \begin{table}[H]
 \centering
-\small
-\caption{Fixed settings shared by the registered cells.}
-\begin{tabular}{ll}
+\footnotesize
+\caption{Notation used consistently in the framework, equations, and supplementary analyses.}
+\label{tab:notation}
+\begin{tabular}{p{0.15\linewidth}p{0.77\linewidth}}
 \toprule
-Component & Registered value \\
+Symbol & Definition \\
 \midrule
-Readout & 512-dimensional Gaussian projection; logistic regression, $C=1$ \\
-Probe seed & 0 \\
-Control labels & 20 recurring-type maps, seeds 0--19 \\
-Probe uncertainty & 2,000 patient-cluster bootstrap draws \\
-Concept doses & $-1,-0.5,-0.25,-0.1,0,0.1,0.25,0.5,1$ \\
-Controlled doses & $-1,-0.5,-0.25,0.25,0.5,1$ \\
-Generic controls & 20 isotropic random directions; coordinate-permutation sham \\
-Clinical controls & Atelectasis, Pneumothorax, Cardiomegaly, Mass, Nodule \\
-Supplement & $\alpha=+0.25$; 400 patients; 5,000 patient bootstraps \\
-Ownership & $6\times6$ clinical grid; 119 random directions; 5,000 bootstraps \\
-Input closure & 50 patient pairs; displacement-matched dose; 5,000 bootstraps \\
+$q,d,c$ & Clinical question, steering direction, and probe concept, respectively. \\
+$\hvec_{it}$ & Consumed visual representation for image $i$ and visual token $t$. \\
+$R,\boldsymbol{s}$ & Fixed Gaussian projection and train-fitted featurewise scale. \\
+$\hat\wvec_c$ & Unit probe-normal direction for concept $c$ after lifting to the consumed representation. \\
+$\alpha$ & Signed intervention dose; $|\alpha|$ is the perturbation norm relative to each token norm. \\
+$W_{q,d}$ & Paired mean change in question $q$'s $P(\mathrm{yes})$ under direction $d$. \\
+$O_q$ & Ownership margin $W_{q,q}-\max_{d\neq q}W_{q,d}$; positive values favor the named direction. \\
+$S$ & Real-label AUROC minus the mean AUROC of the 20 nuisance-type control tasks. \\
+$\gamma_i$ & Positive-minus-negative paired representation displacement along the Consolidation normal. \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\section{Forward-Path Checks}
+\FloatBarrier
 
-\paragraph{Hook witnesses.}
-For LLaVA, the accepted hook captures \texttt{encoder.layers.22} once, preserves a bitwise no-op at $\alpha=0$, and yields maximum absolute changes of 1.1875 at the downstream connector and 0.1875 in the final logits under a nonzero relative-token intervention. For Qwen, the accepted hook verifies 32 visual blocks, captures \texttt{model.visual.blocks.31}, preserves the $\alpha=0$ no-op, and changes both \texttt{model.visual.merger} and final logits under $\alpha=+0.1$.
+\section{Registered Runs and Provenance}
+
+\begin{table}[H]
+\centering
+\small
+\caption{The six accepted runs contributing evidence to the manuscript. GPU
+time sums to 20,939 seconds; each run used one A100.}
+\label{tab:run-ledger}
+\begin{tabular}{cllrrrr}
+\toprule
+Run & Model & Endpoint & Evaluation units & Random & Bootstraps & GPU s \\
+\midrule
+R1 & LLaVA & Effusion cell & \shortstack{1,659 probe patients\\200 intervention images} & 20 & 2,000 & 7,022 \\
+R2 & LLaVA & Edema cell & \shortstack{1,659 probe patients\\200 intervention images} & 20 & 2,000 & 1,823 \\
+R3 & Qwen & Effusion cell & \shortstack{1,659 probe patients\\200 intervention images} & 20 & 2,000 & 2,077 \\
+R4 & Qwen & Effusion specificity & 400 patients & 20 & 5,000 & 361 \\
+R5 & Qwen & Causal ownership & 400 patients & 119 & 5,000 & 9,211 \\
+R6 & Qwen & Consolidation closure & 50 patient pairs & 119 & 5,000 & 445 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[H]
+\centering
+\footnotesize
+\caption{Immutable run identifiers and registered cohort receipts.}
+\label{tab:run-identifiers}
+\begin{tabular}{cp{0.79\linewidth}}
+\toprule
+Run & Immutable identifier or cohort receipt \\
+\midrule
+R1 & \nolinkurl{20260902T191411Z-ffd523c464c8-f99e2f39} \\
+R2 & \nolinkurl{20260902T221534Z-110b84618d1b-edema} \\
+R3 & \nolinkurl{20260903T000321Z-caaae3ef346d-qwen-full} \\
+R4 & \nolinkurl{20260903T103508Z-456c81bad460-7a3edc4b}; row SHA-256
+\nolinkurl{76be1da9659973d44a0898fa69c579afc4649f329ee227b19d1216efaa1c8bda} \\
+R5 & \nolinkurl{20260904T125710Z-a3bd883540eb-causal-ownership}; row SHA-256
+\nolinkurl{e657a9bd1707f13695b02a341047af6f53981295b840376eb0ea5bbebfe2d312} \\
+R6 & \nolinkurl{20260904T162317Z-8a55a4c2f6b6-consolidation-closure}; pair SHA-256
+\nolinkurl{20dcc8cc3aaa8c65a6f7f759a0ff6bf3b0cf4f1b87f4b65cdc6a15a46c6d85e2} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[H]
+\centering
+\small
+\caption{Shared registered settings.}
+\label{tab:registered-settings}
+\begin{tabular}{p{0.27\linewidth}p{0.65\linewidth}}
+\toprule
+Component & Registered value \\
+\midrule
+LLaVA model & \nolinkurl{llava-hf/llava-1.5-7b-hf} \\
+LLaVA revision & \texttt{b234b804b114d9e37bb655e11cbbb5f5}\newline
+\texttt{e971b7a9} \\
+Qwen model & \nolinkurl{Qwen/Qwen2.5-VL-7B-Instruct}; processor resolution $336^2$ \\
+Qwen revision & \texttt{cc594898137f460bfe9f0759e9844b3c}\newline
+\texttt{e807cfb5} \\
+Readout & 512-dimensional Gaussian projection; logistic regression, $C=1$; projection and fit seed 0 \\
+Control labels & 20 recurring-type maps, seeds 0--19 \\
+Original dose grid & $-1,-0.5,-0.25,-0.1,0,0.1,0.25,0.5,1$ \\
+Controlled doses & $-1,-0.5,-0.25,0.25,0.5,1$ \\
+Generic controls & Isotropic random directions and a coordinate-permutation sham \\
+Clinical family & Effusion, Atelectasis, Pneumothorax, Cardiomegaly, Mass, Nodule \\
+Ownership & $\alpha=+0.25$; $6\times6$ grid; 119 random directions; seed 20260904 \\
+Input closure & 50 pairs; displacement-matched dose; 119 random directions; seed 20260905 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\begin{tabular}{@{}c@{\hspace{5pt}$\longrightarrow$\hspace{5pt}}c@{\hspace{5pt}$\longrightarrow$\hspace{5pt}}c@{}}
+\fcolorbox{cfblue}{cflightblue}{\parbox{0.24\linewidth}{\centering\small immutable commit\\commands + environment}} &
+\fcolorbox{cfteal}{white}{\parbox{0.24\linewidth}{\centering\small accepted artifacts\\terminal checksums}} &
+\fcolorbox{cforange}{cflightorange}{\parbox{0.24\linewidth}{\centering\small deterministic replay\\review receipt}}
+\end{tabular}
+
+\vspace{0.7em}
+\begin{tabular}{ccc}
+\fcolorbox{cfblue}{white}{\parbox{0.25\linewidth}{\centering\large\textbf{304,800}\\\footnotesize ownership outcomes}} &
+\fcolorbox{cfteal}{white}{\parbox{0.25\linewidth}{\centering\large\textbf{6,450}\\\footnotesize closure outcomes}} &
+\fcolorbox{cforange}{white}{\parbox{0.25\linewidth}{\centering\large\textbf{257/257}\\\footnotesize closure arrays replayed}}
+\end{tabular}
+\caption{\textbf{Accepted evidence follows one immutable provenance chain.}
+Downstream gates reuse accepted activations or directions where registered;
+the mechanism-route replay is byte-identical.}
+\label{fig:provenance-chain}
+\end{figure}
+
+\FloatBarrier
+
+\section{Complete Causal-Ownership Surface}
+\label{app:ownership}
+
+Here $q$ indexes a clinical question, $d$ indexes a steering direction, and
+$W_{q,d}$ retains its definition from Section~\ref{sec:protocol}.  Rows in
+Figure~\ref{fig:ownership-matrix} are directions and columns are questions, so
+the named comparison lies on the diagonal.  The column-wise ownership margin
+$O_q$ is positive only when that diagonal exceeds every clinical competitor.
+
+\begin{figure}[H]
+\centering
+\scriptsize
+\setlength{\tabcolsep}{4.0pt}
+\renewcommand{\arraystretch}{1.35}
+\begin{tabular}{lrrrrrr}
+\toprule
+Steering $d$ $\backslash$ question $q$ & Eff. & Atel. & Pneu. & Card. & Mass & Nod. \\
+\midrule
+Effusion      & \diagcell{0.181} & \cellcolor{cfblue!40}0.308 & \winnercell{0.194} & \cellcolor{cfblue!34}0.259 & \winnercell{0.511} & \winnercell{0.182} \\
+Atelectasis   & \cellcolor{cfblue!12}0.069 & \diagcell{0.093} & \cellcolor{cfblue!18}0.114 & \winnercell{0.312} & \cellcolor{cfblue!22}0.147 & \cellcolor{cfblue!4}0.012 \\
+Pneumothorax  & \cellcolor{cfblue!5}0.022 & \cellcolor{cfblue!8}0.044 & \diagcell{0.086} & \cellcolor{cfgray!30}$-0.053$ & \cellcolor{cfblue!3}0.006 & \cellcolor{cfgray!20}$-0.030$ \\
+Cardiomegaly  & \cellcolor{cfblue!4}0.015 & \cellcolor{cfblue!7}0.037 & \cellcolor{cfblue!7}0.039 & \diagcell{0.114} & \cellcolor{cfblue!22}0.149 & \cellcolor{cfblue!1}0.001 \\
+Mass          & \cellcolor{cfblue!14}0.078 & \cellcolor{cfblue!23}0.155 & \cellcolor{cfblue!11}0.063 & \cellcolor{cfblue!22}0.150 & \diagcell{0.359} & \cellcolor{cfblue!24}0.160 \\
+Nodule        & \winnercell{0.245} & \winnercell{0.323} & \cellcolor{cfblue!6}0.026 & \cellcolor{cfblue!38}0.283 & \cellcolor{cfblue!33}0.255 & \diagcell{0.099} \\
+\bottomrule
+\end{tabular}
+
+\vspace{0.8em}
+\begin{tabular}{ccc}
+\fcolorbox{cfblue}{cflightblue}{\parbox{0.24\linewidth}{\centering\large\textbf{0/6}\\\footnotesize named concepts owned}} &
+\fcolorbox{cforange}{cflightorange}{\parbox{0.24\linewidth}{\centering\large\textbf{6/6}\\\footnotesize off-diagonal winners}} &
+\fcolorbox{cfteal}{white}{\parbox{0.24\linewidth}{\centering\large\textbf{0/6}\\\footnotesize diagonals beat random controls}}
+\end{tabular}
+\caption{\textbf{Every clinical question is moved most by an off-diagonal
+direction.} Blue underlined cells mark the named diagonals, orange cells mark
+each column's strongest clinical direction, and color intensity encodes effect
+magnitude while the printed values remain authoritative.}
+\label{fig:ownership-matrix}
+\end{figure}
+
+\begin{table}[H]
+\centering
+\scriptsize
+\caption{Per-question ownership statistics. The descriptive interval and
+simultaneous lower bound apply to $O_q$; all margins are negative.}
+\label{tab:ownership-statistics}
+\setlength{\tabcolsep}{3.4pt}
+\begin{tabular}{lrrlrrrr}
+\toprule
+Question $q$ & $W_{q,q}$ & Best other & Winner $d$ & $O_q$ & 95\% CI & Sim. LCB & Random max \\
+\midrule
+Atelectasis  & .093 & .323 & Nodule      & $-.230$ & $[-.238,-.221]$ & $-.242$ & .367 \\
+Cardiomegaly & .114 & .312 & Atelectasis & $-.197$ & $[-.208,-.186]$ & $-.213$ & .521 \\
+Effusion     & .181 & .245 & Nodule      & $-.064$ & $[-.075,-.053]$ & $-.080$ & .264 \\
+Mass         & .359 & .511 & Effusion    & $-.153$ & $[-.164,-.141]$ & $-.169$ & .611 \\
+Nodule       & .099 & .182 & Effusion    & $-.083$ & $[-.096,-.071]$ & $-.101$ & .214 \\
+Pneumothorax & .086 & .194 & Effusion    & $-.109$ & $[-.116,-.102]$ & $-.119$ & .475 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\begin{minipage}[t]{0.46\linewidth}
+\centering
+\textbf{Mean off-diagonal effect by direction}\par\smallskip
+\footnotesize
+\begin{tabular}{@{}lr@{}}
+Atelectasis & .131 \\
+\multicolumn{2}{l}{\colorbox{cfblue!45}{\rule{19.2mm}{1.2ex}}} \\
+Cardiomegaly & .048 \\
+\multicolumn{2}{l}{\colorbox{cfblue!45}{\rule{7.1mm}{1.2ex}}} \\
+\textbf{Effusion} & \textbf{.291} \\
+\multicolumn{2}{l}{\colorbox{cforange!65}{\rule{42.7mm}{1.2ex}}} \\
+Mass & .121 \\
+\multicolumn{2}{l}{\colorbox{cfblue!45}{\rule{17.8mm}{1.2ex}}} \\
+Nodule & .226 \\
+\multicolumn{2}{l}{\colorbox{cfblue!45}{\rule{33.2mm}{1.2ex}}} \\
+Pneumothorax & $-.002$ \\
+\end{tabular}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.46\linewidth}
+\centering
+\textbf{Candidate against global controls}\par\smallskip
+\footnotesize
+\begin{tabular}{@{}lr@{}}
+Effusion candidate & .291 \\
+\multicolumn{2}{l}{\colorbox{cforange!65}{\rule{42.7mm}{1.2ex}}} \\
+Global random max & .340 \\
+\multicolumn{2}{l}{\colorbox{cfgray}{\rule{50.0mm}{1.2ex}}} \\
+Global $|$sham$|$ max & .214 \\
+\multicolumn{2}{l}{\colorbox{cfteal!35}{\rule{31.5mm}{1.2ex}}} \\
+\end{tabular}
+
+\vspace{0.9em}
+\fcolorbox{cfblue}{cflightblue}{\parbox{0.38\textwidth}{\centering\footnotesize
+Effusion dominance LCB $=.133$\\effect LCB $=.281$\\
+\textbf{shared alias: not detected}}}
+\end{minipage}
+\caption{\textbf{Effusion is the strongest shared-alias candidate but remains
+below the registered random-control maximum.} Bar lengths use one common
+$P(\mathrm{yes})$-change scale from 0 to 0.340; simultaneous max-$T$ lower
+bounds are reported separately.}
+\label{fig:shared-alias}
+\end{figure}
+
+\FloatBarrier
+
+\section{Direction Specificity and Input Closure}
+
+\begin{table}[H]
+\centering
+\small
+\caption{Locked-dose Qwen Effusion specificity on 400 independent patients.
+The registered target effect exceeds random and sham controls but not the
+fixed Nodule direction.}
+\label{tab:specificity-controls}
+\begin{tabular}{lrlr}
+\toprule
+Direction or control & Effect & Direction or control & Effect \\
+\midrule
+Effusion target & .1945 & Random-direction p95 & .0878 \\
+Nodule & .2519 & $|$Sham$|$ & .0157 \\
+Atelectasis & .0773 & Cardiomegaly & .0167 \\
+Mass & .0765 & Pneumothorax & .0241 \\
+\midrule
+$O_{\mathrm{Effusion}}$ & $-.0573$ & 95\% patient-bootstrap CI & $[-.0694,-.0450]$ \\
+\midrule
+\multicolumn{4}{l}{\textit{Original 200-image cohort (descriptive context)}} \\
+Nodule at the same dose & 0.2863 & Effusion target & 0.2343 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+For the paired closure gate, $\gamma_i$ is the positive-minus-negative
+representation displacement for patient $i$, and $\alpha_i$ is the
+displacement-matched dose applied to that patient's negative study.  The
+closure gain measures the reduction in the absolute paired
+$P(\mathrm{yes})$ gap.  These quantities are separated into distinct panels
+in Figure~\ref{fig:input-closure} because they have different scales.
+
+\begin{figure}[H]
+\centering
+\begin{minipage}[t]{0.47\linewidth}
+\centering
+\fcolorbox{cfblue}{cflightblue}{\parbox{0.88\linewidth}{
+\textbf{A. Reader eligibility}\par\smallskip
+\small Probe AUROC: \textbf{.7218}\par
+Selectivity: \textbf{.0642}\par
+95\% CI: $[.0302,.0976]$
+}}
+
+\vspace{0.7em}
+\fcolorbox{cfteal}{white}{\parbox{0.88\linewidth}{
+\textbf{B. Paired input displacement}\par\smallskip
+\small Estimate: \textbf{.1091}\par
+One-sided 95\% LCB: \textbf{$-.0364$}\par
+$50$ fresh patient pairs
+}}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.47\linewidth}
+\centering
+\begin{minipage}{0.88\linewidth}
+\color{cforange}\hrule\color{black}\smallskip
+\textbf{\color{cforange}C. Closure gains}\par\smallskip
+\footnotesize
+\begin{tabular}{@{}lr@{}}
+Concept & .00220 \\
+\multicolumn{2}{l}{\colorbox{cforange!60}{\rule{12.1mm}{1.1ex}}} \\
+Random max & .00246 \\
+\multicolumn{2}{l}{\colorbox{cfgray}{\rule{13.5mm}{1.1ex}}} \\
+Best clinical & .00024 \\
+\multicolumn{2}{l}{\colorbox{cfteal!30}{\rule{1.3mm}{1.1ex}}} \\
+Sham & $-.00046$ \\
+\end{tabular}
+\smallskip\color{cforange}\hrule\color{black}
+\end{minipage}
+
+\vspace{0.7em}
+\fcolorbox{cfblue}{white}{\parbox{0.88\linewidth}{
+\textbf{D. Registered conjunction}\par\smallskip
+\small Clinical margin: \textbf{.00197}\par
+One-sided 95\% LCB: \textbf{$-.00153$}\par
+Exact random-rank $p=.025$\par
+\textbf{Input closure: not confirmed}
+}}
+\end{minipage}
+\caption{\textbf{The Consolidation direction is readable, but its measured
+write does not reliably close the paired input gap.} Panels A and B retain
+their own uncertainty scales. Panel C compares closure gains on a common scale
+whose longest bar is the random maximum; panel D reports the registered joint
+decision.}
+\label{fig:input-closure}
+\end{figure}
+
+\begin{table}[H]
+\centering
+\scriptsize
+\caption{Input-closure dose and control diagnostics. No pair reached the
+registered dose cap.}
+\label{tab:closure-diagnostics}
+\begin{tabular}{lr@{\qquad}lr}
+\toprule
+Quantity & Value & Quantity & Value \\
+\midrule
+Random directions & 119 & Bootstrap resamples & 5,000 \\
+Minimum $\alpha_i$ & $-3.653\times10^{-4}$ & Median $\alpha_i$ & $3.558\times10^{-5}$ \\
+Maximum $\alpha_i$ & $4.067\times10^{-4}$ & Fraction at cap & 0 \\
+Maximum unrelated gain & .000238 (Effusion) & Sham gain & $-.000461$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\FloatBarrier
+
+\section{Forward-Path and Replay Checks}
+
+\begin{figure}[H]
+\centering
+\begin{tabular}{@{}c@{\hspace{3pt}$\longrightarrow$\hspace{3pt}}c@{\hspace{3pt}$\longrightarrow$\hspace{3pt}}c@{\hspace{3pt}$\longrightarrow$\hspace{3pt}}c@{}}
+\fcolorbox{cfblue}{white}{\parbox{0.15\linewidth}{\centering\footnotesize visual tokens}} &
+\fcolorbox{cfblue}{cflightblue}{\parbox{0.21\linewidth}{\centering\footnotesize consumed final block\\capture + intervention}} &
+\fcolorbox{cfteal}{white}{\parbox{0.18\linewidth}{\centering\footnotesize connector / merger\\downstream witness}} &
+\fcolorbox{cforange}{cflightorange}{\parbox{0.16\linewidth}{\centering\footnotesize answer logits\\endpoint witness}}
+\end{tabular}
+
+\vspace{0.8em}
+\begin{tabular}{ccc}
+\fcolorbox{cfblue}{white}{\parbox{0.25\linewidth}{\centering\small $\alpha=0$\\\textbf{bitwise no-op}}} &
+\fcolorbox{cfteal}{white}{\parbox{0.25\linewidth}{\centering\small nonzero $\alpha$\\\textbf{downstream change}}} &
+\fcolorbox{cforange}{white}{\parbox{0.25\linewidth}{\centering\small accepted artifact\\\textbf{deterministic replay}}}
+\end{tabular}
+\caption{\textbf{A valid intervention must enter the consumed forward path
+and reach the answer logits.} The same hook is tested at zero and nonzero dose
+before its scientific outcomes are interpreted.}
+\label{fig:forward-path}
+\end{figure}
+
+\begin{table}[H]
+\centering
+\small
+\caption{Forward-path witnesses at the registered intervention loci.}
+\label{tab:hook-witnesses}
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}p{0.10\linewidth}p{0.25\linewidth}p{0.13\linewidth}p{0.20\linewidth}p{0.18\linewidth}@{}}
+\toprule
+Model & Captured module & Zero dose & Downstream & Logits \\
+\midrule
+LLaVA & \texttt{encoder.layers.22};\newline captured once & bitwise no-op & connector max $|\Delta|=1.1875$ & max $|\Delta|=0.1875$ \\
+Qwen & \texttt{model.visual.}\newline\texttt{blocks.31};\newline 32 blocks verified & bitwise no-op & merger changed at $\alpha=+.1$ & changed at $\alpha=+.1$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[H]
+\centering
+\small
+\caption{Replay completeness for the prospective mechanism gates.}
+\label{tab:replay-completeness}
+\begin{tabular}{lrrl}
+\toprule
+Gate & Outcomes & Bootstrap draws & Replay result \\
+\midrule
+Causal ownership & 304,800 & 5,000 & mechanism route byte-identical \\
+Input closure & 6,450 & 5,000 & 257/257 decision arrays exact \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\FloatBarrier
 
 \section{Paired Decoding Contrasts}
 
-\begin{table}[h]
+\begin{table}[H]
 \centering
 \small
-\caption{Paired controlled-decoding contrasts. Both intervals span zero.}
+\caption{Paired controlled-decoding contrasts. Both patient-bootstrap
+intervals span zero.}
+\label{tab:paired-decoding}
 \begin{tabular}{lcc}
 \toprule
 Contrast & Estimate & 95\% patient-bootstrap CI \\
@@ -60,3 +464,5 @@ Qwen Effusion $-$ LLaVA Effusion & 0.0026 & $[-0.0155,0.0215]$ \\
 \bottomrule
 \end{tabular}
 \end{table}
+
+\FloatBarrier
