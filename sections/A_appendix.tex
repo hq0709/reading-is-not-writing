@@ -63,10 +63,10 @@ readability, intervention strength, and semantic attribution.
 
 \begin{table}[H]
 \centering
-\footnotesize
-\caption{Notation used consistently in the framework, equations, and supplementary analyses.}
+\caption{Notation used in the manuscript.}
 \label{tab:notation}
-\begin{tabular}{p{0.15\linewidth}p{0.77\linewidth}}
+\resizebox{\linewidth}{!}{%
+\begin{tabular}{ll}
 \toprule
 Symbol & Definition \\
 \midrule
@@ -81,6 +81,7 @@ $S$ & Real-label AUROC minus the mean AUROC of the 20 nuisance-type control task
 $\gamma_i$ & Positive-minus-negative paired representation displacement along the Consolidation normal. \\
 \bottomrule
 \end{tabular}
+}
 \end{table}
 
 The notation separates three levels of evidence: $S$ describes label
@@ -105,13 +106,13 @@ The ownership experiment accounts for 9,211 of the 20,939 recorded GPU
 seconds because it evaluates the full question--direction surface with 119
 random directions. These are recorded run times, including registered reuse
 of saved computations, rather than a hardware-normalized cost comparison.
+Each run used one A100.
 
 \begin{table}[H]
 \centering
-\small
-\caption{The six experimental runs contributing evidence to the manuscript. GPU
-time sums to 20,939 seconds; each run used one A100.}
+\caption{Experimental runs and computational budgets.}
 \label{tab:run-ledger}
+\resizebox{\linewidth}{!}{%
 \begin{tabular}{cllrrrr}
 \toprule
 Run & Model & Endpoint & Evaluation units & Random & Bootstraps & GPU s \\
@@ -124,6 +125,7 @@ R5 & Qwen & Causal ownership & 400 patients & 119 & 5,000 & 9,211 \\
 R6 & Qwen & Consolidation closure & 50 patient pairs & 119 & 5,000 & 445 \\
 \bottomrule
 \end{tabular}
+}
 \end{table}
 
 The progression from single cells to the full clinical grid broadens the
@@ -145,24 +147,25 @@ reported result.
 
 \begin{table}[H]
 \centering
-\footnotesize
 \caption{Immutable run identifiers and evaluation-cohort selection hashes.}
 \label{tab:run-identifiers}
-\begin{tabular}{cp{0.79\linewidth}}
+\resizebox{\linewidth}{!}{%
+\begin{tabular}{cl}
 \toprule
 Run & Run identifier and cohort selection hash \\
 \midrule
 R1 & \nolinkurl{20260902T191411Z-ffd523c464c8-f99e2f39} \\
 R2 & \nolinkurl{20260902T221534Z-110b84618d1b-edema} \\
 R3 & \nolinkurl{20260903T000321Z-caaae3ef346d-qwen-full} \\
-R4 & \nolinkurl{20260903T103508Z-456c81bad460-7a3edc4b}; row SHA-256
-\nolinkurl{76be1da9659973d44a0898fa69c579afc4649f329ee227b19d1216efaa1c8bda} \\
-R5 & \nolinkurl{20260904T125710Z-a3bd883540eb-causal-ownership}; row SHA-256
-\nolinkurl{e657a9bd1707f13695b02a341047af6f53981295b840376eb0ea5bbebfe2d312} \\
-R6 & \nolinkurl{20260904T162317Z-8a55a4c2f6b6-consolidation-closure}; pair SHA-256
-\nolinkurl{20dcc8cc3aaa8c65a6f7f759a0ff6bf3b0cf4f1b87f4b65cdc6a15a46c6d85e2} \\
+R4 & \shortstack[l]{\nolinkurl{20260903T103508Z-456c81bad460-7a3edc4b}; row SHA-256\\
+\nolinkurl{76be1da9659973d44a0898fa69c579afc4649f329ee227b19d1216efaa1c8bda}} \\
+R5 & \shortstack[l]{\nolinkurl{20260904T125710Z-a3bd883540eb-causal-ownership}; row SHA-256\\
+\nolinkurl{e657a9bd1707f13695b02a341047af6f53981295b840376eb0ea5bbebfe2d312}} \\
+R6 & \shortstack[l]{\nolinkurl{20260904T162317Z-8a55a4c2f6b6-consolidation-closure}; pair SHA-256\\
+\nolinkurl{20dcc8cc3aaa8c65a6f7f759a0ff6bf3b0cf4f1b87f4b65cdc6a15a46c6d85e2}} \\
 \bottomrule
 \end{tabular}
+}
 \end{table}
 
 These identifiers preserve the link between an estimate and the patients
@@ -183,20 +186,18 @@ corresponding control rules.
 
 \begin{table}[H]
 \centering
-\small
 \caption{Shared registered settings.}
 \label{tab:registered-settings}
-\begin{tabular}{p{0.27\linewidth}p{0.65\linewidth}}
+\resizebox{\linewidth}{!}{%
+\begin{tabular}{ll}
 \toprule
 Component & Registered value \\
 \midrule
 LLaVA model & \nolinkurl{llava-hf/llava-1.5-7b-hf} \\
-LLaVA revision & \texttt{b234b804b114d9e37bb655e11cbbb5f5}\newline
-\texttt{e971b7a9} \\
+LLaVA revision & \texttt{b234b804b114d9e37bb655e11cbbb5f5e971b7a9} \\
 Qwen model & \nolinkurl{Qwen/Qwen2.5-VL-7B-Instruct}; processor resolution $336^2$ \\
-Qwen revision & \texttt{cc594898137f460bfe9f0759e9844b3c}\newline
-\texttt{e807cfb5} \\
-Readout & 512-dimensional Gaussian projection; logistic regression, $C=1$; projection and fit seed 0 \\
+Qwen revision & \texttt{cc594898137f460bfe9f0759e9844b3ce807cfb5} \\
+Readout & \shortstack[l]{512-dimensional Gaussian projection; logistic regression, $C=1$;\\projection and fit seed 0} \\
 Control labels & 20 recurring-type maps, seeds 0--19 \\
 Original dose grid & $-1,-0.5,-0.25,-0.1,0,0.1,0.25,0.5,1$ \\
 Controlled doses & $-1,-0.5,-0.25,0.25,0.5,1$ \\
@@ -206,6 +207,7 @@ Ownership & $\alpha=+0.25$; $6\times6$ grid; 119 random directions; seed 2026090
 Input closure & 50 pairs; displacement-matched dose; 119 random directions; seed 20260905 \\
 \bottomrule
 \end{tabular}
+}
 \end{table}
 
 Fixing the readout construction makes the clinical directions comparable
@@ -286,7 +288,8 @@ Table~\ref{tab:ownership-statistics} quantifies these comparisons with
 patient-bootstrap uncertainty. ``Best other'' is the strongest alternative
 clinical effect for the question in that row; ``Sim. LCB'' reports the
 simultaneous lower confidence bound for $O_q$, using the max-$T$ procedure
-over the clinical contrasts. The reported margins range from $-0.230$ to
+over the clinical contrasts. The descriptive intervals also apply to $O_q$.
+The reported margins range from $-0.230$ to
 $-0.064$, and every descriptive 95\% interval lies below zero. The named
 diagonals also fall below their corresponding random maxima. Thus neither
 clinical competition nor the random-control comparison supports a named
@@ -295,11 +298,9 @@ the full-precision estimates.
 
 \begin{table}[H]
 \centering
-\scriptsize
-\caption{Per-question ownership statistics. The descriptive interval and
-simultaneous lower bound apply to $O_q$; all margins are negative.}
+\caption{Per-question ownership statistics.}
 \label{tab:ownership-statistics}
-\setlength{\tabcolsep}{3.4pt}
+\resizebox{\linewidth}{!}{%
 \begin{tabular}{lrrlrrrr}
 \toprule
 Question $q$ & $W_{q,q}$ & Best other & Winner $d$ & $O_q$ & 95\% CI & Sim. LCB & Random max \\
@@ -312,6 +313,7 @@ Nodule       & .099 & .182 & Effusion    & $-.083$ & $[-.096,-.071]$ & $-.101$ &
 Pneumothorax & .086 & .194 & Effusion    & $-.109$ & $[-.116,-.102]$ & $-.119$ & .475 \\
 \bottomrule
 \end{tabular}
+}
 \end{table}
 
 All six named ownership tests fail. The point-estimate winners identify
@@ -374,11 +376,9 @@ attribution under the registered competitor family.
 
 \begin{table}[H]
 \centering
-\small
-\caption{Locked-dose Qwen Effusion specificity on 400 independent patients.
-The registered target effect exceeds random and sham controls but not the
-fixed Nodule direction.}
+\caption{Locked-dose Qwen Effusion specificity.}
 \label{tab:specificity-controls}
+\resizebox{\linewidth}{!}{%
 \begin{tabular}{lrlr}
 \toprule
 Direction or control & Effect & Direction or control & Effect \\
@@ -394,6 +394,7 @@ $O_{\mathrm{Effusion}}$ & $-.0573$ & 95\% patient-bootstrap CI & $[-.0694,-.0450
 Nodule at the same dose & 0.2863 & Effusion target & 0.2343 \\
 \bottomrule
 \end{tabular}
+}
 \end{table}
 
 The independent cohort preserves the intervention's strength while
@@ -450,11 +451,10 @@ the sham response, completing the control comparison in Figure~\ref{fig:input-cl
 
 \begin{table}[H]
 \centering
-\scriptsize
-\caption{Input-closure dose and control diagnostics. No pair reached the
-registered dose cap.}
+\caption{Input-closure dose and control diagnostics.}
 \label{tab:closure-diagnostics}
-\begin{tabular}{lr@{\qquad}lr}
+\resizebox{\linewidth}{!}{%
+\begin{tabular}{lrlr}
 \toprule
 Quantity & Value & Quantity & Value \\
 \midrule
@@ -464,6 +464,7 @@ Maximum $\alpha_i$ & $4.067\times10^{-4}$ & Fraction at cap & 0 \\
 Maximum unrelated gain & .000238 (Effusion) & Sham gain & $-.000461$ \\
 \bottomrule
 \end{tabular}
+}
 \end{table}
 
 All doses lie between approximately $-3.65\times10^{-4}$ and
@@ -516,18 +517,18 @@ model-specific connector and answer computation.
 
 \begin{table}[H]
 \centering
-\small
-\caption{Forward-path witnesses at the registered intervention loci.}
+\caption{Forward-path intervention checks.}
 \label{tab:hook-witnesses}
-\setlength{\tabcolsep}{4pt}
-\begin{tabular}{@{}p{0.10\linewidth}p{0.25\linewidth}p{0.13\linewidth}p{0.20\linewidth}p{0.18\linewidth}@{}}
+\resizebox{\linewidth}{!}{%
+\begin{tabular}{lllll}
 \toprule
 Model & Captured module & Zero dose & Downstream & Logits \\
 \midrule
-LLaVA & \texttt{encoder.layers.22};\newline captured once & bitwise no-op & connector max $|\Delta|=1.1875$ & max $|\Delta|=0.1875$ \\
-Qwen & \texttt{model.visual.}\newline\texttt{blocks.31};\newline 32 blocks verified & bitwise no-op & merger changed at $\alpha=+.1$ & changed at $\alpha=+.1$ \\
+LLaVA & \shortstack[l]{\texttt{encoder.layers.22};\\captured once} & bitwise no-op & \shortstack[l]{connector max\\$|\Delta|=1.1875$} & max $|\Delta|=0.1875$ \\
+Qwen & \shortstack[l]{\texttt{model.visual.}\\\texttt{blocks.31};\\32 blocks verified} & bitwise no-op & \shortstack[l]{merger changed\\at $\alpha=+.1$} & changed at $\alpha=+.1$ \\
 \bottomrule
 \end{tabular}
+}
 \end{table}
 
 For both models, the write reaches the answer computation and the
@@ -549,9 +550,9 @@ experiments, rather than an additional independent cohort or replication.
 
 \begin{table}[H]
 \centering
-\small
-\caption{Replay completeness for the prospective mechanism gates.}
+\caption{Reproducibility of prospective mechanism decisions.}
 \label{tab:replay-completeness}
+\resizebox{\linewidth}{!}{%
 \begin{tabular}{lrrl}
 \toprule
 Gate & Outcomes & Bootstrap draws & Replay result \\
@@ -560,6 +561,7 @@ Causal ownership & 304,800 & 5,000 & mechanism route byte-identical \\
 Input closure & 6,450 & 5,000 & 257/257 decision arrays exact \\
 \bottomrule
 \end{tabular}
+}
 \end{table}
 
 Exact replay preserves the negative mechanism conclusions under the
@@ -585,10 +587,9 @@ between what a probe can read and what its direction causally controls.
 
 \begin{table}[H]
 \centering
-\small
-\caption{Paired controlled-decoding contrasts. Both patient-bootstrap
-intervals span zero.}
+\caption{Paired controlled-decoding contrasts.}
 \label{tab:paired-decoding}
+\resizebox{\linewidth}{!}{%
 \begin{tabular}{lcc}
 \toprule
 Contrast & Estimate & 95\% patient-bootstrap CI \\
@@ -597,6 +598,7 @@ LLaVA Edema $-$ LLaVA Effusion & 0.0221 & $[-0.0175,0.0590]$ \\
 Qwen Effusion $-$ LLaVA Effusion & 0.0026 & $[-0.0155,0.0215]$ \\
 \bottomrule
 \end{tabular}
+}
 \end{table}
 
 The reader comparisons therefore do not explain away the writer outcomes

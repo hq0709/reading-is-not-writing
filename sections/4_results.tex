@@ -4,11 +4,13 @@
 \subsection{A non-generic write effect reproduces}
 \label{sec:qwen-replication}
 
+Table~\ref{tab:decoding} evaluates controlled decodability at the exact final visual block: CLIP \texttt{encoder.layers.22} for LLaVA and \texttt{model.visual.blocks.31} for Qwen. Its intervals are 95\% patient-cluster bootstrap intervals over 2,000 draws. The control column reports mean AUROC over 20 recurring-type random-label maps and their 5th--95th percentile spread.
+
 \input{tables/table_decoding}
 
-Qwen Effusion first satisfies the reader test. At the consumed final visual block, its probe reaches AUROC 0.7742 and controlled selectivity 0.1166 (95\% CI $[0.0897,0.1428]$; Table~\ref{tab:decoding}). It then makes a strong write-direction case in the original 200-image cohort: the maximum concept-consistent change is 0.2343 at $\alpha=+0.25$, above the random-direction 95th percentile of 0.0963 and the maximum absolute sham effect of 0.0852.
+Qwen Effusion first satisfies the reader test. Its probe reaches AUROC 0.7742 and controlled selectivity 0.1166 (95\% CI $[0.0897,0.1428]$). Original-cohort intervention outcomes maximize the concept-consistent effect over six fixed nonzero doses. Qwen makes a strong write-direction case in the original 200-image cohort: the maximum concept-consistent change is 0.2343 at $\alpha=+0.25$, above the random-direction 95th percentile of 0.0963 and the maximum absolute sham effect of 0.0852.
 
-The locked-dose response reproduces on the patient-disjoint 400-patient cohort (Figure~\ref{fig:specificity}). Effusion changes mean $P(\mathrm{yes})$ by 0.1945, again above the random-direction 95th percentile of 0.0878 and absolute sham effect of 0.0157. None of these patients appears in the original intervention cohort, and the dose was not reselected, supporting a large and reproducible non-generic effect within ChestX-ray14.
+The response at the locked dose $\alpha=+0.25$ reproduces on the patient-disjoint 400-patient cohort (Figure~\ref{fig:specificity}). Effusion changes mean $P(\mathrm{yes})$ by 0.1945, again above the random-direction 95th percentile of 0.0878 and absolute sham effect of 0.0157. None of these patients appears in the original intervention cohort, and the dose was not reselected, supporting a large and reproducible non-generic effect within ChestX-ray14.
 
 \begin{figure}[H]
     \centering
@@ -22,18 +24,20 @@ The locked-dose response reproduces on the patient-disjoint 400-patient cohort (
 \subsection{Semantic competition changes attribution, not efficacy}
 \label{sec:specificity-results}
 
-The fixed clinical family provides a harder identification test than non-semantic controls. Nodule changes the Effusion answer by 0.2519 and realizes the point-estimate maximum among the five alternatives. The Effusion ownership contrast $O_{\mathrm{Effusion}}$ is $-0.0573$. Recomputing the maximum inside each of 5,000 patient-bootstrap draws gives a two-sided 95\% CI of $[-0.0694,-0.0450]$ and a one-sided 95\% lower bound of $-0.0678$. The entire interval is below zero. Descriptively, all five alternative clinical normals move the Effusion endpoint in the same positive direction; Effusion exceeds four by 0.1172--0.1778, while Nodule alone has a larger point estimate. This shared-sign pattern motivates an answer-sensitive-alias hypothesis but cannot distinguish it from question-specific ownership.
+The fixed clinical family provides a harder identification test than non-semantic controls. Nodule changes the Effusion answer by 0.2519 and realizes the point-estimate maximum among the five alternatives. The Effusion ownership contrast $O_{\mathrm{Effusion}}$ is $-0.0573$. The registered fixed-family endpoint recomputes the maximum inside each of 5,000 patient-bootstrap draws, giving a two-sided 95\% CI of $[-0.0694,-0.0450]$ and a one-sided 95\% lower bound of $-0.0678$. The entire interval is below zero. Descriptively, all five alternative clinical normals move the Effusion endpoint in the same positive direction; Effusion exceeds four by 0.1172--0.1778, while Nodule alone has a larger point estimate. This shared-sign pattern motivates an answer-sensitive-alias hypothesis but cannot distinguish it from question-specific ownership.
 
 Qwen Effusion therefore remains a reproducible direction that changes the answer beyond random and sham perturbations, while its specific semantic attribution fails. The familywise endpoint establishes that at least one fixed clinical alternative is stronger; Nodule is the point-estimate maximizer, not a separately familywise-identified semantic owner.
 
 \subsection{Prospective mechanism gates preserve the attribution boundary}
 \label{sec:mechanism-results}
 
+The prospective Qwen mechanism gates operate at the consumed final visual block (\texttt{vis.last}; Table~\ref{tab:mechanisms}). LCB denotes a one-sided simultaneous or familywise 95\% lower confidence bound.
+
 \input{tables/table_mechanisms}
 
-The causal-ownership matrix provides no named replacement for the failed Effusion attribution. All six diagonal ownership margins are negative, so zero of six clinical concepts is owned under the simultaneous and random-control rules. Every question column's strongest clinical direction is off-diagonal. Effusion is the strongest shared-alias candidate: its mean off-diagonal effect is 0.2909 with simultaneous lower bound 0.2808, and its relative-dominance lower bound is 0.1332. Yet the random alias maximum, taken over 119 directions and six five-question mean effects, is larger at 0.3402. The matrix therefore confirms neither clinical ownership nor a shared alias.
+The causal-ownership matrix crosses six probe normals with six matching questions and provides no named replacement for the failed Effusion attribution. All six diagonal ownership margins are negative, so zero of six clinical concepts is owned under the simultaneous and random-control rules. Every question column's strongest clinical direction is off-diagonal. Effusion is the strongest shared-alias candidate: its mean off-diagonal effect is 0.2909 with simultaneous lower bound 0.2808, and its relative-dominance lower bound is 0.1332. Yet the random alias maximum, taken over 119 directions and six five-question mean effects, is larger at 0.3402. The matrix therefore confirms neither clinical ownership nor a shared alias.
 
-The Consolidation fallback separates availability from input closure on 50 fresh within-patient pairs. On the full patient-disjoint test split, its probe selectivity is 0.0642 with 95\% CI $[0.0302,0.0976]$, so the readout is eligible before pair selection. Across the 50 pairs, mean positive-minus-negative displacement along the Consolidation normal is 0.1091, but its one-sided lower bound is $-0.0364$. Writing the measured displacement back produces mean closure gain 0.0022, below the maximum over 119 random directions, 0.0025. The familywise Consolidation-minus-maximum-clinical lower bound is also negative at $-0.0015$. The input-closure conjunction is not met.
+The Consolidation fallback separates availability from input closure on 50 fresh within-patient pairs. On the full patient-disjoint test split, its probe selectivity is 0.0642 with 95\% CI $[0.0302,0.0976]$, so the readout is eligible before pair selection. Across the 50 pairs, mean positive-minus-negative displacement along the Consolidation normal is 0.1091, but its one-sided lower bound is $-0.0364$. Writing each patient's measured Consolidation displacement back into the negative study produces mean closure gain 0.0022, below the maximum over 119 random directions, 0.0025. The familywise Consolidation-minus-maximum-clinical lower bound is also negative at $-0.0015$. The input-closure conjunction is not met.
 
 \begin{figure}[H]
     \centering
@@ -58,6 +62,8 @@ The decoding contrasts reinforce this dissociation. Within LLaVA, Edema-minus-Ef
 \subsection{Each control changes the scientific claim}
 
 The experiments separate three statements that are often collapsed. Controlled decoding supports that a label is available to a fixed reader. Random and sham controls support that a labeled normal is an unusually effective writer relative to matched non-semantic perturbations. Semantic competition asks whether the clinical name attached by the reader is specific to that write effect. Qwen supports the first two statements but not the third; LLaVA establishes the first but not the second. Holding locus, dose, rows, endpoint, and uncertainty calculation fixed makes the reader--writer gap experimentally visible.
+
+Table~\ref{tab:gates} summarizes the intervention outcomes; ``Supported interpretation'' states the strongest claim warranted by each cohort.
 
 \input{tables/table_gates}
 
