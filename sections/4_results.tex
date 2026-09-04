@@ -1,7 +1,7 @@
 \section{Results: A Reproducible Writer Meets Semantic Competition}
 \label{sec:results}
 
-\subsection{A non-generic write effect replicates}
+\subsection{A non-generic write effect reproduces}
 \label{sec:qwen-replication}
 
 \input{tables/table_decoding}
@@ -13,7 +13,7 @@ The locked-dose response reproduces on the patient-disjoint 400-patient cohort (
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.90\textwidth]{figures/fig3_direction_specificity.pdf}
-    \caption{\textbf{Qwen Effusion reproduces as a non-generic write direction, but semantic competition changes its attribution.} \textbf{(a)} Changes in mean $P(yes)$ at the locked dose $\alpha=+0.25$ on 400 patients absent from the original cohort. The random group contains 20 directions; its dashed segment marks p95. Diamonds show the five fixed alternative clinical normals. \textbf{(b)} The Effusion-minus-maximum-alternative statistic with its two-sided 95\% patient-bootstrap interval; the registered one-sided 95\% lower bound is $-0.0678$. Nodule realizes the point-estimate maximum.}
+    \caption{\textbf{Qwen Effusion reproduces as a non-generic write direction, but semantic competition changes its attribution.} \textbf{(a)} Changes in mean $P(yes)$ at the locked dose $\alpha=+0.25$ on 400 patients absent from the original cohort. The random group contains 20 directions; its dashed segment marks p95. Diamonds show the five fixed alternative clinical normals. \textbf{(b)} The Effusion ownership contrast $O_{\mathrm{Effusion}}$ with its two-sided 95\% patient-bootstrap interval; the registered one-sided 95\% lower bound is $-0.0678$. Nodule realizes the point-estimate maximum.}
     \label{fig:specificity}
 \end{figure}
 
@@ -22,7 +22,7 @@ The locked-dose response reproduces on the patient-disjoint 400-patient cohort (
 \subsection{Semantic competition changes attribution, not efficacy}
 \label{sec:specificity-results}
 
-The fixed clinical family provides a harder identification test than non-semantic controls. Nodule changes the Effusion answer by 0.2519 and realizes the point-estimate maximum among the five alternatives. The Effusion-minus-maximum-alternative margin is $-0.0573$. Recomputing the maximum inside each of 5,000 patient-bootstrap draws gives a two-sided 95\% CI of $[-0.0694,-0.0450]$ and a one-sided 95\% lower bound of $-0.0678$. The entire interval is below zero. Descriptively, Effusion exceeds the other four alternatives by 0.1172--0.1778; Nodule is the only alternative with a larger point estimate in this fixed family.
+The fixed clinical family provides a harder identification test than non-semantic controls. Nodule changes the Effusion answer by 0.2519 and realizes the point-estimate maximum among the five alternatives. The Effusion ownership contrast $O_{\mathrm{Effusion}}$ is $-0.0573$. Recomputing the maximum inside each of 5,000 patient-bootstrap draws gives a two-sided 95\% CI of $[-0.0694,-0.0450]$ and a one-sided 95\% lower bound of $-0.0678$. The entire interval is below zero. Descriptively, all five alternative clinical normals move the Effusion endpoint in the same positive direction; Effusion exceeds four by 0.1172--0.1778, while Nodule alone has a larger point estimate. This shared-sign pattern motivates an answer-sensitive-alias hypothesis but cannot distinguish it from question-specific ownership.
 
 Qwen Effusion therefore remains a reproducible direction that changes the answer beyond random and sham perturbations, while its specific semantic attribution fails. The familywise endpoint establishes that at least one fixed clinical alternative is stronger; Nodule is the point-estimate maximizer, not a separately familywise-identified semantic owner.
 
