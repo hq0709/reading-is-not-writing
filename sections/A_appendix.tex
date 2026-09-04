@@ -213,30 +213,37 @@ The larger random family in ownership and closure also imposes a stronger
 maximum-control comparison than the original p95 rule. The next analyses
 interpret each result against the rule registered for that experiment.
 
-\subsection{From execution to accepted evidence}
+\subsection{From registered design to statistical decisions}
 
-Figure~\ref{fig:provenance-chain} summarizes how an execution becomes a
-reported result. The code snapshot and environment identify the computation;
-accepted outputs supply the observations; replay checks reproduce the
-decision summaries. The 304,800 ownership outcomes and 6,450 closure outcomes
-count evaluated perturbation conditions, not independent patients.
-Reproducing all 257 closure decision arrays verifies the computational
-trace, while statistical uncertainty continues to use patients as the
-resampling unit.
+Figure~\ref{fig:provenance-chain} connects the experimental design to the
+patient-level estimates and their statistical interpretation. Model, visual
+locus, dose rule, and cohort selection are specified before each test.
+Ownership and aliasing use 400 patients and 304,800 evaluations; closure
+uses 50 patient pairs and 6,450 evaluations. Evaluation counts include the
+perturbation conditions applied to each study, while the bootstrap resamples
+patients or within-patient pairs. Ownership and alias decisions combine
+patient-bootstrap bounds with the registered clinical, random, and sham
+comparisons. Closure requires the displacement and gain comparisons to
+satisfy the registered conjunction.
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=\linewidth]{figures/figA2_provenance.pdf}
-\caption{\textbf{Accepted evidence follows one immutable provenance chain.}
-Downstream gates reuse accepted activations or directions where registered;
-the mechanism-route replay is byte-identical.}
+\caption{\textbf{Registered designs connect patient-level estimates to
+statistical decisions.} The two experiments evaluate different patient
+cohorts under prespecified dose rules. Their bootstrap and comparator
+requirements yield zero named owners, no detected shared alias, and no
+confirmed input closure.}
 \label{fig:provenance-chain}
 \end{figure}
 
-This chain supports tracing every reported decision back to a fixed
-execution. It does not increase the effective sample size or supply new
-causal evidence: scientific conclusions come from the patient-level
-comparisons, whose full response surface is examined next.
+The decision step distinguishes an observed effect from a supported causal
+interpretation. Neither the six named ownership tests nor the shared-alias
+test meets its confirmation rule, and the paired experiment does not
+confirm input closure. These conclusions depend on the patient-level
+uncertainty and comparator results, rather than on the number of evaluations.
+The full ownership surface below shows which clinical competitors drive
+the first of these outcomes.
 
 \FloatBarrier
 

@@ -93,38 +93,37 @@ def prompt_score():
 
 
 def provenance():
-    fig, ax = canvas(2.76)
+    fig, ax = canvas(3.65)
     columns = ((0.12, 1.67, BLUE), (1.94, 3.75, TEAL),
                (4.02, 6.16, ORANGE))
-    headings = ("Source execution", "Accepted outcomes", "Deterministic replay")
+    headings = ("Registered design", "Patient-level\nestimates",
+                "Registered\nstatistical decision")
     for i, ((left, right, color), heading) in enumerate(zip(columns, headings)):
-        text(ax, left, 0.13, f"0{i + 1}", size=8, color=color, weight="bold")
+        text(ax, left, 0.13, f"0{i + 1}", size=8.5, weight="bold")
         rule(ax, left + 0.27, right, 0.19, color=color)
         text(ax, left, 0.37, heading, size=9.4, weight="semibold")
-    arrow(ax, (1.69, 0.45), (1.85, 0.45))
-    arrow(ax, (3.77, 0.45), (3.93, 0.45))
+    arrow(ax, (1.69, 0.53), (1.85, 0.53), color=INK)
+    arrow(ax, (3.77, 0.53), (3.93, 0.53), color=INK)
 
-    text(ax, 0.12, 0.87, "Immutable commit", weight="semibold", size=8.5)
-    text(ax, 0.12, 1.16, "Commands +\nenvironment", color=MUTED, size=8.5)
-    text(ax, 0.12, 1.94, "Fixed computation", size=8, color=BLUE)
+    text(ax, 0.12, 1.04, "Model + locus", weight="semibold", size=8.8)
+    text(ax, 0.12, 1.35, "Qwen\nFinal visual block", size=8.8)
+    text(ax, 0.12, 2.06, "Dose + cohort", weight="semibold", size=8.8)
+    text(ax, 0.12, 2.37, "Prespecified dose rule\nand patient selection", size=8.8)
 
-    text(ax, 1.94, 0.87, "Causal ownership", weight="semibold", size=8.5)
-    text(ax, 1.94, 1.16, "304,800 outcomes", color=TEAL, size=9.5)
-    text(ax, 4.02, 0.87, "Mechanism route", weight="semibold", size=8.5)
-    text(ax, 4.02, 1.16, "Byte-identical", color=ORANGE, size=9.5)
-    arrow(ax, (3.64, 1.23), (3.92, 1.23), color=TEAL)
-    rule(ax, 1.94, 6.16, 1.51)
-    text(ax, 1.94, 1.69, "Input closure", weight="semibold", size=8.5)
-    text(ax, 1.94, 1.98, "6,450 outcomes", color=TEAL, size=9.5)
-    text(ax, 4.02, 1.69, "Closure decision arrays", weight="semibold", size=8.5)
-    text(ax, 4.02, 1.98, "257/257 exact", color=ORANGE, size=9.5)
-    arrow(ax, (3.64, 2.05), (3.92, 2.05), color=TEAL)
+    text(ax, 1.94, 1.04, "Ownership / alias", weight="semibold", size=8.8)
+    text(ax, 1.94, 1.38, "400 patients\n304,800 evaluations", size=9)
+    text(ax, 4.02, 1.04, "Patient bootstrap +\nregistered comparators", size=8.8)
+    text(ax, 4.02, 1.63, "0/6 owned\nNo shared alias", weight="semibold", size=9)
+    arrow(ax, (3.68, 1.48), (3.92, 1.48), color=INK)
 
-    rule(ax, 0.12, 6.16, 2.36)
-    text(ax, 0.12, 2.53, "Accepted artifacts · terminal checksums", size=8,
-         color=MUTED)
-    text(ax, 6.16, 2.53, "Replay · review receipt", size=8,
-         color=MUTED, ha="right")
+    rule(ax, 1.94, 6.16, 2.20)
+    text(ax, 1.94, 2.40, "Input closure", weight="semibold", size=8.8)
+    text(ax, 1.94, 2.74, "50 patient pairs\n6,450 evaluations", size=9)
+    text(ax, 4.02, 2.40, "Paired bootstrap +\nclosure conjunction", size=8.8)
+    text(ax, 4.02, 2.99, "No input closure", weight="semibold", size=9)
+    arrow(ax, (3.68, 2.85), (3.92, 2.85), color=INK)
+
+    rule(ax, 0.12, 6.16, 3.39)
     save_figure(fig, "figA2_provenance")
 
 
