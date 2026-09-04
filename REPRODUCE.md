@@ -7,7 +7,7 @@ Use Tectonic `Tectonic 0.17.0` with binary SHA-256
 SOURCE_DATE_EPOCH=1788439147 FORCE_SOURCE_DATE=1 tectonic -X compile main.tex --keep-logs
 ```
 
-The resulting `main.pdf` must have SHA-256 `4696fffada2bef6214c01d9fed2eff18589e2bc210fa9d29ac97cd335dc6edae`.
+The resulting `main.pdf` must have SHA-256 `fe8fc3afa74b7acf84607fd16bdf1169345fd855dc263d636280aeab02e8e64d`.
 `MANIFEST.sha256` records every submitted source asset.
 
 ## Figure 3 provenance
