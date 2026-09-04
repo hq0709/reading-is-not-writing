@@ -7,8 +7,18 @@ Use Tectonic `Tectonic 0.17.0` with binary SHA-256
 SOURCE_DATE_EPOCH=1788439147 FORCE_SOURCE_DATE=1 tectonic -X compile main.tex --keep-logs
 ```
 
-The resulting `main.pdf` must have SHA-256 `fe8fc3afa74b7acf84607fd16bdf1169345fd855dc263d636280aeab02e8e64d`.
+The resulting `main.pdf` must have SHA-256 `f1e224f07d98fcb4039e3372b88124d43dd5d3aeb2469bf4f31f9b8cf769cece`.
 `MANIFEST.sha256` records every submitted source asset.
+
+## Six-gate evidence provenance
+
+The accepted evidence snapshot is the read-only `concept-flow-code` repository at
+commit `20fbecde8bc9c3d9b358a65dfe50345929b3547f`. The two prospective
+mechanism runs are `20260904T125710Z-a3bd883540eb-causal-ownership`
+(304,800 outcomes; 5,000 bootstraps) and
+`20260904T162317Z-8a55a4c2f6b6-consolidation-closure` (6,450 outcomes;
+257 decision arrays reproduced exactly). The paper repository contains only the
+submission sources, figures, tables, and reproducibility metadata.
 
 ## Figure 3 provenance
 

@@ -2,17 +2,61 @@
 \label{app:protocol}
 
 \paragraph{Prompts.}
-The Effusion prompt is ``Is there a pleural effusion in this chest radiograph? Answer yes or no.'' The Edema prompt is ``Is there pulmonary edema in this chest radiograph? Answer yes or no.'' LLaVA uses \texttt{llava-hf/llava-1.5-7b-hf} at revision \texttt{b234b804b114d9e37bb655e11cbbb5f5e971b7a9}. Qwen uses \texttt{Qwen/Qwen2.5-VL-7B-Instruct} at revision \texttt{cc594898137f460bfe9f0759e9844b3ce807cfb5}, with processor resolution fixed at $336^2$ pixels.
+The Effusion prompt is ``Is there a pleural effusion in this chest radiograph? Answer yes or no.'' The Edema prompt is ``Is there pulmonary edema in this chest radiograph? Answer yes or no.'' The Consolidation prompt substitutes ``consolidation'' in the same template. The ownership matrix likewise uses one fixed yes/no prompt for each of its six named findings. LLaVA uses \texttt{llava-hf/llava-1.5-7b-hf} at revision \texttt{b234b804b114d9e37bb655e11cbbb5f5e971b7a9}. Qwen uses \texttt{Qwen/Qwen2.5-VL-7B-Instruct} at revision \texttt{cc594898137f460bfe9f0759e9844b3ce807cfb5}, with processor resolution fixed at $336^2$ pixels.
+
+\paragraph{Ownership prompts and answer score.}
+The six matrix prompts ask ``Is there [finding] in this chest radiograph? Answer yes or no.'' with [finding] instantiated as ``a pleural effusion,'' ``atelectasis,'' ``a pneumothorax,'' ``cardiomegaly,'' ``a lung mass,'' and ``a lung nodule.'' At the first generated position, the scorer takes the maximum log probability among each tokenizer's single-token forms of \texttt{yes}, \texttt{Yes}, or \texttt{YES} (with and without a leading space), does the same for \texttt{no}, and applies a two-class logistic normalization to their difference.
 
 \paragraph{Rows and seeds.}
-The deterministic NIH split hashes patient identity. Probe projection and fitting use seed 0. Type-to-label controls use seeds 0--19. Probe intervals use 2,000 patient-cluster draws with seed 20260827. The independent Qwen cohort excludes every patient in the original intervention set, chooses one row per remaining patient with SHA-256 of \texttt{qwen-direction-specificity-row-v1\textbackslash0<row\_id>}, ranks patients with SHA-256 of \texttt{qwen-direction-specificity-patient-v1\textbackslash0<patient\_id>}, and takes the first 400. The canonical row-list SHA-256 is \texttt{76be1da9659973d44a0898fa69c579afc4649f329ee227b19d1216efaa1c8bda}. Supplement bootstraps use seed 20260903.
+The deterministic NIH split hashes patient identity. Probe projection and fitting use seed 0. Type-to-label controls use seeds 0--19. Probe intervals use 2,000 patient-cluster draws with seed 20260827. The independent Qwen cohort excludes every patient in the original intervention set, chooses one row per remaining patient with SHA-256 of \texttt{qwen-direction-specificity-row-v1\textbackslash0<row\_id>}, ranks patients with SHA-256 of \texttt{qwen-direction-specificity-patient-v1\textbackslash0<patient\_id>}, and takes the first 400. Its canonical row-list SHA-256 is \texttt{76be1da9659973d44a0898fa69c579afc4649f329ee227b19d1216efaa1c8bda}; supplement bootstraps use seed 20260903. The ownership matrix selects a third label-blind 400-patient cohort with row-list SHA-256 \texttt{e657a9bd1707f13695b02a341047af6f53981295b840376eb0ea5bbebfe2d312} and bootstrap seed 20260904. The Consolidation cohort excludes all 1,000 earlier Qwen rows and hash-selects one positive/negative pair for 50 patients; its pair-list SHA-256 is \texttt{20dcc8cc3aaa8c65a6f7f759a0ff6bf3b0cf4f1b87f4b65cdc6a15a46c6d85e2}, with bootstrap seed 20260905.
 
 \paragraph{Immutable runs.}
-The accepted full runs are \texttt{20260902T191411Z-ffd523c464c8-f99e2f39} (LLaVA Effusion), \texttt{20260902T221534Z-110b84618d1b-edema} (LLaVA Edema), \texttt{20260903T000321Z-caaae3ef346d-qwen-full} (Qwen Effusion), and \texttt{20260903T103508Z-456c81bad460-7a3edc4b} (Qwen direction specificity). Their recorded GPU wall times are 7,022, 1,823, 2,077, and 361 seconds, respectively, for 11,283 seconds total on one A100 per run. The latter three reuse accepted upstream activations or direction artifacts where registered.
+The accepted full runs are \texttt{20260902T191411Z-ffd523c464c8-f99e2f39} (LLaVA Effusion), \texttt{20260902T221534Z-110b84618d1b-edema} (LLaVA Edema), \texttt{20260903T000321Z-caaae3ef346d-qwen-full} (Qwen Effusion), \texttt{20260903T103508Z-456c81bad460-7a3edc4b} (Qwen direction specificity), \texttt{20260904T125710Z-a3bd883540eb-causal-ownership} (Qwen ownership), and \texttt{20260904T162317Z-8a55a4c2f6b6-consolidation-closure} (Qwen input closure). Their recorded GPU wall times are 7,022, 1,823, 2,077, 361, 9,211, and 445 seconds, respectively, for 20,939 seconds total on one A100 per run. Downstream gates reuse accepted activations or directions where registered.
 
-Every accepted run uses an immutable commit snapshot and records commands, environment, timings, outputs, and terminal checksums. Internal validation replays decision summaries from accepted artifacts.
+Every accepted run uses an immutable commit snapshot and records commands, environment, timings, outputs, and terminal checksums. Internal validation replays decision summaries from accepted artifacts. The ownership run contains 304,800 outcomes and 5,000 bootstrap draws; its mechanism-route replay is byte-identical. The closure run contains 6,450 outcomes; deterministic replay reproduces all 257 decision arrays exactly.
+
+\section{Complete Registered Settings}
+
+\begin{table}[H]
+\centering
+\small
+\caption{Fixed settings shared by the registered cells.}
+\begin{tabular}{ll}
+\toprule
+Component & Registered value \\
+\midrule
+Readout & 512-dimensional Gaussian projection; logistic regression, $C=1$ \\
+Probe seed & 0 \\
+Control labels & 20 recurring-type maps, seeds 0--19 \\
+Probe uncertainty & 2,000 patient-cluster bootstrap draws \\
+Concept doses & $-1,-0.5,-0.25,-0.1,0,0.1,0.25,0.5,1$ \\
+Controlled doses & $-1,-0.5,-0.25,0.25,0.5,1$ \\
+Generic controls & 20 isotropic random directions; coordinate-permutation sham \\
+Clinical controls & Atelectasis, Pneumothorax, Cardiomegaly, Mass, Nodule \\
+Supplement & $\alpha=+0.25$; 400 patients; 5,000 patient bootstraps \\
+Ownership & $6\times6$ clinical grid; 119 random directions; 5,000 bootstraps \\
+Input closure & 50 patient pairs; displacement-matched dose; 5,000 bootstraps \\
+\bottomrule
+\end{tabular}
+\end{table}
 
 \section{Forward-Path Checks}
 
 \paragraph{Hook witnesses.}
 For LLaVA, the accepted hook captures \texttt{encoder.layers.22} once, preserves a bitwise no-op at $\alpha=0$, and yields maximum absolute changes of 1.1875 at the downstream connector and 0.1875 in the final logits under a nonzero relative-token intervention. For Qwen, the accepted hook verifies 32 visual blocks, captures \texttt{model.visual.blocks.31}, preserves the $\alpha=0$ no-op, and changes both \texttt{model.visual.merger} and final logits under $\alpha=+0.1$.
+
+\section{Paired Decoding Contrasts}
+
+\begin{table}[h]
+\centering
+\small
+\caption{Paired controlled-decoding contrasts. Both intervals span zero.}
+\begin{tabular}{lcc}
+\toprule
+Contrast & Estimate & 95\% patient-bootstrap CI \\
+\midrule
+LLaVA Edema $-$ LLaVA Effusion & 0.0221 & $[-0.0175,0.0590]$ \\
+Qwen Effusion $-$ LLaVA Effusion & 0.0026 & $[-0.0155,0.0215]$ \\
+\bottomrule
+\end{tabular}
+\end{table}
