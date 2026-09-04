@@ -5,16 +5,6 @@
 \renewcommand{\thetable}{A\arabic{table}}
 \renewcommand{\theHtable}{appendix.A.\arabic{table}}
 
-\definecolor{cfblue}{RGB}{24,78,141}
-\definecolor{cflightblue}{RGB}{232,241,249}
-\definecolor{cforange}{RGB}{230,104,24}
-\definecolor{cflightorange}{RGB}{253,237,224}
-\definecolor{cfteal}{RGB}{16,119,128}
-\definecolor{cfgray}{RGB}{235,237,240}
-
-\newcommand{\diagcell}[1]{\cellcolor{cflightblue}\textbf{\underline{#1}}}
-\newcommand{\winnercell}[1]{\cellcolor{cflightorange}\textbf{#1}}
-
 \section{Prompts, Scores, and Notation}
 \label{app:protocol}
 
@@ -46,32 +36,7 @@ of a generated clinical report.
 
 \begin{figure}[H]
 \centering
-\setlength{\fboxsep}{4pt}
-\fcolorbox{cfblue}{cflightblue}{%
-\begin{minipage}{0.94\linewidth}
-\textbf{Fixed clinical question template}\par\smallskip
-\centering\ttfamily\small
-Is there <finding> in this chest radiograph? Answer yes or no.
-\end{minipage}}
-
-\vspace{0.8em}
-\begin{tabular}{@{}p{0.30\linewidth}p{0.30\linewidth}p{0.30\linewidth}@{}}
-\fcolorbox{cfblue!70}{white}{\parbox{0.25\textwidth}{\centering\footnotesize\textbf{Effusion}\\\ttfamily a pleural effusion}} &
-\fcolorbox{cfblue!70}{white}{\parbox{0.25\textwidth}{\centering\footnotesize\textbf{Atelectasis}\\\ttfamily atelectasis}} &
-\fcolorbox{cfblue!70}{white}{\parbox{0.25\textwidth}{\centering\footnotesize\textbf{Pneumothorax}\\\ttfamily a pneumothorax}} \\
-\noalign{\vskip 5pt}
-\fcolorbox{cfteal!70}{white}{\parbox{0.25\textwidth}{\centering\footnotesize\textbf{Cardiomegaly}\\\ttfamily cardiomegaly}} &
-\fcolorbox{cfteal!70}{white}{\parbox{0.25\textwidth}{\centering\footnotesize\textbf{Mass}\\\ttfamily a lung mass}} &
-\fcolorbox{cfteal!70}{white}{\parbox{0.25\textwidth}{\centering\footnotesize\textbf{Nodule}\\\ttfamily a lung nodule}} \\
-\end{tabular}
-
-\vspace{0.9em}
-\begin{tabular}{@{}c@{\hspace{1pt}$\longrightarrow$\hspace{1pt}}c@{\hspace{1pt}$\longrightarrow$\hspace{1pt}}c@{\hspace{1pt}$\longrightarrow$\hspace{1pt}}c@{}}
-\fcolorbox{cfblue}{white}{\parbox{0.15\textwidth}{\centering\footnotesize image + fixed question}} &
-\fcolorbox{cfblue}{white}{\parbox{0.15\textwidth}{\centering\footnotesize first-position logits}} &
-\fcolorbox{cfteal}{white}{\parbox{0.19\textwidth}{\centering\footnotesize max score over valid yes/no token variants}} &
-\fcolorbox{cforange}{white}{\parbox{0.17\textwidth}{\centering\footnotesize $P(\mathrm{yes})=\sigma(\ell_{\mathrm{yes}}-\ell_{\mathrm{no}})$}}
-\end{tabular}
+\includegraphics[width=\linewidth]{figures/figA1_prompt_score.pdf}
 \caption{\textbf{The registered prompts share one template and one answer score.}
 The six findings instantiate an otherwise fixed yes/no question, and every
 model uses the same first-answer-position scoring sequence.}
@@ -261,18 +226,7 @@ resampling unit.
 
 \begin{figure}[H]
 \centering
-\begin{tabular}{@{}c@{\hspace{5pt}$\longrightarrow$\hspace{5pt}}c@{\hspace{5pt}$\longrightarrow$\hspace{5pt}}c@{}}
-\fcolorbox{cfblue}{cflightblue}{\parbox{0.24\linewidth}{\centering\small immutable commit\\commands + environment}} &
-\fcolorbox{cfteal}{white}{\parbox{0.24\linewidth}{\centering\small accepted artifacts\\terminal checksums}} &
-\fcolorbox{cforange}{cflightorange}{\parbox{0.24\linewidth}{\centering\small deterministic replay\\review receipt}}
-\end{tabular}
-
-\vspace{0.7em}
-\begin{tabular}{ccc}
-\fcolorbox{cfblue}{white}{\parbox{0.25\linewidth}{\centering\large\textbf{304,800}\\\footnotesize ownership outcomes}} &
-\fcolorbox{cfteal}{white}{\parbox{0.25\linewidth}{\centering\large\textbf{6,450}\\\footnotesize closure outcomes}} &
-\fcolorbox{cforange}{white}{\parbox{0.25\linewidth}{\centering\large\textbf{257/257}\\\footnotesize closure arrays replayed}}
-\end{tabular}
+\includegraphics[width=\linewidth]{figures/figA2_provenance.pdf}
 \caption{\textbf{Accepted evidence follows one immutable provenance chain.}
 Downstream gates reuse accepted activations or directions where registered;
 the mechanism-route replay is byte-identical.}
@@ -305,32 +259,12 @@ original Effusion comparison.
 
 \begin{figure}[H]
 \centering
-\scriptsize
-\setlength{\tabcolsep}{4.0pt}
-\renewcommand{\arraystretch}{1.35}
-\begin{tabular}{lrrrrrr}
-\toprule
-Steering $d$ $\backslash$ question $q$ & Eff. & Atel. & Pneu. & Card. & Mass & Nod. \\
-\midrule
-Effusion      & \diagcell{0.181} & \cellcolor{cfblue!40}0.308 & \winnercell{0.194} & \cellcolor{cfblue!34}0.259 & \winnercell{0.511} & \winnercell{0.182} \\
-Atelectasis   & \cellcolor{cfblue!12}0.069 & \diagcell{0.093} & \cellcolor{cfblue!18}0.114 & \winnercell{0.312} & \cellcolor{cfblue!22}0.147 & \cellcolor{cfblue!4}0.012 \\
-Pneumothorax  & \cellcolor{cfblue!5}0.022 & \cellcolor{cfblue!8}0.044 & \diagcell{0.086} & \cellcolor{cfgray!30}$-0.053$ & \cellcolor{cfblue!3}0.006 & \cellcolor{cfgray!20}$-0.030$ \\
-Cardiomegaly  & \cellcolor{cfblue!4}0.015 & \cellcolor{cfblue!7}0.037 & \cellcolor{cfblue!7}0.039 & \diagcell{0.114} & \cellcolor{cfblue!22}0.149 & \cellcolor{cfblue!1}0.001 \\
-Mass          & \cellcolor{cfblue!14}0.078 & \cellcolor{cfblue!23}0.155 & \cellcolor{cfblue!11}0.063 & \cellcolor{cfblue!22}0.150 & \diagcell{0.359} & \cellcolor{cfblue!24}0.160 \\
-Nodule        & \winnercell{0.245} & \winnercell{0.323} & \cellcolor{cfblue!6}0.026 & \cellcolor{cfblue!38}0.283 & \cellcolor{cfblue!33}0.255 & \diagcell{0.099} \\
-\bottomrule
-\end{tabular}
-
-\vspace{0.8em}
-\begin{tabular}{ccc}
-\fcolorbox{cfblue}{cflightblue}{\parbox{0.24\linewidth}{\centering\large\textbf{0/6}\\\footnotesize named concepts owned}} &
-\fcolorbox{cforange}{cflightorange}{\parbox{0.24\linewidth}{\centering\large\textbf{6/6}\\\footnotesize off-diagonal winners}} &
-\fcolorbox{cfteal}{white}{\parbox{0.24\linewidth}{\centering\large\textbf{0/6}\\\footnotesize diagonals beat random controls}}
-\end{tabular}
+\includegraphics[width=\linewidth]{figures/figA3_ownership_matrix.pdf}
 \caption{\textbf{Every clinical question is moved most by an off-diagonal
-direction.} Blue underlined cells mark the named diagonals, orange cells mark
-each column's strongest clinical direction, and color intensity encodes effect
-magnitude while the printed values remain authoritative.}
+direction.} Outlined cells mark the named diagonals, and orange triangles
+mark each column's strongest clinical direction. The continuous color scale
+encodes signed effects, with white at zero; printed values give the
+corresponding estimates to three decimal places.}
 \label{fig:ownership-matrix}
 \end{figure}
 
@@ -397,46 +331,12 @@ pattern does not confirm the shared-alias hypothesis.
 
 \begin{figure}[H]
 \centering
-\begin{minipage}[t]{0.46\linewidth}
-\centering
-\textbf{Mean off-diagonal effect by direction}\par\smallskip
-\footnotesize
-\begin{tabular}{@{}lr@{}}
-Atelectasis & .131 \\
-\multicolumn{2}{l}{\colorbox{cfblue!45}{\rule{19.2mm}{1.2ex}}} \\
-Cardiomegaly & .048 \\
-\multicolumn{2}{l}{\colorbox{cfblue!45}{\rule{7.1mm}{1.2ex}}} \\
-\textbf{Effusion} & \textbf{.291} \\
-\multicolumn{2}{l}{\colorbox{cforange!65}{\rule{42.7mm}{1.2ex}}} \\
-Mass & .121 \\
-\multicolumn{2}{l}{\colorbox{cfblue!45}{\rule{17.8mm}{1.2ex}}} \\
-Nodule & .226 \\
-\multicolumn{2}{l}{\colorbox{cfblue!45}{\rule{33.2mm}{1.2ex}}} \\
-Pneumothorax & $-.002$ \\
-\end{tabular}
-\end{minipage}\hfill
-\begin{minipage}[t]{0.46\linewidth}
-\centering
-\textbf{Candidate against global controls}\par\smallskip
-\footnotesize
-\begin{tabular}{@{}lr@{}}
-Effusion candidate & .291 \\
-\multicolumn{2}{l}{\colorbox{cforange!65}{\rule{42.7mm}{1.2ex}}} \\
-Global random max & .340 \\
-\multicolumn{2}{l}{\colorbox{cfgray}{\rule{50.0mm}{1.2ex}}} \\
-Global $|$sham$|$ max & .214 \\
-\multicolumn{2}{l}{\colorbox{cfteal!35}{\rule{31.5mm}{1.2ex}}} \\
-\end{tabular}
-
-\vspace{0.9em}
-\fcolorbox{cfblue}{cflightblue}{\parbox{0.38\textwidth}{\centering\footnotesize
-Effusion dominance LCB $=.133$\\effect LCB $=.281$\\
-\textbf{shared alias: not detected}}}
-\end{minipage}
+\includegraphics[width=\linewidth]{figures/figA4_shared_alias.pdf}
 \caption{\textbf{Effusion is the strongest shared-alias candidate but remains
-below the registered random-control maximum.} Bar lengths use one common
-$P(\mathrm{yes})$-change scale from 0 to 0.340; simultaneous max-$T$ lower
-bounds are reported separately.}
+below the registered random-control maximum.} Both panels use a common
+$P(\mathrm{yes})$-change axis and zero baseline. Markers indicate point
+estimates, with horizontal stems showing their signed distance from zero.
+Simultaneous max-$T$ lower bounds for the candidate are reported separately.}
 \label{fig:shared-alias}
 \end{figure}
 
@@ -513,55 +413,15 @@ eligible reader and positive point estimates.
 
 \begin{figure}[H]
 \centering
-\begin{minipage}[t]{0.47\linewidth}
-\centering
-\fcolorbox{cfblue}{cflightblue}{\parbox{0.88\linewidth}{
-\textbf{A. Reader eligibility}\par\smallskip
-\small Probe AUROC: \textbf{.7218}\par
-Selectivity: \textbf{.0642}\par
-95\% CI: $[.0302,.0976]$
-}}
-
-\vspace{0.7em}
-\fcolorbox{cfteal}{white}{\parbox{0.88\linewidth}{
-\textbf{B. Paired input displacement}\par\smallskip
-\small Estimate: \textbf{.1091}\par
-One-sided 95\% LCB: \textbf{$-.0364$}\par
-$50$ fresh patient pairs
-}}
-\end{minipage}\hfill
-\begin{minipage}[t]{0.47\linewidth}
-\centering
-\begin{minipage}{0.88\linewidth}
-\color{cforange}\hrule\color{black}\smallskip
-\textbf{\color{cforange}C. Closure gains}\par\smallskip
-\footnotesize
-\begin{tabular}{@{}lr@{}}
-Concept & .00220 \\
-\multicolumn{2}{l}{\colorbox{cforange!60}{\rule{12.1mm}{1.1ex}}} \\
-Random max & .00246 \\
-\multicolumn{2}{l}{\colorbox{cfgray}{\rule{13.5mm}{1.1ex}}} \\
-Best clinical & .00024 \\
-\multicolumn{2}{l}{\colorbox{cfteal!30}{\rule{1.3mm}{1.1ex}}} \\
-Sham & $-.00046$ \\
-\end{tabular}
-\smallskip\color{cforange}\hrule\color{black}
-\end{minipage}
-
-\vspace{0.7em}
-\fcolorbox{cfblue}{white}{\parbox{0.88\linewidth}{
-\textbf{D. Registered conjunction}\par\smallskip
-\small Clinical margin: \textbf{.00197}\par
-One-sided 95\% LCB: \textbf{$-.00153$}\par
-Exact random-rank $p=.025$\par
-\textbf{Input closure: not confirmed}
-}}
-\end{minipage}
+\includegraphics[width=\linewidth]{figures/figA5_input_closure.pdf}
 \caption{\textbf{The Consolidation direction is readable, but its measured
-write does not reliably close the paired input gap.} Panels A and B retain
-their own uncertainty scales. Panel C compares closure gains on a common scale
-whose longest bar is the random maximum; panel D reports the registered joint
-decision.}
+write does not reliably close the paired input gap.} Panel A shows the reader
+estimate and two-sided 95\% interval. Panels B and D show point estimates
+and one-sided 95\% lower bounds; arrows extend toward larger values rather
+than indicating a finite upper confidence limit. Panel C compares gains on
+a common axis with a zero baseline. Panels C and D display values in units of
+$10^{-3}$; the descriptive random-rank result does not replace the joint
+confirmation rule.}
 \label{fig:input-closure}
 \end{figure}
 
@@ -622,19 +482,7 @@ measured.
 
 \begin{figure}[H]
 \centering
-\begin{tabular}{@{}c@{\hspace{3pt}$\longrightarrow$\hspace{3pt}}c@{\hspace{3pt}$\longrightarrow$\hspace{3pt}}c@{\hspace{3pt}$\longrightarrow$\hspace{3pt}}c@{}}
-\fcolorbox{cfblue}{white}{\parbox{0.15\linewidth}{\centering\footnotesize visual tokens}} &
-\fcolorbox{cfblue}{cflightblue}{\parbox{0.21\linewidth}{\centering\footnotesize consumed final block\\capture + intervention}} &
-\fcolorbox{cfteal}{white}{\parbox{0.18\linewidth}{\centering\footnotesize connector / merger\\downstream witness}} &
-\fcolorbox{cforange}{cflightorange}{\parbox{0.16\linewidth}{\centering\footnotesize answer logits\\endpoint witness}}
-\end{tabular}
-
-\vspace{0.8em}
-\begin{tabular}{ccc}
-\fcolorbox{cfblue}{white}{\parbox{0.25\linewidth}{\centering\small $\alpha=0$\\\textbf{bitwise no-op}}} &
-\fcolorbox{cfteal}{white}{\parbox{0.25\linewidth}{\centering\small nonzero $\alpha$\\\textbf{downstream change}}} &
-\fcolorbox{cforange}{white}{\parbox{0.25\linewidth}{\centering\small accepted artifact\\\textbf{deterministic replay}}}
-\end{tabular}
+\includegraphics[width=\linewidth]{figures/figA6_forward_path.pdf}
 \caption{\textbf{A valid intervention must enter the consumed forward path
 and reach the answer logits.} The same hook is tested at zero and nonzero dose
 before its scientific outcomes are interpreted.}

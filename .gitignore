@@ -6,3 +6,4 @@ main.pdf
 *.out
 *.synctex.gz
 tmp/
+__pycache__/
