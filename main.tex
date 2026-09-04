@@ -1,10 +1,12 @@
 \PassOptionsToPackage{table}{xcolor}
 \documentclass{article}
-\usepackage{iclr2025_conference}
+\usepackage{iclr2027_conference}
 \usepackage{newtxtext,newtxmath}
 \usepackage{microtype}
 \usepackage{graphicx}
 \usepackage{booktabs}
+\usepackage{float}
+\usepackage{placeins}
 \usepackage{amsmath}
 \let\Bbbk\relax
 \usepackage{amssymb}
@@ -14,8 +16,9 @@
 \hypersetup{hidelinks}
 \input{math_commands}
 
-\title{Beyond Decodability:\\
-A Three-Rung Test for Causal Clinical Directions in Medical Vision-Language Models}
+\title{Reading Is Not Writing:\\
+Semantic Competition for Probe Directions\\
+in Medical Vision-Language Models}
 \author{Anonymous Authors}
 
 \begin{document}
@@ -32,8 +35,10 @@ A Three-Rung Test for Causal Clinical Directions in Medical Vision-Language Mode
 \input{sections/5_discussion}
 \input{sections/6_conclusion}
 
+\input{sections/7_ai_statement}
+
 \bibliography{refs}
-\bibliographystyle{iclr2025_conference}
+\bibliographystyle{iclr2027_conference}
 
 \appendix
 \input{sections/A_appendix}

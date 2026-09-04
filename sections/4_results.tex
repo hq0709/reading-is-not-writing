@@ -1,47 +1,55 @@
-\section{Results: Availability, Selectivity, and Specificity}
+\section{Results: A Reproducible Writer Meets Semantic Competition}
 \label{sec:results}
 
-\subsection{Every cell establishes robust linear availability}
-\label{sec:decoding-results}
+\subsection{A non-generic write effect replicates}
+\label{sec:qwen-replication}
 
 \input{tables/table_decoding}
 
-All three final-block representations make the target label available to the fixed linear readout (Table~\ref{tab:decoding}). LLaVA Effusion reaches AUROC 0.7788 and selectivity 0.1139 (95\% CI $[0.0875,0.1404]$). LLaVA Edema reaches AUROC 0.8009 and selectivity 0.1360 ($[0.0994,0.1693]$). Qwen Effusion reaches AUROC 0.7742 and selectivity 0.1166 ($[0.0897,0.1428]$). Each selectivity interval excludes zero despite the control maps' substantial spread.
+Qwen Effusion first satisfies the reader test. At the consumed final visual block, its probe reaches AUROC 0.7742 and controlled selectivity 0.1166 (95\% CI $[0.0897,0.1428]$; Table~\ref{tab:decoding}). It then makes a strong write-direction case in the original 200-image cohort: the maximum concept-consistent change is 0.2343 at $\alpha=+0.25$, above the random-direction 95th percentile of 0.0963 and the maximum absolute sham effect of 0.0852.
 
-The paired decoding contrasts do not resolve a concept or architecture ordering. Within LLaVA, Edema-minus-Effusion selectivity is 0.0221 with a paired 95\% CI of $[-0.0175,0.0590]$. For Effusion, Qwen-minus-LLaVA selectivity is 0.0026 with a paired CI of $[-0.0155,0.0215]$. The cells therefore provide similarly strong availability evidence without supporting a rank claim.
+The locked-dose response reproduces on the patient-disjoint 400-patient cohort (Figure~\ref{fig:specificity}). Effusion changes mean $P(yes)$ by 0.1945, again above the random-direction 95th percentile of 0.0878 and absolute sham effect of 0.0157. None of these patients appears in the original intervention cohort, and the dose was not reselected, supporting a large and reproducible non-generic effect within ChestX-ray14.
 
-\subsection{Matched generic controls reveal a causal split}
-\label{sec:generic-results}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.90\textwidth]{figures/fig3_direction_specificity.pdf}
+    \caption{\textbf{Qwen Effusion reproduces as a non-generic write direction, but semantic competition changes its attribution.} \textbf{(a)} Changes in mean $P(yes)$ at the locked dose $\alpha=+0.25$ on 400 patients absent from the original cohort. The random group contains 20 directions; its dashed segment marks p95. Diamonds show the five fixed alternative clinical normals. \textbf{(b)} The Effusion-minus-maximum-alternative statistic with its two-sided 95\% patient-bootstrap interval; the registered one-sided 95\% lower bound is $-0.0678$. Nodule realizes the point-estimate maximum.}
+    \label{fig:specificity}
+\end{figure}
 
-\begin{figure*}[t]
+\FloatBarrier
+
+\subsection{Semantic competition changes attribution, not efficacy}
+\label{sec:specificity-results}
+
+The fixed clinical family provides a harder identification test than non-semantic controls. Nodule changes the Effusion answer by 0.2519 and realizes the point-estimate maximum among the five alternatives. The Effusion-minus-maximum-alternative margin is $-0.0573$. Recomputing the maximum inside each of 5,000 patient-bootstrap draws gives a two-sided 95\% CI of $[-0.0694,-0.0450]$ and a one-sided 95\% lower bound of $-0.0678$. The entire interval is below zero. Descriptively, Effusion exceeds the other four alternatives by 0.1172--0.1778; Nodule is the only alternative with a larger point estimate in this fixed family.
+
+Qwen Effusion therefore remains a reproducible direction that changes the answer beyond random and sham perturbations, while its specific semantic attribution fails. The familywise endpoint establishes that at least one fixed clinical alternative is stronger; Nodule is the point-estimate maximizer, not a separately familywise-identified semantic owner.
+
+\begin{figure}[H]
     \centering
     \includegraphics[width=\textwidth]{figures/fig2_dose_responses.pdf}
-    \caption{\textbf{Registered dose responses at the consumed final visual block.} The blue curve is the raw change in mean $P(yes)$ under the target probe normal on the same 200 held-out images per cell. Gray bands show the 5th--95th percentile across 20 equal-norm random directions at the six controlled nonzero doses; orange crosses show the coordinate-permutation sham. The concept-consistent orientation used by the registered decision rule accounts for the negative-dose maxima in the two LLaVA cells.}
+    \caption{\textbf{Comparable readers become different writers at the consumed final visual block.} The blue curve is the raw change in mean $P(yes)$ under the target probe normal on the same 200 held-out images per cell. Gray bands show the 5th--95th percentile across 20 equal-norm random directions at the six controlled nonzero doses; orange crosses show the coordinate-permutation sham. The concept-consistent rule uses $\operatorname{sign}(\alpha)\Delta(\alpha)$, accounting for the negative-dose maxima in the two LLaVA cells.}
     \label{fig:dose}
-\end{figure*}
+\end{figure}
 
-Figure~\ref{fig:dose} shows the complete target dose curves and matched controls. LLaVA Effusion attains a maximum concept-consistent change of 0.1470 at $\alpha=-1$. This value exceeds the same-dose random p95 of 0.1202 but remains below the maximum absolute sham effect of 0.1546. The response is monotone over $[-0.5,0.5]$ (Spearman $\rho=1.0$), yet monotonicity does not replace the failed sham criterion.
+\FloatBarrier
 
-LLaVA Edema attains 0.0659 at $\alpha=-1$. It lies inside the same-dose random interval $[-0.1304,0.1470]$ and below the maximum absolute sham effect of 0.0913. Its descriptive dose monotonicity is $\rho=-0.4286$. Edema's point estimate for controlled decoding is higher but statistically indistinguishable from Effusion's, and it does not clear the generic intervention rule.
+\subsection{The reader--writer mismatch begins earlier in LLaVA}
+\label{sec:generic-results}
 
-Qwen Effusion clears the original random/sham rung. Its maximum concept-consistent change is 0.2343 at $\alpha=+0.25$, above random p95 0.0963 and the maximum absolute sham effect 0.0852. The response is nearly monotone over the registered central range ($\rho=0.9643$). This original rule establishes selectivity against generic perturbation controls. The same-dose Nodule effect of 0.2863 then exposes the missing semantic test and motivates the separate prospective specificity endpoint.
+The LLaVA cells show that the mismatch can arise before semantic competition. Both are robust readers: Effusion reaches AUROC 0.7788 and selectivity 0.1139 (95\% CI $[0.0875,0.1404]$), while Edema reaches AUROC 0.8009 and selectivity 0.1360 ($[0.0994,0.1693]$). Their selectivity intervals exclude zero, as does Qwen's, but their write directions do not clear the registered random-and-sham conjunction (Figure~\ref{fig:dose}).
+
+LLaVA Effusion attains a maximum concept-consistent change of 0.1470 at $\alpha=-1$. It exceeds the same-dose random p95 of 0.1202 but remains below the maximum absolute sham effect of 0.1546. Its monotone central response ($\rho=1.0$ over $[-0.5,0.5]$) is descriptively coherent, but does not distinguish the probe normal from the sham.
+
+LLaVA Edema attains 0.0659 at $\alpha=-1$. It lies inside the same-dose random interval $[-0.1304,0.1470]$ and below the maximum absolute sham effect of 0.0913. Its descriptive dose monotonicity is $\rho=-0.4286$. Neither its random nor sham comparison supports a selective write effect.
+
+The decoding contrasts reinforce this dissociation. Within LLaVA, Edema-minus-Effusion selectivity is 0.0221 with paired 95\% CI $[-0.0175,0.0590]$; for Effusion, Qwen-minus-LLaVA is 0.0026 with CI $[-0.0155,0.0215]$. The intervals do not resolve a reader ordering, while the generic-control outcomes still differ.
+
+\subsection{Each control changes the scientific claim}
+
+The experiments separate three statements that are often collapsed. Controlled decoding supports that a label is available to a fixed reader. Random and sham controls support that a labeled normal is an unusually effective writer relative to matched non-semantic perturbations. Semantic competition asks whether the clinical name attached by the reader is specific to that write effect. Qwen supports the first two statements but not the third; LLaVA establishes the first but not the second. Holding locus, dose, rows, endpoint, and uncertainty calculation fixed makes the reader--writer gap experimentally visible.
 
 \input{tables/table_gates}
 
-\subsection{Clinical competition changes the meaning of the generic pass}
-\label{sec:specificity-results}
-
-\begin{figure*}[t]
-    \centering
-    \includegraphics[width=0.82\textwidth]{figures/fig3_direction_specificity.pdf}
-    \caption{\textbf{Qwen Effusion replicates above generic controls but not fixed clinical directions.} \textbf{(a)} Changes in mean $P(yes)$ at $\alpha=+0.25$ on 400 patients absent from the original cohort. The random group contains 20 directions; its dashed segment marks p95. Diamonds show the five fixed unrelated clinical normals. \textbf{(b)} The Effusion-minus-maximum-unrelated statistic with its two-sided 95\% patient-bootstrap interval; the registered one-sided 95\% lower bound is $-0.0678$. Nodule realizes the point-estimate maximum.}
-    \label{fig:specificity}
-\end{figure*}
-
-The independent cohort reproduces Qwen's generic response (Figure~\ref{fig:specificity}). Effusion changes mean $P(yes)$ by 0.1945, above random p95 0.0878 and absolute sham 0.0157. This result uses 400 distinct patients, all absent from the original intervention cohort, and retains the discovery-locked dose.
-
-The clinical comparison changes the scientific meaning of that generic pass. Nodule changes mean $P(yes)$ by 0.2519 and realizes the maximum unrelated-direction effect. The reported Effusion-minus-maximum-unrelated margin is $-0.0573$. When the maximum over all five fixed clinical directions is recomputed in each bootstrap replicate, its two-sided 95\% CI is $[-0.0694,-0.0450]$ and its one-sided 95\% lower bound is $-0.0678$. The replicated effect is causally non-generic, but the named Effusion direction does not own it under the registered specificity criterion.
-
-\subsection{The evidence ladder localizes each supported interpretation}
-
-The results form one ordered finding. First, every target is robustly available to the same-capacity linear readout. Second, matched generic controls distinguish the two LLaVA cells from Qwen Effusion, so availability alone does not determine intervention selectivity. Third, Qwen's replicated generic-control pass meets a fixed family of clinical alternatives and yields a stronger Nodule response, separating non-generic causal influence from clinical identity. The shared location, dose, rows, controls, and uncertainty calculation make each rung an explicit claim boundary rather than an informal interpretation.
+\FloatBarrier
