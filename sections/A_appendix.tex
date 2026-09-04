@@ -103,12 +103,12 @@ further 400-patient cohort, and R6 uses paired studies from 50 fresh patients.
 The ownership experiment accounts for 9,211 of the 20,939 recorded GPU
 seconds because it evaluates the full question--direction surface with 119
 random directions. These are recorded run times, including registered reuse
-of existing artifacts, rather than a hardware-normalized cost comparison.
+of saved computations, rather than a hardware-normalized cost comparison.
 
 \begin{table}[H]
 \centering
 \small
-\caption{The six accepted runs contributing evidence to the manuscript. GPU
+\caption{The six experimental runs contributing evidence to the manuscript. GPU
 time sums to 20,939 seconds; each run used one A100.}
 \label{tab:run-ledger}
 \begin{tabular}{cllrrrr}
@@ -134,22 +134,22 @@ therefore be interpreted separately from the unpaired 400-patient tests.
 \subsection{Cohort identity and fixed settings}
 
 Table~\ref{tab:run-identifiers} links the run labels to immutable executions
-and gives the accepted row or pair receipts for the prospective cohorts.
+and gives the row or pair selection hashes for the prospective cohorts.
 The specificity cohort excludes patients in the original intervention set,
 and ownership uses a third label-blind cohort. Closure excludes the earlier
 Qwen evaluation rows and selects one positive and one negative study for
-each eligible patient. The receipts identify the exact evaluation units
+each eligible patient. These hashes identify the exact evaluation units
 used in those comparisons, so a replay can be tied to the same cohort as the
 reported result.
 
 \begin{table}[H]
 \centering
 \footnotesize
-\caption{Immutable run identifiers and registered cohort receipts.}
+\caption{Immutable run identifiers and evaluation-cohort selection hashes.}
 \label{tab:run-identifiers}
 \begin{tabular}{cp{0.79\linewidth}}
 \toprule
-Run & Immutable identifier or cohort receipt \\
+Run & Run identifier and cohort selection hash \\
 \midrule
 R1 & \nolinkurl{20260902T191411Z-ffd523c464c8-f99e2f39} \\
 R2 & \nolinkurl{20260902T221534Z-110b84618d1b-edema} \\
@@ -505,7 +505,7 @@ the corresponding implementation evidence.
 Table~\ref{tab:hook-witnesses} gives the corresponding model-specific
 witnesses. Here the maximum absolute change is taken elementwise between
 the perturbed and unperturbed downstream tensors or logits. LLaVA's hook
-fires once at the accepted block and produces nonzero connector and logit
+fires once at the registered block and produces nonzero connector and logit
 changes; Qwen's final visual block likewise affects both the merger and
 answer logits at $\alpha=+0.1$. The zero-dose column tests baseline
 preservation, and the final two columns test propagation through the
@@ -534,14 +534,14 @@ mismatch. Having established that the manipulation reaches the model
 output, the remaining computational check is whether its saved outcomes
 reproduce the reported decisions.
 
-\subsection{Can the accepted decisions be reproduced?}
+\subsection{Can the reported decisions be reproduced?}
 
 Table~\ref{tab:replay-completeness} reports replay at the decision level for
 the two prospective mechanism gates. Ownership reproduces the mechanism
 route byte for byte, and closure reproduces all 257 decision arrays from
-its accepted outcomes and bootstrap calculation. This agreement connects
+its saved outcomes and bootstrap calculation. This agreement connects
 the reported conclusions to their saved evidence and complements the
-forward-path checks. It is a reproducibility check on the accepted
+forward-path checks. It is a reproducibility check on the reported
 experiments, rather than an additional independent cohort or replication.
 
 \begin{table}[H]
