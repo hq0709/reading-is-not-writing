@@ -1,0 +1,141 @@
+\clearpage
+\section{Paired Behavioral Opportunity Across Model Configurations}
+\label{app:paired-opportunity}
+
+\subsection{A shared, metadata-matched patient cohort}
+
+The paired-opportunity study evaluates 100 fresh test patients, each with
+one Consolidation-positive and one Consolidation-negative study. Patients
+are absent from the entire original probe manifest and all preceding
+intervention cohorts, including the earlier 50-pair closure study.
+Within each patient, the two studies match on view, sex, integer age, and
+all 13 other source disease labels. The fixed selection retains complete
+source records and patient/image order. Matching defines the paired
+population; unrecorded longitudinal differences can remain.
+
+Figure~\ref{fig:paired-prompt} gives the common clinical prompt. Qwen is
+evaluated first, followed by a registered LLaVA comparison on exactly the
+same 200 images. The model-specific processor and chat template wrap that
+prompt. Qwen retains its accepted image processing; LLaVA uses its snapshot
+processor's RGB conversion, 336-pixel shortest-edge resize, $336\times336$
+center crop, CLIP normalization, and default visual feature selection.
+
+\begin{figure}[H]
+\centering
+\begin{minipage}{0.95\linewidth}
+\small
+\fbox{\parbox{0.95\linewidth}{Is there consolidation in this chest radiograph? Answer yes or no.}}
+\end{minipage}
+\caption{\textbf{Both model configurations evaluate the same paired-input question.} The clinical prompt is fixed across the positive and negative studies and across models.}
+\label{fig:paired-prompt}
+\end{figure}
+
+Each model supplies its first-answer yes-minus-no margin, taking the
+maximum over accepted singleton case and leading-space variants for each
+answer. The paired gap subtracts the negative study's margin from the
+positive study's margin in that model's own coordinates. The sigmoid of
+each image's margin gives its yes probability; the probability gap
+subtracts the two probabilities. This is a clean-response measurement,
+with no representation intervention. The Qwen and LLaVA runs each contain
+200 image outcomes and take 31 and 38 seconds, respectively, on one A100.
+
+\subsection{Model-specific opportunity and the direct paired comparison}
+
+The registered opportunity endpoint is the patient-weighted mean margin
+gap within each model. Its one-sided 95\% lower bound is the fifth
+percentile of 5,000 patient-bootstrap estimates. A strictly positive bound
+is required for positive opportunity. Both analyses use the identical
+stored resampling indices, generated with seed 20260912, and retain all
+100 patients irrespective of the sign of their gap.
+Table~\ref{tab:paired-gap-intervals} presents these model-specific endpoints
+and their descriptive two-sided percentile intervals.
+
+\begin{table}[H]
+\centering
+\caption{Uncertainty in paired Consolidation response.}
+\label{tab:paired-gap-intervals}
+\resizebox{\ifdim\width>\linewidth\linewidth\else\width\fi}{!}{%
+\begin{tabular}{lrrr}
+\toprule
+Model & Mean margin gap & One-sided 95\% lower bound & Descriptive 95\% interval \\
+\midrule
+Qwen2.5-VL-7B & $-0.1175$ & $-0.3987$ & $[-0.4500,0.2088]$ \\
+LLaVA-1.5-7B & $-0.0712$ & $-0.1338$ & $[-0.1463,0.0012]$ \\
+\bottomrule
+\end{tabular}%
+}
+\end{table}
+
+Both lower bounds are negative, so neither configuration meets the
+opportunity criterion. The two-sided intervals include positive and
+negative mean responses: positive opportunity remains unresolved in this
+metadata-defined population. The model-specific margin scales are not
+subtracted from one another to infer a model difference.
+
+For that direct comparison, within-patient concordance assigns one to a
+positive gap, zero to a negative gap, and one half to a tie. A tie is exact
+equality of the positive and negative margins under the registered scoring
+configured for BF16. A model's concordance is the mean of these patient
+scores. The cross-model endpoint
+first subtracts Qwen's score from LLaVA's for each patient, then averages
+over the shared cohort. Its descriptive 95\% interval reuses the same
+5,000 patient-bootstrap draws. Table~\ref{tab:paired-concordance} shows the
+gap-sign counts and the direct contrast.
+
+\begin{table}[H]
+\centering
+\caption{Within-patient concordance and its direct model contrast.}
+\label{tab:paired-concordance}
+\resizebox{\ifdim\width>\linewidth\linewidth\else\width\fi}{!}{%
+\begin{tabular}{lrrrrr}
+\toprule
+Model or contrast & Positive & Negative & Tied & Concordance & 95\% interval \\
+\midrule
+Qwen2.5-VL-7B & 54 & 45 & 1 & 0.545 & --- \\
+LLaVA-1.5-7B & 36 & 45 & 19 & 0.455 & --- \\
+LLaVA $-$ Qwen & --- & --- & --- & $-0.090$ & $[-0.210,0.025]$ \\
+\bottomrule
+\end{tabular}%
+}
+\end{table}
+
+The direct interval spans zero, leaving the concordance difference
+unresolved. The sign counts account for every selected patient, and ties
+receive the same half-credit treatment in both models. The direct contrast
+uses the paired patient scores, rather than comparing the significance of
+the separate model-specific opportunity tests.
+
+\subsection{Probability gaps and source-label strata}
+
+Table~\ref{tab:paired-strata} reports complementary descriptive summaries.
+The cohort contains 52 pairs whose negative image is labelled
+\texttt{No Finding} and 48 whose negative image has other source findings.
+Stratum means use the within-model logit gap; the full-cohort probability
+gap uses the difference of sigmoid scores defined above.
+
+\begin{table}[H]
+\centering
+\caption{Paired response across source-label strata.}
+\label{tab:paired-strata}
+\resizebox{\ifdim\width>\linewidth\linewidth\else\width\fi}{!}{%
+\begin{tabular}{lrrr}
+\toprule
+Model & \shortstack{Full-cohort\\probability gap} & \shortstack{No Finding\\margin gap ($n=52$)} & \shortstack{Other findings\\margin gap ($n=48$)} \\
+\midrule
+Qwen2.5-VL-7B & $-0.01743$ & $-0.21154$ & $-0.01563$ \\
+LLaVA-1.5-7B & $-0.01508$ & $-0.15385$ & $0.01823$ \\
+\bottomrule
+\end{tabular}%
+}
+\end{table}
+
+Mean probability gaps are negative in both configurations. The stratum
+summaries describe the selected population and leave the registered
+full-cohort opportunity decisions unchanged. Taken together, the mean-gap
+uncertainty and the direct concordance comparison identify the behavioral
+opportunity that remains unresolved before interpreting component-based
+recovery. Because this cohort differs from the original 50-pair closure
+cohort, it contextualizes that study rather than identifying the cause of
+its closure result.
+
+\FloatBarrier

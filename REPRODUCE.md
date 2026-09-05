@@ -57,7 +57,25 @@ false; all seven calibration cells are eligible. The accepted scientific
 review receipt is
 `/home/qingchan/.codex/state/claude-review-concept-flow/review-20260905T051404447778Z.json`.
 
-## Appendix figures
+## Paired behavioral opportunity
+
+The shared 100-patient cohort is bound by
+`20260905T052025Z-9bc918b414ff-paired-opportunity/artifacts/registered-pairs.json`.
+Qwen run `20260905T053520Z-f0317eaf3f4e-paired-opportunity` uses source
+`f0317eaf3f4e3d97a18c266eb3d84b0f1c09baec`; LLaVA run
+`20260905T064036Z-1af90218a1d8-llava-opportunity` uses source
+`1af90218a1d8022bce66452826fa408ef146e432`. Each contributes 200 outcomes,
+with all 100 patients and the same 5,000 bootstrap indices retained.
+The accepted joint report and review are in code commit `f774842`, under
+`docs/PAIRED_OPPORTUNITY_ARCHITECTURE_RESULTS.md` and
+`docs/reviews/llava-paired-opportunity-results.md`; the Qwen report is
+`docs/QWEN_PAIRED_OPPORTUNITY_RESULTS.md`, with full-precision values in
+`docs/reviews/qwen7b-paired-opportunity-results.md`. The LLaVA result receipt is
+`/home/qingchan/.codex/state/claude-review-concept-flow/review-20260905T064601848008Z.json`.
+The paper's `sections/D_paired_opportunity.tex` contains the complete
+model-specific and direct patient-paired summaries.
+
+## Appendix figure generation
 
 Figures A1--A6 are vector PDFs generated with Matplotlib and NumPy. From this
 directory, install the plotting dependencies and regenerate them with:
