@@ -9,15 +9,16 @@
 \section{Prompts, Scores, and Notation}
 \label{app:protocol}
 
-The appendix develops the evidence behind the reader--writer comparison in
-six stages. This section specifies the endpoint and notation;
+The appendix develops the evidence behind the reader--writer comparison.
+This section specifies the original endpoint and notation;
 Appendix~\ref{app:runs} identifies the cohorts and computation behind each
 experiment. Appendices~\ref{app:ownership} and~\ref{app:specificity-closure}
 examine semantic competition and paired input closure in detail.
 Appendix~\ref{app:implementation} checks that the interventions enter the
-consumed forward path and that their results replay. Finally,
-Appendix~\ref{app:decoding} compares reader selectivity across the original
-cells to clarify what the different intervention outcomes imply.
+consumed forward path and that their results replay.
+Appendix~\ref{app:decoding} compares the original intervention outcomes and
+reader selectivity. Appendices~\ref{app:response-diagnostics} and~\ref{app:encoding}
+then examine score-coordinate diagnostics and answer-encoding sensitivity.
 
 \subsection{A common question and answer endpoint}
 
@@ -572,8 +573,33 @@ the writer differences simply mirror a resolved reader ranking.
 
 \FloatBarrier
 
-\section{Paired Decoding Contrasts}
+\section{Original-Cell Interventions and Decoding Contrasts}
 \label{app:decoding}
+
+Figure~\ref{fig:dose} compares the original dose responses. The target
+effects vary smoothly in some cells, but the random and sham comparisons
+determine whether the response is unusual for that perturbation scale.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\linewidth]{figures/fig2_dose_responses.pdf}
+\caption{\textbf{Comparable readers become different writers at the consumed final visual block.} The blue curve is the raw change in mean $P(\mathrm{yes})$ under the target probe normal on the same 200 held-out images per cell. Gray bands show the 5th--95th percentile across 20 equal-norm random directions at the six controlled nonzero doses; orange crosses show the coordinate-permutation sham. The concept-consistent rule uses $\operatorname{sign}(\alpha)\Delta(\alpha)$, accounting for the negative-dose maxima in the two LLaVA cells.}
+\label{fig:dose}
+\end{figure}
+
+LLaVA Effusion is centrally monotone but does not exceed the maximum
+absolute sham response; LLaVA Edema remains inside its random interval.
+Qwen Effusion passes the original generic-control comparison and reproduces
+at the locked dose. Table~\ref{tab:gates} collects these outcomes.
+Original-cohort effects maximize the concept-consistent response over six
+fixed nonzero doses; the patient-disjoint supplement fixes $\alpha=+0.25$.
+``Supported interpretation'' gives the strongest claim warranted by each cohort.
+
+\input{tables/table_gates}
+
+The generic-control and clinical-family rows separate intervention efficacy
+from its attribution. Qwen's replicated response exceeds the non-semantic
+comparators, but the registered familywise clinical margin remains negative.
 
 Table~\ref{tab:paired-decoding} tests whether the different writer outcomes
 are accompanied by a resolved ordering of reader selectivity. Within

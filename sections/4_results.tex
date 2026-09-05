@@ -39,15 +39,6 @@ The causal-ownership matrix crosses six probe normals with six matching question
 
 The Consolidation fallback separates availability from input closure on 50 fresh within-patient pairs. On the full patient-disjoint test split, its probe selectivity is 0.0642 with 95\% CI $[0.0302,0.0976]$, so the readout is eligible before pair selection. Across the 50 pairs, mean positive-minus-negative displacement along the Consolidation normal is 0.1091, but its one-sided lower bound is $-0.0364$. Writing each patient's measured Consolidation displacement back into the negative study produces mean closure gain 0.0022, below the maximum over 119 random directions, 0.0025. The familywise Consolidation-minus-maximum-clinical lower bound is also negative at $-0.0015$. The input-closure conjunction is not met.
 
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=\textwidth]{figures/fig2_dose_responses.pdf}
-    \caption{\textbf{Comparable readers become different writers at the consumed final visual block.} The blue curve is the raw change in mean $P(\mathrm{yes})$ under the target probe normal on the same 200 held-out images per cell. Gray bands show the 5th--95th percentile across 20 equal-norm random directions at the six controlled nonzero doses; orange crosses show the coordinate-permutation sham. The concept-consistent rule uses $\operatorname{sign}(\alpha)\Delta(\alpha)$, accounting for the negative-dose maxima in the two LLaVA cells.}
-    \label{fig:dose}
-\end{figure}
-
-\FloatBarrier
-
 \subsection{The reader--writer mismatch begins earlier in LLaVA}
 \label{sec:generic-results}
 
@@ -59,14 +50,21 @@ LLaVA Edema attains 0.0659 at $\alpha=-1$. It lies inside the same-dose random i
 
 The decoding contrasts reinforce this dissociation. Within LLaVA, Edema-minus-Effusion selectivity is 0.0221 with paired 95\% CI $[-0.0175,0.0590]$; for Effusion, Qwen-minus-LLaVA is 0.0026 with CI $[-0.0155,0.0215]$. The intervals do not resolve a reader ordering, while the generic-control outcomes still differ.
 
+\subsection{Answer mapping separates response structure from clinical attribution}
+\label{sec:encoding-results}
+
+The Qwen causal-ownership matrix cohort's attribution pattern also persists in logit coordinates: all six named ownership margins remain negative, and matched steering lowers all six answer-score AUROC point estimates (Appendix~\ref{app:response-diagnostics}). The crossover reuses 200 of these patients, distinct from the earlier Effusion specificity cohort. These retrospective diagnostics motivate testing the answer interface, not just the perturbation direction.
+
+In the registered crossover, Atelectasis, Pneumothorax, Mass, and Nodule pass independent capability calibration. On these four questions, mapping-even minus mapping-odd response energy is $-2.1786$ (95\% CI $[-2.4061,-1.9810]$): effects are larger in the component that reverses raw A-minus-B sign when the finding-to-letter mapping is exchanged. Yet all 20 random directions and the sham are also mapping-odd dominant (Appendix~\ref{app:encoding}). Aggregate mapping response therefore does not distinguish the clinical normals from generic perturbations.
+
+Clinical competition adds a different observation. Table~\ref{tab:encoding-mass} compares the Mass direction with its strongest of five clinical competitors in finding-present logit coordinates at $\alpha=+0.25$. A-present assigns A to presence and B to absence; B-present reverses those assignments. The intervals are pointwise patient-bootstrap summaries.
+
+\input{tables/table_encoding_mass}
+
+Under both coded prompts, the Mass effect exceeds every other clinical effect, the largest of 20 random effects, and the absolute sham effect. Its clinical margin is negative under the standard prompt and positive under both coded mappings. The standard-prompt margin is recomputed on the 200 intervention patients, rather than the full 400-patient diagnostic cohort. This discovery was selected from six questions on reused patients; the coded prompts change wording and instructions together with the answer symbols. It identifies a prompt-conditioned candidate for independent confirmation, while the original fixed-prompt ownership verdict remains intact. The relevant causal comparison is thus indexed by the question and its prompt interface as well as the direction.
+
 \subsection{Each control changes the scientific claim}
 
-The experiments separate three statements that are often collapsed. Controlled decoding supports that a label is available to a fixed reader. Random and sham controls support that a labeled normal is an unusually effective writer relative to matched non-semantic perturbations. Semantic competition asks whether the clinical name attached by the reader is specific to that write effect. Qwen supports the first two statements but not the third; LLaVA establishes the first but not the second. Holding locus, dose, rows, endpoint, and uncertainty calculation fixed makes the reader--writer gap experimentally visible.
-
-Table~\ref{tab:gates} summarizes the intervention outcomes; ``Supported interpretation'' states the strongest claim warranted by each cohort.
-
-\input{tables/table_gates}
-
-Across the six gates, every target is available to the fixed readout, but generic selectivity, clinical specificity, ownership, aliasing, and input closure separate in turn. The ordered failures bound the concept-specific causal claim rather than erasing the underlying intervention effects.
+Controlled decoding tests label availability, non-semantic perturbations test write efficacy, and clinical competitors test attribution within a specified response interface. The original Qwen Effusion studies separate efficacy from attribution, while the crossover shows why the prompt interface belongs in that comparison. Table~\ref{tab:gates} collects the original intervention outcomes. The new Mass candidate changes the next empirical question, not the inferential status of the original six gates.
 
 \FloatBarrier

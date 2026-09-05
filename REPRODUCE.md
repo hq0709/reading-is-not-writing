@@ -21,6 +21,24 @@ mechanism runs are `20260904T125710Z-a3bd883540eb-causal-ownership`
 submission sources, figure-generation scripts, aggregate plotting data, and
 reproducibility metadata.
 
+## Answer-encoding evidence
+
+The paired sensitivity experiment is
+`20260904T230152Z-21dad2f72726-answer-encoding`, immutable code commit
+`21dad2f727261491c372bf9ffccf2dafd7c01413`. Its
+`artifacts/answer-encoding-summary.json`, `meta.json`, `per-image.csv`, and
+`calibration.csv` record 198,000 intervention and 2,400 calibration outcomes.
+Accepted results and review documentation are in the code repository at
+`b1f58b5`, under `docs/ANSWER_ENCODING_RESULTS.md` and
+`docs/reviews/qwen7b-vislast-answer-encoding.md`.
+The preceding score-coordinate analysis reuses the 400-patient ownership
+cohort in run `20260904T224225Z-1ab7576193a7-ownership-diagnostics`;
+its primary artifact is `artifacts/ownership-diagnostics.json`.
+`sections/B_answer_encoding.tex` contains the diagnostic and encoding
+protocols and tables; `tables/table_encoding_mass.tex` contains the
+descriptive Mass prompt comparison. The experiment archives remain the
+source of full-precision results.
+
 ## Appendix figures
 
 Figures A1--A6 are vector PDFs generated with Matplotlib and NumPy. From this
@@ -44,7 +62,7 @@ surface from run `20260904T125710Z-a3bd883540eb-causal-ownership`. Statistical
 figures read these snapshots directly; the diagram script encodes the fixed
 experimental interface and evidence-flow descriptions in the manuscript.
 
-## Figure 3 provenance
+## Direction-specificity figure provenance
 
 `figures/fig3_direction_specificity.pdf` is generated from the read-only
 `paper/scripts/gen_fig3.py` and `paper/data/accepted_results.json` in the

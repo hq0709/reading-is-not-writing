@@ -1,0 +1,232 @@
+\section{Score Coordinates and Answer Discrimination}
+\label{app:response-diagnostics}
+
+We retrospectively analyze the stored outputs from the 400-patient Qwen
+causal-ownership matrix cohort at $\alpha=+0.25$, distinct from the earlier
+400-patient Effusion specificity supplement. The logit margin is the yes-token
+logit minus the no-token logit; each intervention effect is its change
+relative to the same patient's unperturbed output. In each score coordinate,
+the ownership margin subtracts the largest mean effect among the five other
+clinical directions from the matched direction's mean effect.
+Table~\ref{tab:response-diagnostics} compares these margins with answer
+discrimination. Here, AUROC ranks patients by the model's answer logit
+margin against the corresponding disease labels, rather than by a fitted
+probe score. The probability-ownership values here belong to the matrix
+cohort: its Effusion margin is $-0.0640$, whereas the earlier specificity
+supplement reports $-0.0573$ on different patients.
+
+\begin{table}[H]
+\centering
+\caption{Score-coordinate ownership and answer discrimination.}
+\label{tab:response-diagnostics}
+\resizebox{\linewidth}{!}{%
+\begin{tabular}{lrrrr}
+\toprule
+Question & \shortstack{Probability\\ownership} & \shortstack{Logit-margin\\ownership} & \shortstack{Baseline\\AUROC} & \shortstack{Matched-direction\\AUROC} \\
+\midrule
+Effusion     & $-0.0640$ & $-0.4853$ & 0.6178 & 0.5921 \\
+Atelectasis  & $-0.2295$ & $-1.0703$ & 0.6235 & 0.5479 \\
+Pneumothorax & $-0.1086$ & $-0.8944$ & 0.6666 & 0.6324 \\
+Cardiomegaly & $-0.1972$ & $-0.8559$ & 0.6217 & 0.5152 \\
+Mass         & $-0.1528$ & $-0.7134$ & 0.6636 & 0.6354 \\
+Nodule       & $-0.0831$ & $-0.4134$ & 0.6805 & 0.6355 \\
+\bottomrule
+\end{tabular}%
+}
+\end{table}
+
+All six ownership margins remain negative before the sigmoid mapping to
+probability. Answer-score AUROC is lower under each matched direction in
+the point estimates, separating a larger affirmative response from better
+patient discrimination. These are descriptive comparisons, with the
+registered ownership decisions retaining their original inferential status.
+
+\subsection{Label-conditioned shifts and matrix geometry}
+
+For the Effusion direction on the Effusion question, the mean logit-margin
+shift is 2.1336 among 29 label-positive patients and 2.2712 among 371
+label-negative patients. The positive-minus-negative difference is
+$-0.1376$, with a pointwise 95\% patient-bootstrap percentile interval of
+$[-0.4443,0.1659]$ from 2,000 draws. Both groups show an upward shift,
+while their mean-shift difference remains unresolved. The Brier score,
+the mean squared difference between the yes probability and binary label,
+rises from 0.0681 to 0.1035.
+
+The six-by-six matrix of mean logit-margin changes has clinical directions
+as rows and questions as columns. Its first singular component accounts
+for 90.51\% of the sum of squared matrix entries. Subtracting row and column
+means and restoring the grand mean leaves an interaction component with
+7.91\% of that same raw matrix energy. These are distinct decompositions
+with a common denominator, not complementary percentages. They summarize
+response geometry rather than identifying a shared causal channel. The
+answer-encoding experiment below tests another feature of that response
+structure: its behavior when the finding-to-letter mapping is exchanged.
+
+\FloatBarrier
+
+\section{Answer-Encoding Sensitivity}
+\label{app:encoding}
+
+\subsection{Paired design and independent capability calibration}
+
+The crossover selects the first 200 patients in the accepted causal-ownership
+matrix cohort's registered order for interventions and the remaining 200 for
+capability calibration. Each patient contributes one image. These two
+sets are patient-disjoint from each other but both reuse the original
+ownership cohort. The six clinical questions cross three prompt packages,
+each question--prompt pair having its own unsteered baseline and
+27 directions at each of $\alpha=\pm0.25$:
+six clinical directions, 20 seed-0 random directions, and a coordinate-
+permutation sham. The 198,000 intervention outcomes and 2,400 clean
+calibration outcomes took 6,402 seconds on one A100.
+
+Figure~\ref{fig:encoding-prompts} displays the exact Mass prompts. The other
+five questions use the corresponding finding phrases from the original
+clinical family. Coded prompts exchange the answer mapping while retaining
+their wording; comparison with standard yes/no changes the question wording
+and response instructions as well as the answer symbols.
+
+\begin{figure}[H]
+\centering
+\begin{minipage}{0.95\linewidth}
+\small
+\fbox{\parbox{0.95\linewidth}{Is there a lung mass in this chest radiograph? Answer yes or no.}}
+\par\smallskip\centerline{(a) Standard yes/no}\medskip
+\fbox{\parbox{0.95\linewidth}{Does this chest radiograph show a lung mass? Answer A if the finding is present and B if it is absent. Reply with A or B only.}}
+\par\smallskip\centerline{(b) A-present}\medskip
+\fbox{\parbox{0.95\linewidth}{Does this chest radiograph show a lung mass? Answer B if the finding is present and A if it is absent. Reply with A or B only.}}
+\par\smallskip\centerline{(c) B-present}
+\end{minipage}
+\caption{\textbf{The crossover distinguishes answer mapping within coded prompts from the full prompt-package comparison.} The two coded conditions exchange presence and absence assignments for A and B. The standard condition retains the original question.}
+\label{fig:encoding-prompts}
+\end{figure}
+
+At the first answer position, the raw coded margin is the maximum A-token
+logit minus the maximum B-token logit among valid single-token leading-space
+variants. A-present uses that margin as the finding-present score;
+B-present negates it. Capability calibration uses these clinically oriented
+scores against image labels. Both mappings must have a one-sided 95\%
+AUROC lower bound above 0.5 and at least ten patients in each label class.
+The lower bounds use 2,000 patient-bootstrap draws, with seed 20260908.
+Table~\ref{tab:encoding-calibration} reports the resulting eligibility.
+
+\begin{table}[H]
+\centering
+\caption{Independent answer-encoding capability calibration.}
+\label{tab:encoding-calibration}
+\resizebox{\linewidth}{!}{%
+\begin{tabular}{lrrrrrl}
+\toprule
+Question & Positive & \shortstack{A-present\\AUROC} & \shortstack{B-present\\AUROC} & \shortstack{A-present\\lower bound} & \shortstack{B-present\\lower bound} & Eligibility \\
+\midrule
+Effusion     & 11 & 0.5125 & 0.5111 & 0.3872 & 0.3967 & Below baseline criterion \\
+Atelectasis  & 15 & 0.6586 & 0.6441 & 0.5448 & 0.5372 & Eligible \\
+Pneumothorax & 13 & 0.6508 & 0.6524 & 0.5088 & 0.5113 & Eligible \\
+Cardiomegaly &  8 & 0.5661 & 0.5811 & 0.4677 & 0.4757 & Insufficient labels \\
+Mass         & 15 & 0.6533 & 0.6542 & 0.5198 & 0.5231 & Eligible \\
+Nodule       & 21 & 0.6347 & 0.6327 & 0.5210 & 0.5196 & Eligible \\
+\bottomrule
+\end{tabular}%
+}
+\end{table}
+
+Atelectasis, Pneumothorax, Mass, and Nodule enter the primary endpoint.
+Effusion and Cardiomegaly remain descriptive. Clean finding-present A/B
+rankings are highly correlated: independent calibration Spearman
+correlations range from 0.960770 to 0.988116, while the intervention-cohort
+range is 0.9594--0.9804. Calibration mean raw A-minus-B margins have
+opposite signs across mappings for every question; their absolute
+magnitudes differ by 0.0050--0.1200. Thus similar patient rankings coexist
+with baseline score asymmetry.
+
+\subsection{Mapping-even and mapping-odd response energy}
+
+For patient $i$, direction $d$, and question $q$, let $x^A_{i,d,q}$ and
+$x^B_{i,d,q}$ denote the changes in raw A-minus-B margin from each prompt's
+own baseline under A-present and B-present, respectively, at
+$\alpha=+0.25$. Define the mapping-even component $e_{i,d,q}$ and
+mapping-odd component $o_{i,d,q}$ by
+\begin{equation}
+e_{i,d,q}=\tfrac12(x^A_{i,d,q}+x^B_{i,d,q}),\qquad
+o_{i,d,q}=\tfrac12(x^A_{i,d,q}-x^B_{i,d,q}).
+\label{eq:encoding-components}
+\end{equation}
+The even component retains raw letter preference under the exchange; the
+odd component reverses raw sign as the clinical assignment reverses.
+These are coordinate decompositions, not mechanism labels.
+
+\begin{samepage}
+For a sequence of $n=200$ patient effects $z=(z_1,\ldots,z_n)$, let
+$U(z)$ estimate its squared population mean. Let $\mathcal Q$ be the four
+eligible questions and $\mathcal D$ the six clinical directions. The
+registered energy contrast $T$ is
+\begin{equation}
+U(z)=\frac{(\sum_i z_i)^2-\sum_i z_i^2}{n(n-1)},\qquad
+T=\frac{1}{6}\sum_{d\in\mathcal D}\sum_{q\in\mathcal Q}
+\bigl[U(e_{\cdot,d,q})-U(o_{\cdot,d,q})\bigr].
+\label{eq:encoding-energy}
+\end{equation}
+The cross-patient products remove the finite-sample variance contribution
+to a squared sample mean.
+\end{samepage}
+The endpoint sums questions and averages clinical
+directions, in squared-logit units. Joint patient resampling preserves
+pairing across mappings, directions, and questions; 2,000 draws use seed
+20260907. Each random direction uses the same eligible-question sum.
+For sham, the question-specific permuted normal supplies each question's
+effect. The registered even-beyond-controls condition requires a positive
+95\% lower endpoint for $T$, a point estimate above every random contrast,
+and a point estimate above the absolute sham contrast.
+
+Table~\ref{tab:encoding-energy} compares the primary estimate with its
+controls and the all-question descriptive endpoint. Negative values favor
+mapping-odd squared mean response in the aggregate.
+
+\begin{table}[H]
+\centering
+\caption{Mapping-even versus mapping-odd response energy.}
+\label{tab:encoding-energy}
+\resizebox{\linewidth}{!}{%
+\begin{tabular}{llrr}
+\toprule
+Comparison & Questions & Estimate & 95\% interval \\
+\midrule
+Clinical mean & Four eligible & $-2.1786$ & $[-2.4061,-1.9810]$ \\
+Random-direction range & Four eligible & $[-5.4773,-0.1769]$ & --- \\
+Sham & Four eligible & $-2.3848$ & $[-2.5371,-2.2460]$ \\
+Clinical mean & All six & $-2.9329$ & $[-3.2374,-2.6636]$ \\
+\bottomrule
+\end{tabular}%
+}
+\end{table}
+
+The primary interval is entirely negative, and all 20 random-direction
+point estimates are negative as well. The registered even-beyond-controls
+condition is therefore unmet. Mapping-odd dominance is a property shared
+with generic perturbations in this experiment, so the energy contrast does
+not by itself establish clinical specificity or encoding invariance. The
+random row gives the observed range over directions, not an uncertainty
+interval; the other intervals are patient-bootstrap percentile summaries.
+
+\subsection{Prompt-conditioned clinical competition}
+
+Table~\ref{tab:encoding-mass} reports Mass in finding-present logit
+coordinates, using yes-minus-no for standard prompts, A-minus-B for
+A-present, and B-minus-A for B-present. Each clinical margin subtracts the
+maximum alternative among five directions within that same prompt; the
+maximum is recomputed in each patient-bootstrap draw. The matched effects
+under A-present and B-present are 1.6125 and 1.7469, exceeding their random
+maxima of 1.1650 and 1.2581 and absolute sham effects of 0.7550 and 1.1475.
+Their positive clinical margins contrast with the standard value of
+$-0.7181$ on the same 200 patients. That standard-prompt value is recomputed
+on the intervention subset; the full 400-patient diagnostic value is
+$-0.7134$ (Table~\ref{tab:response-diagnostics}).
+
+This is a descriptive discovery selected from six questions, with
+pointwise intervals and 20 random directions. Standard-to-coded contrasts
+concern the whole prompt package because wording and response instructions
+also change. The result motivates independent, prospectively locked
+confirmation of prompt-conditioned specificity; it preserves the original
+400-patient simultaneous ownership verdict at its original yes/no prompts.
+
+\FloatBarrier
