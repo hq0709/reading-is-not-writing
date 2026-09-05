@@ -19,7 +19,7 @@ supplement reports $-0.0573$ on different patients.
 \centering
 \caption{Score-coordinate ownership and answer discrimination.}
 \label{tab:response-diagnostics}
-\resizebox{\linewidth}{!}{%
+\resizebox{\ifdim\width>\linewidth\linewidth\else\width\fi}{!}{%
 \begin{tabular}{lrrrr}
 \toprule
 Question & \shortstack{Probability\\ownership} & \shortstack{Logit-margin\\ownership} & \shortstack{Baseline\\AUROC} & \shortstack{Matched-direction\\AUROC} \\
@@ -114,7 +114,7 @@ Table~\ref{tab:encoding-calibration} reports the resulting eligibility.
 \centering
 \caption{Independent answer-encoding capability calibration.}
 \label{tab:encoding-calibration}
-\resizebox{\linewidth}{!}{%
+\resizebox{\ifdim\width>\linewidth\linewidth\else\width\fi}{!}{%
 \begin{tabular}{lrrrrrl}
 \toprule
 Question & Positive & \shortstack{A-present\\AUROC} & \shortstack{B-present\\AUROC} & \shortstack{A-present\\lower bound} & \shortstack{B-present\\lower bound} & Eligibility \\
@@ -186,7 +186,7 @@ mapping-odd squared mean response in the aggregate.
 \centering
 \caption{Mapping-even versus mapping-odd response energy.}
 \label{tab:encoding-energy}
-\resizebox{\linewidth}{!}{%
+\resizebox{\ifdim\width>\linewidth\linewidth\else\width\fi}{!}{%
 \begin{tabular}{llrr}
 \toprule
 Comparison & Questions & Estimate & 95\% interval \\
@@ -222,11 +222,13 @@ $-0.7181$ on the same 200 patients. That standard-prompt value is recomputed
 on the intervention subset; the full 400-patient diagnostic value is
 $-0.7134$ (Table~\ref{tab:response-diagnostics}).
 
+\input{tables/table_encoding_mass}
+
 This is a descriptive discovery selected from six questions, with
 pointwise intervals and 20 random directions. Standard-to-coded contrasts
 concern the whole prompt package because wording and response instructions
-also change. The result motivates independent, prospectively locked
-confirmation of prompt-conditioned specificity; it preserves the original
-400-patient simultaneous ownership verdict at its original yes/no prompts.
+also change. The independent confirmation below separates these prompt
+factors on fresh patients. The original 400-patient simultaneous ownership
+verdict concerns its original yes/no prompts.
 
 \FloatBarrier

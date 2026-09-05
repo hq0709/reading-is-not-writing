@@ -3,7 +3,7 @@
 \caption{Intervention outcomes and the scientific claims supported by their controls.}
 \label{tab:gates}
 \textit{Generic-control outcomes}\\[2pt]
-\resizebox{\linewidth}{!}{%
+\resizebox{\ifdim\width>\linewidth\linewidth\else\width\fi}{!}{%
 \begin{tabular}{lllrrccc}
 \toprule
 Model & Concept & Cohort & $N$ & $\alpha$ & Target $\Delta$ & Random 95th & $|$sham$|$ \\
@@ -18,7 +18,7 @@ Qwen2.5-VL-7B & Effusion & Patient-disjoint & 400 & +0.25 & 0.1945 & 0.0878 & 0.
 \medskip
 
 \textit{Fixed-family ownership outcome}\\[2pt]
-\resizebox{\linewidth}{!}{%
+\resizebox{\ifdim\width>\linewidth\linewidth\else\width\fi}{!}{%
 \begin{tabular}{lllcl}
 \toprule
 Model & Concept & Cohort & $O_{\mathrm{Effusion}}$ [95\% CI] & Supported interpretation \\

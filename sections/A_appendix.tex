@@ -18,7 +18,9 @@ Appendix~\ref{app:implementation} checks that the interventions enter the
 consumed forward path and that their results replay.
 Appendix~\ref{app:decoding} compares the original intervention outcomes and
 reader selectivity. Appendices~\ref{app:response-diagnostics} and~\ref{app:encoding}
-then examine score-coordinate diagnostics and answer-encoding sensitivity.
+then examine score-coordinate diagnostics and answer-encoding sensitivity;
+Appendix~\ref{app:mass-confirmation} tests the Mass candidate on independent
+patients across question wordings and response instructions.
 
 \subsection{A common question and answer endpoint}
 
@@ -66,7 +68,7 @@ readability, intervention strength, and semantic attribution.
 \centering
 \caption{Notation used in the manuscript.}
 \label{tab:notation}
-\resizebox{\linewidth}{!}{%
+\resizebox{\ifdim\width>\linewidth\linewidth\else\width\fi}{!}{%
 \begin{tabular}{ll}
 \toprule
 Symbol & Definition \\
@@ -113,7 +115,7 @@ Each run used one A100.
 \centering
 \caption{Experimental runs and computational budgets.}
 \label{tab:run-ledger}
-\resizebox{\linewidth}{!}{%
+\resizebox{\ifdim\width>\linewidth\linewidth\else\width\fi}{!}{%
 \begin{tabular}{cllrrrr}
 \toprule
 Run & Model & Endpoint & Evaluation units & Random & Bootstraps & GPU s \\
@@ -150,7 +152,7 @@ reported result.
 \centering
 \caption{Immutable run identifiers and evaluation-cohort selection hashes.}
 \label{tab:run-identifiers}
-\resizebox{\linewidth}{!}{%
+\resizebox{\ifdim\width>\linewidth\linewidth\else\width\fi}{!}{%
 \begin{tabular}{cl}
 \toprule
 Run & Run identifier and cohort selection hash \\
@@ -189,7 +191,7 @@ corresponding control rules.
 \centering
 \caption{Shared registered settings.}
 \label{tab:registered-settings}
-\resizebox{\linewidth}{!}{%
+\resizebox{\ifdim\width>\linewidth\linewidth\else\width\fi}{!}{%
 \begin{tabular}{ll}
 \toprule
 Component & Registered value \\
@@ -301,7 +303,7 @@ the full-precision estimates.
 \centering
 \caption{Per-question ownership statistics.}
 \label{tab:ownership-statistics}
-\resizebox{\linewidth}{!}{%
+\resizebox{\ifdim\width>\linewidth\linewidth\else\width\fi}{!}{%
 \begin{tabular}{lrrlrrrr}
 \toprule
 Question $q$ & $W_{q,q}$ & Best other & Winner $d$ & $O_q$ & 95\% CI & Sim. LCB & Random max \\
@@ -379,7 +381,7 @@ attribution under the registered competitor family.
 \centering
 \caption{Locked-dose Qwen Effusion specificity.}
 \label{tab:specificity-controls}
-\resizebox{\linewidth}{!}{%
+\resizebox{\ifdim\width>\linewidth\linewidth\else\width\fi}{!}{%
 \begin{tabular}{lrlr}
 \toprule
 Direction or control & Effect & Direction or control & Effect \\
@@ -454,7 +456,7 @@ the sham response, completing the control comparison in Figure~\ref{fig:input-cl
 \centering
 \caption{Input-closure dose and control diagnostics.}
 \label{tab:closure-diagnostics}
-\resizebox{\linewidth}{!}{%
+\resizebox{\ifdim\width>\linewidth\linewidth\else\width\fi}{!}{%
 \begin{tabular}{lrlr}
 \toprule
 Quantity & Value & Quantity & Value \\
@@ -520,7 +522,7 @@ model-specific connector and answer computation.
 \centering
 \caption{Forward-path intervention checks.}
 \label{tab:hook-witnesses}
-\resizebox{\linewidth}{!}{%
+\resizebox{\ifdim\width>\linewidth\linewidth\else\width\fi}{!}{%
 \begin{tabular}{lllll}
 \toprule
 Model & Captured module & Zero dose & Downstream & Logits \\
@@ -553,7 +555,7 @@ experiments, rather than an additional independent cohort or replication.
 \centering
 \caption{Reproducibility of prospective mechanism decisions.}
 \label{tab:replay-completeness}
-\resizebox{\linewidth}{!}{%
+\resizebox{\ifdim\width>\linewidth\linewidth\else\width\fi}{!}{%
 \begin{tabular}{lrrl}
 \toprule
 Gate & Outcomes & Bootstrap draws & Replay result \\
@@ -615,7 +617,7 @@ between what a probe can read and what its direction causally controls.
 \centering
 \caption{Paired controlled-decoding contrasts.}
 \label{tab:paired-decoding}
-\resizebox{\linewidth}{!}{%
+\resizebox{\ifdim\width>\linewidth\linewidth\else\width\fi}{!}{%
 \begin{tabular}{lcc}
 \toprule
 Contrast & Estimate & 95\% patient-bootstrap CI \\

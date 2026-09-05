@@ -44,27 +44,29 @@ The Consolidation fallback separates availability from input closure on 50 fresh
 
 The LLaVA cells show that the mismatch can arise before semantic competition. Both are robust readers: Effusion reaches AUROC 0.7788 and selectivity 0.1139 (95\% CI $[0.0875,0.1404]$), while Edema reaches AUROC 0.8009 and selectivity 0.1360 ($[0.0994,0.1693]$). Their selectivity intervals exclude zero, as does Qwen's, but their write directions do not clear the registered random-and-sham conjunction (Figure~\ref{fig:dose}).
 
-LLaVA Effusion attains a maximum concept-consistent change of 0.1470 at $\alpha=-1$. It exceeds the same-dose random p95 of 0.1202 but remains below the maximum absolute sham effect of 0.1546. Its monotone central response ($\rho=1.0$ over $[-0.5,0.5]$) is descriptively coherent, but does not distinguish the probe normal from the sham.
+LLaVA Effusion attains a maximum concept-consistent change of 0.1470 at $\alpha=-1$, above same-dose random p95 of 0.1202 but below maximum absolute sham effect 0.1546.
 
-LLaVA Edema attains 0.0659 at $\alpha=-1$. It lies inside the same-dose random interval $[-0.1304,0.1470]$ and below the maximum absolute sham effect of 0.0913. Its descriptive dose monotonicity is $\rho=-0.4286$. Neither its random nor sham comparison supports a selective write effect.
+LLaVA Edema attains 0.0659 at $\alpha=-1$, inside the same-dose random interval $[-0.1304,0.1470]$ and below maximum absolute sham effect 0.0913. Neither comparison supports a selective write effect.
 
-The decoding contrasts reinforce this dissociation. Within LLaVA, Edema-minus-Effusion selectivity is 0.0221 with paired 95\% CI $[-0.0175,0.0590]$; for Effusion, Qwen-minus-LLaVA is 0.0026 with CI $[-0.0155,0.0215]$. The intervals do not resolve a reader ordering, while the generic-control outcomes still differ.
+Paired decoding contrasts do not resolve a reader ordering (Table~\ref{tab:paired-decoding}), while the generic-control outcomes differ.
 
-\subsection{Answer mapping separates response structure from clinical attribution}
+\subsection{Wording changes clinical competition within the answer interface}
 \label{sec:encoding-results}
 
 The Qwen causal-ownership matrix cohort's attribution pattern also persists in logit coordinates: all six named ownership margins remain negative, and matched steering lowers all six answer-score AUROC point estimates (Appendix~\ref{app:response-diagnostics}). The crossover reuses 200 of these patients, distinct from the earlier Effusion specificity cohort. These retrospective diagnostics motivate testing the answer interface, not just the perturbation direction.
 
 In the registered crossover, Atelectasis, Pneumothorax, Mass, and Nodule pass independent capability calibration. On these four questions, mapping-even minus mapping-odd response energy is $-2.1786$ (95\% CI $[-2.4061,-1.9810]$): effects are larger in the component that reverses raw A-minus-B sign when the finding-to-letter mapping is exchanged. Yet all 20 random directions and the sham are also mapping-odd dominant (Appendix~\ref{app:encoding}). Aggregate mapping response therefore does not distinguish the clinical normals from generic perturbations.
 
-Clinical competition adds a different observation. Table~\ref{tab:encoding-mass} compares the Mass direction with its strongest of five clinical competitors in finding-present logit coordinates at $\alpha=+0.25$. A-present assigns A to presence and B to absence; B-present reverses those assignments. The intervals are pointwise patient-bootstrap summaries.
+The crossover identifies Mass as a prompt-conditioned candidate: its clinical margin changes from $-0.7181$ under the original yes/no prompt to $0.2825$ and $0.2900$ under A-present and B-present, respectively (Table~\ref{tab:encoding-mass}). A-present assigns A to presence and B to absence; B-present reverses those assignments. Both coded effects exceed the discovery study's 20 random directions and sham. Because wording and instructions also change, we test them separately on independent patients.
 
-\input{tables/table_encoding_mass}
+Table~\ref{tab:mass-confirmation} reports the registered confirmation on 200 new patients. Clinical margins subtract the largest of five alternative clinical effects in finding-present logit units. Minimum LCB is the smallest simultaneous lower bound among a cell's five contrasts, from the joint 20-comparison family. All seven prompt cells pass separate capability calibration.
 
-Under both coded prompts, the Mass effect exceeds every other clinical effect, the largest of 20 random effects, and the absolute sham effect. Its clinical margin is negative under the standard prompt and positive under both coded mappings. The standard-prompt margin is recomputed on the 200 intervention patients, rather than the full 400-patient diagnostic cohort. This discovery was selected from six questions on reused patients; the coded prompts change wording and instructions together with the answer symbols. It identifies a prompt-conditioned candidate for independent confirmation, while the original fixed-prompt ownership verdict remains intact. The relevant causal comparison is thus indexed by the question and its prompt interface as well as the direction.
+\input{tables/table_mass_confirmation}
+
+The clinical advantage reproduces under both \textit{show} coded prompts, but the Mass effects remain below the maxima of 119 random directions, with reference ranks of 3/120. Under \textit{is}, both clinical margins are negative. Neither the cross-wording nor original-wording specificity conjunction is met. Explicit \textit{show} yes/no also has a positive clinical margin, 0.2369; its paired differences from A-present and B-present span zero. Within each response instruction, changing \textit{show} to \textit{is} reduces the clinical margin (Table~\ref{tab:mass-contrasts}). This supports wording-conditioned clinical competition, rather than an advantage attributable to answer letters alone. Mass steering increases Brier error in every cell, while all AUROC-change intervals span zero (Tables~\ref{tab:mass-brier} and~\ref{tab:mass-prediction}).
 
 \subsection{Each control changes the scientific claim}
 
-Controlled decoding tests label availability, non-semantic perturbations test write efficacy, and clinical competitors test attribution within a specified response interface. The original Qwen Effusion studies separate efficacy from attribution, while the crossover shows why the prompt interface belongs in that comparison. Table~\ref{tab:gates} collects the original intervention outcomes. The new Mass candidate changes the next empirical question, not the inferential status of the original six gates.
+Controlled decoding tests label availability, non-semantic perturbations test write efficacy, and clinical competitors test attribution within a specified response interface. The original Qwen Effusion studies separate efficacy from attribution (Table~\ref{tab:gates}); independent Mass confirmation shows that clinical competition depends on wording while remaining insufficient for the registered random-control criterion.
 
 \FloatBarrier

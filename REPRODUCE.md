@@ -39,6 +39,24 @@ protocols and tables; `tables/table_encoding_mass.tex` contains the
 descriptive Mass prompt comparison. The experiment archives remain the
 source of full-precision results.
 
+## Independent Mass confirmation
+
+Run `20260905T015725Z-1c9820d7b576-mass-prompts` fixes source commit
+`1c9820d7b5765c2ec220d9f4afaafd4c743e43e4` and records 177,800
+confirmation plus 1,400 calibration outcomes in
+`artifacts/mass-prompt-specificity-summary.json`. The accepted result and
+review are in the code repository at `9bc918b414ff14af804873aba3642ac4dcbb3ff3`,
+under `docs/MASS_PROMPT_SPECIFICITY_RESULTS.md` and
+`docs/reviews/qwen7b-mass-prompt-specificity-results.md`.
+`sections/C_mass_confirmation.tex` contains the seven-condition protocol,
+calibration, paired contrasts, and predictive metrics;
+`tables/table_mass_confirmation.tex` contains the coded-cell main table.
+The source summary retains all full-precision estimates and all 20
+simultaneous clinical comparisons. Both registered specificity flags are
+false; all seven calibration cells are eligible. The accepted scientific
+review receipt is
+`/home/qingchan/.codex/state/claude-review-concept-flow/review-20260905T051404447778Z.json`.
+
 ## Appendix figures
 
 Figures A1--A6 are vector PDFs generated with Matplotlib and NumPy. From this
