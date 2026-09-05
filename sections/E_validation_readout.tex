@@ -1,0 +1,121 @@
+\clearpage
+\section{Frozen Readers and Clean Answer Discrimination in LLaVA}
+\label{app:validation-readout}
+
+\subsection{Prospective validation allocation and qualification}
+
+The validation screen asks which fixed clinical directions combine
+controlled readability with an informative clean answer margin before
+testing their write efficacy. It reuses the accepted LLaVA-1.5-7B snapshot,
+native image processor, final visual block, and six train-fitted clinical
+directions. The clinical questions are the six prompts in
+Figure~\ref{fig:prompt-score}. The scoring interface takes the maximum
+first-answer logit among accepted singleton yes variants minus the maximum
+among no variants, retaining case and leading-space variants. Its sigmoid
+is a model score rather than a calibrated disease probability.
+
+Allocation uses the original manifest's validation split, excluding every
+patient represented in the sixteen implementation-preflight images.
+Remaining patient identifiers are sorted and permuted with seed 20260913.
+The first 700 patients form the reader and capability cohort, and the next
+100 are reserved for conditional write evaluation. Each patient contributes
+its lexicographically smallest validation image identifier. This allocation
+precedes inspection of labels and responses. The two cohorts are
+patient-disjoint, as are the original training, validation, and test splits.
+All six questions use the same 700 calibration images.
+
+Clinical reader scores use the stored projection, training centering and
+scaling, and logistic coefficients. Twenty recurring-type random-label
+controls are fitted on the original training split and shared across the
+six comparisons. No reader or control parameter is fitted on validation.
+Selectivity, defined in Section~\ref{sec:protocol}, subtracts mean control
+AUROC from clinical AUROC, with each control evaluated against its own type
+labels. The same 2,000 patient-bootstrap draws, seeded with 20260914, serve
+every clinical reader, every control, and clean answer capability.
+
+Reader qualification requires a positive 2.5th-percentile selectivity bound.
+Clean capability requires an answer-margin AUROC fifth-percentile bound
+strictly above 0.5. Both require at least ten patients per label class and
+1,900 valid draws. A question enters the write screen only when both
+criteria pass. These prospectively fixed thresholds define an exploratory
+validation policy; their percentile intervals are not selection-adjusted
+confirmatory intervals across the six questions.
+
+\subsection{Controlled reader availability}
+
+Table~\ref{tab:validation-readers} presents all six frozen-reader comparisons.
+Every question meets the class-count requirement, and every reader
+comparison yields all 2,000 valid joint draws.
+
+\begin{table}[H]
+\centering
+\caption{Frozen clinical-reader qualification on validation patients.}
+\label{tab:validation-readers}
+\resizebox{\ifdim\width>\linewidth\linewidth\else\width\fi}{!}{%
+\begin{tabular}{lrrrrl}
+\toprule
+Question & Positive & Negative & Selectivity & 95\% interval & Qualifies \\
+\midrule
+Effusion & 34 & 666 & 0.1438 & $[0.0658,0.2163]$ & Yes \\
+Atelectasis & 43 & 657 & 0.0472 & $[-0.0351,0.1198]$ & No \\
+Pneumothorax & 12 & 688 & 0.0362 & $[-0.1271,0.1731]$ & No \\
+Cardiomegaly & 25 & 675 & 0.0889 & $[0.0002,0.1723]$ & Yes \\
+Mass & 39 & 661 & 0.0735 & $[-0.0023,0.1473]$ & No \\
+Nodule & 48 & 652 & 0.0037 & $[-0.0833,0.0865]$ & No \\
+\bottomrule
+\end{tabular}%
+}
+\end{table}
+
+Effusion and Cardiomegaly satisfy the registered reader screen. Effusion's
+lower bound is 0.065803, whereas Cardiomegaly's is 0.000164 before rounding.
+The latter sits close to the qualification threshold. The other four
+intervals span zero. Effusion consequently provides the more stable
+screening anchor for a subsequent independent diagnostic of answer
+measurement; that choice remains a validation-stage selection.
+
+\clearpage
+\subsection{Clean capability and the conditional write stage}
+
+Table~\ref{tab:validation-capability} reports clean answer-margin AUROC on
+the same patients. Its two-sided 95\% intervals are descriptive; the
+separate one-sided 95\% lower bounds implement the capability rule. All six
+questions again have 2,000 valid draws. The run measures 4,200 clean
+image--question outcomes in 366 seconds on one A100.
+
+\begin{table}[H]
+\centering
+\caption{Clean answer discrimination across the six validation questions.}
+\label{tab:validation-capability}
+\resizebox{\ifdim\width>\linewidth\linewidth\else\width\fi}{!}{%
+\begin{tabular}{lrrrl}
+\toprule
+Question & AUROC & Descriptive 95\% interval & One-sided 95\% lower bound & Qualifies \\
+\midrule
+Effusion & 0.4548 & $[0.3546,0.5555]$ & 0.3722 & No \\
+Atelectasis & 0.5275 & $[0.4473,0.6111]$ & 0.4609 & No \\
+Pneumothorax & 0.5122 & $[0.3785,0.6400]$ & 0.4028 & No \\
+Cardiomegaly & 0.5232 & $[0.4034,0.6375]$ & 0.4240 & No \\
+Mass & 0.5518 & $[0.4584,0.6514]$ & 0.4723 & No \\
+Nodule & 0.5536 & $[0.4601,0.6482]$ & 0.4731 & No \\
+\bottomrule
+\end{tabular}%
+}
+\end{table}
+
+The largest capability lower bound is 0.473107, so no question qualifies
+jointly for reader availability and clean capability. The reserved
+100-patient write cohort remains untouched. Its planned bidirectional
+clinical, random, and sham comparisons therefore contribute no efficacy
+estimate. This is the registered outcome of the conditional screen.
+
+Together, the tables separate controlled direction-level information from
+its reliable expression through this fixed answer margin. The reader and
+capability criteria test different quantities; their qualification pattern
+is not a direct statistical comparison between the measurements. Prompt
+wording, answer verbalizers, and image dependence remain candidate sources
+of the separation. A subsequent diagnostic can compare these factors while
+independently replicating the frozen reader, before advancing to clinical
+write competition.
+
+\FloatBarrier

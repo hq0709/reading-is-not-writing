@@ -75,6 +75,24 @@ The accepted joint report and review are in code commit `f774842`, under
 The paper's `sections/D_paired_opportunity.tex` contains the complete
 model-specific and direct patient-paired summaries.
 
+## LLaVA validation readout screen
+
+Run `20260905T093108Z-42a43207c848-llava-validation` uses immutable source
+`42a43207c848acfcadecf2f3e0bf866ea71d9dc7`. It measures 4,200 calibration
+outcomes on 700 validation patients; the reserved 100-patient write cohort
+is untouched because no question meets joint reader and capability
+qualification. Accepted reports are in code commit `bafd1d0`, under
+`docs/LLAVA_VALIDATION_OPPORTUNITY_RESULTS.md` and
+`docs/reviews/llava-validation-opportunity-results.md`.
+The internal receipt is
+`/home/qingchan/data/concept-flow/state/llava-validation-opportunity-internal-20260905T093743Z/receipt.json`.
+Pinned result and synthesis receipts are
+`/home/qingchan/.codex/state/claude-review-concept-flow/review-20260905T094007326743Z.json`
+and `review-20260905T094932091464Z.json` in the same directory.
+`sections/E_validation_readout.tex` records the prospective allocation,
+screening criteria, complete reader and capability tables, and conditional
+write-stage disposition.
+
 ## Appendix figure generation
 
 Figures A1--A6 are vector PDFs generated with Matplotlib and NumPy. From this

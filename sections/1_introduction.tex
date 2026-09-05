@@ -1,11 +1,11 @@
 \section{Introduction}
 \label{sec:introduction}
 
-A linear probe reads a concept from a representation; steering assigns it the role of writing that concept back. Under original yes/no prompts, Qwen's Effusion normal reproducibly beats random and sham controls, yet Nodule moves the same Effusion answer more. Mass's clinical advantage under \emph{show} A/B prompts reverses under \emph{is}. Clinical attribution depends on the direction--question--prompt combination.
+A linear probe reads a concept; steering assigns it a writing role. Qwen's Effusion normal reproducibly beats random and sham controls under original yes/no prompts, yet Nodule moves the Effusion answer more. Mass's clinical advantage under \emph{show} A/B prompts reverses under \emph{is}. Attribution depends on direction, question, and prompt.
 
-Linear probes expose information available to a restricted readout family \citep{alain2017understanding,hewitt2019designing}, without establishing the model's use of it \citep{ravichander2021probing}. Random and sham vectors challenge generic steering effects. Semantic competition asks whether the named direction is privileged among equally constructed clinical directions for the named response.
+Probes expose information available to restricted readouts \citep{alain2017understanding,hewitt2019designing}, without establishing model use \citep{ravichander2021probing}. Semantic competition tests whether a direction is privileged among equally constructed clinical alternatives.
 
-For a fixed yes/no prompt, $W_{q,d}$ is the paired mean change in question $q$'s yes probability under direction $d$. Ownership $O_q=W_{q,q}-\max_{d\neq q}W_{q,d}$ compares the named direction with its strongest clinical competitor (Figure~\ref{fig:framework}). Contenders share readout construction, locus, dose, patients, and endpoint. Finding-present logit margins align answer mappings across prompts.
+For fixed yes/no prompts, $W_{q,d}$ is the paired mean change in question $q$'s yes probability under direction $d$. Ownership $O_q=W_{q,q}-\max_{d\neq q}W_{q,d}$ compares the named direction with its strongest clinical competitor (Figure~\ref{fig:framework}). Contenders share construction, locus, dose, patients, and endpoint. Finding-present logit margins align answer mappings.
 
 \begin{figure*}[t]
     \centering
@@ -14,10 +14,8 @@ For a fixed yes/no prompt, $W_{q,d}$ is the paired mean change in question $q$'s
     \label{fig:framework}
 \end{figure*}
 
-The original six gates establish the fixed-prompt reader--writer boundary on NIH ChestX-ray14. Three LLaVA/Qwen cells are readable, with positive controlled selectivity. LLaVA directions stop at random/sham controls. On 400 independent patients, Qwen Effusion's ownership contrast is $-0.0573$ (95\% CI $[-0.0694,-0.0450]$). A six-direction by six-question matrix yields zero owned concepts and no shared alias beyond 119 random directions. A 50-patient Consolidation test finds no reliable input-displacement closure: gain is 0.0022 versus a random maximum of 0.0025.
+Six gates establish the reader--writer boundary on NIH ChestX-ray14: three LLaVA/Qwen cells have positive controlled selectivity, but neither LLaVA cell clears random/sham controls. Qwen's six-direction by six-question matrix yields zero owned concepts and no shared alias beyond 119 random directions. A 50-patient Consolidation test finds no reliable input-displacement closure.
 
-Both models evaluate the same 200 images from 100 fresh Consolidation patient pairs. Neither establishes positive natural paired opportunity (Section~\ref{sec:paired-opportunity}), motivating its measurement before interpreting component closure in a target population.
+Independent Mass confirmation establishes positive simultaneous clinical margins under both \emph{show} A/B prompts, while larger effects among 119 random directions defeat both registered specificity criteria. Both \emph{is} coded margins are negative; explicit \emph{show} yes/no has a similar observed margin (Section~\ref{sec:encoding-results}).
 
-The answer-encoding crossover reveals mapping-odd dominance shared by random and sham directions and a prompt-dependent Mass ranking (Section~\ref{sec:encoding-results}). On 200 independent confirmation patients, Mass exceeds clinical competitors under both \emph{show} A/B prompts with positive simultaneous lower bounds. Larger effects among 119 random directions defeat both registered specificity criteria. Both \emph{is} coded margins are negative. Explicit \emph{show} yes/no has a similar observed margin.
-
-Semantic competition formalizes the reader--writer problem; six gates separate steering efficacy, clinical attribution, and mechanism confirmation; independent prompt comparisons establish wording- and instruction-sensitive competition. Paired opportunity adds a behavioral boundary to component-closure interpretation.
+Behavioral opportunity completes this chain. On the same 100 fresh Consolidation patient pairs, both models leave positive natural paired opportunity unresolved (Section~\ref{sec:paired-opportunity}). An exploratory LLaVA validation screen separates frozen-reader availability from clean answer discrimination at the measurement stage (Section~\ref{sec:generic-results}). Together, these studies motivate measuring behavioral opportunity alongside readability and clinical competition before interpreting component closure or pursuing causal writes.
