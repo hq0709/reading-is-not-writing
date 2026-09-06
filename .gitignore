@@ -7,3 +7,4 @@ main.pdf
 *.synctex.gz
 tmp/
 __pycache__/
+.omc/
