@@ -1,0 +1,385 @@
+\clearpage
+\section{Text Calibration and Independent Image/Reader Validation}
+\label{app:image-readout}
+
+\subsection{Finite calibration of the answer interface}
+
+The pilot motivates two distinct checks: whether answer instructions
+preserve known textual meaning, and whether the selected interface and
+frozen reader generalize to independent images. The text check uses 16
+constructed descriptions: two target objects (red square and blue circle),
+four positive/negative patterns, and both truth values. Every prompt begins
+with ``The target finding is a \{object\}.'' The object placeholder is
+replaced literally throughout. Figure~\ref{fig:text-calibration-prompts}
+shows all description patterns and response instructions. Their order and
+the routing rule are fixed before observing outcomes.
+
+\begin{figure}[H]
+\centering
+\fbox{\begin{minipage}{0.94\linewidth}
+\small\raggedright
+The scene contains a \{object\}. / The scene contains no \{object\}.\par
+A \{object\} is present. / A \{object\} is absent.\par
+It is false that the \{object\} is absent. / It is false that the \{object\} is present.\par
+The list is complete. Listed objects: \{object\}, green triangle. /\par
+The list is complete. Listed objects: green triangle.
+\end{minipage}}\par
+{\small (a) Positive / negative description pairs}\par\medskip
+\fbox{\begin{minipage}{0.94\linewidth}
+\small\raggedright
+Is the finding present?\par
+Answer yes or no.
+\end{minipage}}\par
+{\small (b) Yes/no question and instruction}\par\medskip
+\fbox{\begin{minipage}{0.94\linewidth}
+\small\raggedright
+Answer A if the finding is present and B if it is absent. Reply with A or B only.
+\end{minipage}}\par
+{\small (c) Incumbent A-present instruction}\par\medskip
+\fbox{\begin{minipage}{0.94\linewidth}
+\small\raggedright
+Choose the correct option.\par
+A. The finding is present.\par
+B. The finding is absent.\par
+Reply with A or B only.
+\end{minipage}}\par
+{\small (d) Candidate A-present instruction}
+\caption{\textbf{Constructed descriptions and answer instructions for text calibration.}
+Each description follows the target preface and precedes the question in
+(b). The A/B conditions replace only the answer instruction; B-present
+swaps the letter assignments in (c), or the option meanings in (d).}
+\label{fig:text-calibration-prompts}
+\end{figure}
+
+All five conditions share the question ``Is the finding present?'' The
+yes/no margin takes the maximum yes singleton logit minus the maximum no
+singleton logit; a secondary margin replaces each maximum with
+log-sum-exp over the same variants. The A/B margin uses singleton token
+IDs 319 and 350 and is oriented toward presence. Each margin must be
+strictly positive for presence and strictly negative for absence; zero is
+an error. A yes/no route requires both aggregations to be correct on all
+16 descriptions and at least one candidate A/B condition to make an error.
+This finite constructed-suite rule supplies no population or clinical
+inference. The 80 text outcomes take 15 dispatcher seconds on one A100.
+
+\clearpage
+Table~\ref{tab:text-calibration} reports every condition. Its minimum
+correctly oriented margin multiplies a presence-oriented score by $+1$
+for a positive description and by $-1$ for a negative description.
+Yes/no passes both aggregations (the secondary minimum is 0.12500056).
+Each candidate A/B condition fails the two negative complete-list
+descriptions, one per object. The registered rule therefore selects yes/no.
+
+\begin{table}[H]
+\centering
+\caption{Answer-sign accuracy on constructed descriptions.}
+\label{tab:text-calibration}
+\resizebox{\ifdim\width>\linewidth\linewidth\else\width\fi}{!}{%
+\begin{tabular}{lrrr}
+\toprule
+Condition & Primary errors / 16 & Minimum oriented margin & LSE errors / 16 \\
+\midrule
+Yes/no & 0 & 0.125 & 0 \\
+Incumbent A-present & 7 & $-3.500$ & --- \\
+Incumbent B-present & 8 & $-1.000$ & --- \\
+Candidate A-present & 2 & $-2.000$ & --- \\
+Candidate B-present & 2 & $-1.500$ & --- \\
+\bottomrule
+\end{tabular}%
+}
+\end{table}
+
+Table~\ref{tab:text-pairs} gives the positive-minus-negative primary-margin
+change for each description pair, in Figure~\ref{fig:text-calibration-prompts}(a)
+order. All changes are positive, including conditions with sign errors.
+Sensitivity to a textual truth change therefore does not by itself
+establish correct individual answer semantics. These results select an
+interface for image testing, not a clinically capable model.
+
+\begin{table}[H]
+\centering
+\caption{Paired text-margin changes across description patterns.}
+\label{tab:text-pairs}
+\resizebox{\ifdim\width>\linewidth\linewidth\else\width\fi}{!}{%
+\begin{tabular}{llrrrr}
+\toprule
+Condition & Object & Contains & Present/absent & Negation & Complete list \\
+\midrule
+Yes/no & Red square & 5.875 & 5.625 & 5.250 & 1.125 \\
+ & Blue circle & 5.750 & 5.500 & 6.000 & 1.125 \\
+Incumbent A-present & Red square & 3.500 & 3.375 & 3.375 & 0.125 \\
+ & Blue circle & 3.375 & 3.125 & 2.875 & 0.250 \\
+Incumbent B-present & Red square & 0.750 & 0.250 & 0.875 & 0.250 \\
+ & Blue circle & 1.125 & 0.500 & 1.125 & 0.250 \\
+Candidate A-present & Red square & 5.500 & 5.875 & 5.750 & 0.250 \\
+ & Blue circle & 5.250 & 6.250 & 5.250 & 0.375 \\
+Candidate B-present & Red square & 4.250 & 4.500 & 5.375 & 0.375 \\
+ & Blue circle & 4.125 & 5.125 & 5.750 & 0.375 \\
+\bottomrule
+\end{tabular}%
+}
+\end{table}
+
+\subsection{Independent paired images and frozen measurements}
+
+The image cohort contains validation patients absent from the entire
+original 26,229-row manifest. The lexicographically first image identifier
+represents each patient. String-sorted patient identifiers are permuted
+with NumPy seed 20260916: the first 700 supply index images and the next
+700 supply donors, paired by position. All 1,400 patients are distinct and
+independent of the pilot cohort. Index labels contain 25 Effusion-positive
+and 675 negative cases; donor labels contain 22 positive and 678 negative
+cases. Selection is label-blind within this pool. The pilot instead samples
+within the original disease-positive/No Finding-sampled manifest, so the
+two cohorts do not share the same sampling frame.
+
+Both wordings use the accepted LLaVA-1.5-7B snapshot, native 336-pixel
+processor and chat template, configured for BF16 with batch size 16.
+The primary score is the first-answer maximum-variant yes-minus-no logit
+margin, using singleton yes IDs 3869, 4874, 22483 and no IDs 694, 1939,
+11698. Logits are retained in float32; the score's sigmoid is not a
+calibrated disease probability. Secondary log-sum-exp scores reuse those
+same logits. The run measures 2,800 image outcomes and two fixed-prompt
+image-free priors in 260 dispatcher seconds on one A100.
+
+\clearpage
+Figure~\ref{fig:image-readout-prompts} gives the exact image prompts.
+Let $w\in\{0,1\}$ index the accepted and alternative wording,
+respectively. Let $A_w$ be real-image score AUROC against index labels,
+$D_w$ donor-image score AUROC against those same index labels, and
+$G_w=A_w-D_w$ the image advantage. Donor-own-label AUROC is a separate
+descriptive diagnostic, not the donor term in $G_w$.
+
+\begin{figure}[H]
+\centering
+\fbox{\begin{minipage}{0.94\linewidth}
+\small\raggedright
+Is there a pleural effusion in this chest radiograph? Answer yes or no.
+\end{minipage}}\par
+{\small (a) Accepted wording}\par\medskip
+\fbox{\begin{minipage}{0.94\linewidth}
+\small\raggedright
+Does this chest radiograph show a pleural effusion? Answer yes or no.
+\end{minipage}}\par
+{\small (b) Alternative wording}
+\caption{\textbf{Fixed Effusion prompts for independent image validation.}
+Each prompt is evaluated with index images, donor images, and once without
+an image. The response instruction is shared across wordings.}
+\label{fig:image-readout-prompts}
+\end{figure}
+
+\subsection{Image opportunity and wording under the primary family}
+
+Table~\ref{tab:image-auroc} presents descriptive 95\% percentile intervals.
+The resampling unit is a complete index--donor pair, shared across both
+wordings. All 10,000 paired bootstrap draws (seed 20260917) are valid;
+AUROC assigns half credit to ties. Each individual interval describes its
+own quantity and does not implement the registered joint decision.
+
+\begin{table}[H]
+\centering
+\caption{Real-image and donor-image answer discrimination.}
+\label{tab:image-auroc}
+\resizebox{\ifdim\width>\linewidth\linewidth\else\width\fi}{!}{%
+\begin{tabular}{lrr}
+\toprule
+Quantity & Accepted wording & Alternative wording \\
+\midrule
+Real AUROC $A_w$ & 0.5259 & 0.5089 \\
+Descriptive 95\% interval & $[0.4135,0.6367]$ & $[0.3916,0.6255]$ \\
+Donor AUROC $D_w$ (index labels) & 0.4072 & 0.3975 \\
+Descriptive 95\% interval & $[0.3085,0.5107]$ & $[0.2868,0.5113]$ \\
+Image advantage $G_w$ & 0.1187 & 0.1113 \\
+Descriptive 95\% interval & $[-0.0013,0.2383]$ & $[-0.0357,0.2583]$ \\
+Donor-own-label AUROC & 0.4542 & 0.5117 \\
+\bottomrule
+\end{tabular}%
+}
+\end{table}
+
+The registered primary family contains $(A_0-0.5,G_0,G_1-G_0)$.
+For each common valid draw, we take the maximum absolute deviation of
+these three bootstrap estimates from their observed estimates. The
+95th percentile of those maxima, using NumPy's linear quantile, supplies
+a common radius of 0.1304. Table~\ref{tab:image-family} reports each point
+estimate plus or minus this radius. These are untruncated,
+unstudentized simultaneous intervals, not studentized max-$T$ intervals.
+The rule requires at least 9,500 draws with all four AUROCs and all three
+contrasts finite. Image opportunity requires strictly positive lower
+bounds for both $A_0-0.5$ and $G_0$; wording dependence requires the third
+interval to exclude zero.
+
+\begin{table}[H]
+\centering
+\caption{Simultaneous image-opportunity and wording contrasts.}
+\label{tab:image-family}
+\resizebox{\ifdim\width>\linewidth\linewidth\else\width\fi}{!}{%
+\begin{tabular}{lrr}
+\toprule
+Contrast & Estimate & Simultaneous 95\% interval \\
+\midrule
+$A_0-0.5$ & 0.0259 & $[-0.1045,0.1563]$ \\
+$G_0$ & 0.1187 & $[-0.0117,0.2491]$ \\
+$G_1-G_0$ & $-0.0073$ & $[-0.1377,0.1231]$ \\
+\bottomrule
+\end{tabular}%
+}
+\end{table}
+
+Neither opportunity lower bound is positive. The cross-wording interval
+also spans zero, leaving wording dependence unresolved rather than
+establishing no effect or equivalence. The descriptive real-image AUROC
+difference $A_1-A_0$ is $-0.0170$ (95\% interval $[-0.0650,0.0300]$).
+
+\clearpage
+\subsection{Independent frozen-reader replication}
+
+The Effusion reader uses index images under the accepted wording. Its
+features average all 577 tokens at the consumed vision block
+\texttt{model.vision\_tower.encoder.layers.22}, stored in float16.
+The projection, training mean and scale, clinical coefficients, and all
+20 control models and type maps are reused without fitting. Controls
+predict fixed random binary labels assigned to recurring
+view--sex--age-decade types; each is evaluated against its own type labels,
+not against Effusion labels. Selectivity subtracts their mean AUROC from
+clinical AUROC, as defined in Section~\ref{sec:protocol}. It is not a direct
+estimate of deconfounded clinical information.
+
+Table~\ref{tab:image-reader} compares the pilot and independent cohort.
+The frozen-reader analysis uses the same 10,000 bootstrap indices as the
+answer analysis but a separate validity mask requiring finite clinical
+and all 20 control AUROCs. All draws are valid. The registered replication
+criterion requires at least ten cases per class, 9,500 valid draws, and
+a positive 2.5th-percentile selectivity bound. That bound is negative, so
+the pilot's positive selectivity does not replicate.
+
+\begin{table}[H]
+\centering
+\caption{Frozen-reader performance across the two cohorts.}
+\label{tab:image-reader}
+\resizebox{\ifdim\width>\linewidth\linewidth\else\width\fi}{!}{%
+\begin{tabular}{lrr}
+\toprule
+Quantity & Pilot & Independent index cohort \\
+\midrule
+Effusion-positive / negative & 34 / 666 & 25 / 675 \\
+Clinical AUROC & 0.8196 & 0.6664 \\
+Mean control AUROC & 0.6758 & 0.6775 \\
+Selectivity & 0.1438 & $-0.0111$ \\
+Selectivity 95\% interval & $[0.0658,0.2163]$ & $[-0.1541,0.1185]$ \\
+Positive lower bound & Yes & No \\
+\bottomrule
+\end{tabular}%
+}
+\end{table}
+
+At the point-estimate level, the selectivity difference primarily reflects
+lower clinical AUROC, not a higher control mean. The pilot clinical AUROC
+interval is $[0.7424,0.8920]$; no between-cohort difference interval was
+registered. Different sampling frames, limited positive cases, and
+selection of Effusion from the pilot are unresolved explanations, not
+identified mechanisms. Reader results neither filter the answer grid nor
+alter its simultaneous decision.
+
+Table~\ref{tab:image-controls} lists every frozen control in its stored
+order, making the reported mean auditable. Their task-dependent AUROCs
+describe recurring nuisance-type predictability and should not be read as
+20 alternative clinical Effusion classifiers.
+
+\begin{table}[H]
+\centering
+\caption{Frozen nuisance-type control AUROCs on independent patients.}
+\label{tab:image-controls}
+\resizebox{\ifdim\width>\linewidth\linewidth\else\width\fi}{!}{%
+\begin{tabular}{rrrrrrrr}
+\toprule
+Control & AUROC & Control & AUROC & Control & AUROC & Control & AUROC \\
+\midrule
+1 & 0.9000 & 6 & 0.7416 & 11 & 0.6806 & 16 & 0.7076 \\
+2 & 0.5961 & 7 & 0.5952 & 12 & 0.5961 & 17 & 0.5706 \\
+3 & 0.6346 & 8 & 0.7585 & 13 & 0.7022 & 18 & 0.6587 \\
+4 & 0.7142 & 9 & 0.6728 & 14 & 0.6036 & 19 & 0.7593 \\
+5 & 0.7397 & 10 & 0.6238 & 15 & 0.6194 & 20 & 0.6749 \\
+\bottomrule
+\end{tabular}%
+}
+\end{table}
+
+\clearpage
+\subsection{Descriptive aggregation and prior diagnostics}
+
+Table~\ref{tab:image-aggregation} recomputes discrimination from the same
+logits using log-sum-exp (LSE). The accepted-wording image advantage has
+a positive descriptive percentile interval, but this secondary endpoint
+does not replace the primary simultaneous family. Intervals for the
+paired difference from the primary maximum-variant advantage span zero
+under both wordings. The evidence does not isolate aggregation choice as
+the source of unresolved primary opportunity.
+
+\begin{table}[H]
+\centering
+\caption{Same-logit aggregation sensitivity.}
+\label{tab:image-aggregation}
+\resizebox{\ifdim\width>\linewidth\linewidth\else\width\fi}{!}{%
+\begin{tabular}{lrr}
+\toprule
+Quantity & Accepted wording & Alternative wording \\
+\midrule
+LSE real-image AUROC & 0.5263 & 0.5075 \\
+LSE donor AUROC (index labels) & 0.3990 & 0.3944 \\
+LSE image advantage & 0.1273 & 0.1131 \\
+Descriptive 95\% interval & $[0.0019,0.2504]$ & $[-0.0377,0.2637]$ \\
+LSE minus primary advantage & 0.0087 & 0.0017 \\
+Descriptive 95\% interval & $[-0.0053,0.0220]$ & $[-0.0137,0.0166]$ \\
+\bottomrule
+\end{tabular}%
+}
+\end{table}
+
+Table~\ref{tab:image-priors} reports margin means, Brier error of the
+sigmoid score, and total probability mass on the accepted answer tokens.
+Real and donor Brier errors both use index labels. The alternative wording
+shifts both image-source margins toward yes and has higher Brier error;
+its real-image AUROC and paired image advantage remain unresolved under
+their respective intervals. This pattern distinguishes a score/prior
+shift from established improvement in disease discrimination.
+
+\begin{table}[H]
+\centering
+\caption{Answer margins, predictive error, and token mass.}
+\label{tab:image-priors}
+\resizebox{\ifdim\width>\linewidth\linewidth\else\width\fi}{!}{%
+\begin{tabular}{llrr}
+\toprule
+Input & Quantity & Accepted wording & Alternative wording \\
+\midrule
+Real image & Mean primary margin & 0.0488 & 0.7998 \\
+ & Brier error & 0.2728 & 0.4604 \\
+ & Mean answer-token mass & 0.9972 & 0.9965 \\
+Donor image & Mean primary margin & 0.0380 & 0.7907 \\
+ & Brier error & 0.2726 & 0.4596 \\
+ & Mean answer-token mass & 0.9972 & 0.9965 \\
+No image & Primary margin & 0.8750 & 1.2500 \\
+ & Answer-token mass & 0.9932 & 0.9926 \\
+ & Constant-score AUROC & 0.5000 & 0.5000 \\
+\bottomrule
+\end{tabular}%
+}
+\end{table}
+
+Each image-free prompt produces one constant score, whose AUROC against
+index labels is 0.5 under half-credit ties. These are prior and token-mass
+diagnostics, not patient-varying no-image discrimination estimates.
+Subtracting a wording-specific constant from all its image scores leaves
+AUROC unchanged. High answer-token mass establishes concentration on the
+chosen verbalizers, not clinical correctness.
+
+Taken together, finite text calibration selects a semantically consistent
+yes/no interface for the constructed suite. Independent images establish
+neither the registered opportunity conjunction nor wording dependence,
+and the frozen clinical reader does not reproduce its pilot selectivity.
+The pilot remains an observation within its sampling frame; it does not
+support a reproducible reader--answer separation or identify the mechanism
+behind the downstream write-control outcomes.
+
+\FloatBarrier

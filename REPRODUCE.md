@@ -93,6 +93,42 @@ and `review-20260905T094932091464Z.json` in the same directory.
 screening criteria, complete reader and capability tables, and conditional
 write-stage disposition.
 
+## LLaVA text calibration and independent image/reader validation
+
+Text run `20260905T221642Z-f2b4bafc8a80-llava-text` fixes source
+`f2b4bafc8a802e3f046e82318fd8b5b9aa762c52` and contains 80 finite-suite
+outcomes. The accepted report is `docs/LLAVA_TEXT_SEMANTIC_CALIBRATION_RESULTS.md`
+in the code repository. Its internal and pinned result receipts are
+`/home/qingchan/data/concept-flow/state/llava-text-calibration-internal-20260905T2218Z/receipt.json`
+and `/home/qingchan/.codex/state/claude-review-concept-flow/review-20260905T221855379998Z.json`.
+
+Image run `20260905T232313Z-2a95dfbed888-llava-yesno` fixes source
+`2a95dfbed888fce12b7481812065e5d68b712e8a`. It contains 2,800 image outcomes
+and two image-free priors, with 700 index and 700 disjoint donor patients.
+The accepted report is `docs/LLAVA_YESNO_IMAGE_DIAGNOSTIC_RESULTS.md`;
+both reports are available at code commit
+`3cd386c8fd582eb50f1a59e73ae3b48a9eaee90d`.
+The authoritative full-precision summary is
+`/home/qingchan/data/concept-flow/state/llava-yesno-image-recovery-20260905T234235Z/llava-yesno-image-diagnostic-summary.json`.
+Validator-only source `06277a1fb8a487a54b9220373957b1f1d988e2f5` reuses the
+unchanged native artifact; terminal validation source
+`1da1ca3c6da95218a99304f0edb65e3ab407e0de` verifies the registered allocation,
+scores, bootstrap and frozen-reader control. These steps create no model
+outcomes. The internal and pinned result receipts are
+`/home/qingchan/data/concept-flow/state/llava-yesno-image-internal-20260905T235215Z/receipt.json`
+and `/home/qingchan/.codex/state/claude-review-concept-flow/review-20260905T235348704249Z.json`.
+
+`sections/F_image_readout.tex` gives the constructed prompts, both image
+prompts, all primary contrasts, frozen-reader comparison and twenty control
+AUROCs, and secondary aggregation, Brier, margin and token-mass diagnostics.
+The pilot clinical AUROC, interval and control mean in the cross-cohort
+table come from `questions[0]` in
+`/home/qingchan/data/concept-flow/runs/20260905T093108Z-42a43207c848-llava-validation/artifacts/qualification.json`.
+The two sampling frames differ; no between-cohort difference interval was
+registered. Text calibration selects yes/no on the finite suite; independent
+image opportunity is unestablished, wording is unresolved, and reader
+selectivity does not replicate. No subsequent write experiment is reported.
+
 ## Appendix figure generation
 
 Figures A1--A6 are vector PDFs generated with Matplotlib and NumPy. From this
