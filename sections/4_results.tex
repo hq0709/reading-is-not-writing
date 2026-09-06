@@ -1,8 +1,10 @@
-\section{Results: A Reproducible Writer Meets Semantic Competition}
+\section{Results: Reproducible Steering and Prompt-Conditioned Competition}
 \label{sec:results}
 
 \subsection{A non-generic write effect reproduces}
 \label{sec:qwen-replication}
+
+The first finding starts with a successful intervention: Qwen Effusion reproduces beyond random and sham controls before clinical alternatives change its attribution.
 
 Table~\ref{tab:decoding} evaluates controlled decodability at the exact final visual block: CLIP \texttt{encoder.layers.22} for LLaVA and \texttt{model.visual.blocks.31} for Qwen. Its intervals are 95\% patient-cluster bootstrap intervals over 2,000 draws. The control column reports mean AUROC over 20 recurring-type random-label maps and their 5th--95th percentile spread.
 
@@ -28,30 +30,10 @@ The fixed clinical family provides a harder identification test than non-semanti
 
 Qwen Effusion therefore remains a reproducible direction that changes the answer beyond random and sham perturbations, while its specific semantic attribution fails. The familywise endpoint establishes that at least one fixed clinical alternative is stronger; Nodule is the point-estimate maximizer, not a separately familywise-identified semantic owner.
 
-\subsection{Prospective mechanism gates preserve the attribution boundary}
-\label{sec:mechanism-results}
-
-The prospective Qwen mechanism gates operate at the consumed final visual block (\texttt{vis.last}; Table~\ref{tab:mechanisms}). LCB denotes a one-sided simultaneous or familywise 95\% lower confidence bound.
-
-\input{tables/table_mechanisms}
-
-The causal-ownership matrix crosses six probe normals with six matching questions and provides no named replacement for the failed Effusion attribution. All six diagonal ownership margins are negative, so zero of six clinical concepts is owned under the simultaneous and random-control rules. Every question column's strongest clinical direction is off-diagonal. Effusion is the strongest shared-alias candidate: its mean off-diagonal effect is 0.2909 with simultaneous lower bound 0.2808, and its relative-dominance lower bound is 0.1332. Yet the random alias maximum, taken over 119 directions and six five-question mean effects, is larger at 0.3402. The matrix therefore confirms neither clinical ownership nor a shared alias.
-
-The Consolidation fallback separates availability from input closure on 50 fresh within-patient pairs. On the full patient-disjoint test split, its probe selectivity is 0.0642 with 95\% CI $[0.0302,0.0976]$, so the readout is eligible before pair selection. Across the 50 pairs, mean positive-minus-negative displacement along the Consolidation normal is 0.1091, but its one-sided lower bound is $-0.0364$. Writing each patient's measured Consolidation displacement back into the negative study produces mean closure gain 0.0022, below the maximum over 119 random directions, 0.0025. The familywise Consolidation-minus-maximum-clinical lower bound is also negative at $-0.0015$. The input-closure conjunction is not met.
-
-\subsection{The reader--writer mismatch begins earlier in LLaVA}
-\label{sec:generic-results}
-
-The LLaVA mismatch arises before semantic competition. Effusion and Edema are robust readers, with AUROCs 0.7788 and 0.8009 and positive selectivity intervals (Table~\ref{tab:decoding}), but neither clears the random-and-sham conjunction. Effusion's maximum effect, 0.1470, remains below absolute sham 0.1546; Edema's 0.0659 lies inside its random interval (Figure~\ref{fig:dose}; Table~\ref{tab:gates}). Paired decoding contrasts do not resolve a reader ordering (Table~\ref{tab:paired-decoding}), while the write-control outcomes differ.
-
-A 700-patient pilot finds positive frozen-reader selectivity for Effusion, 0.1438 (95\% CI $[0.0658,0.2163]$), and Cardiomegaly, 0.0889 ($[0.0002,0.1723]$). None of six clean yes/no AUROC lower bounds exceeds 0.5 (maximum 0.4731); the reserved write cohort remains unevaluated (Appendix~\ref{app:validation-readout}). Text calibration then favors yes/no: all 16 constructed descriptions have correct margin signs, whereas each candidate A/B instruction makes two errors.
-
-Independent image/reader validation pairs 700 fresh index patients with 700 disjoint donors. Under the accepted wording, real-image AUROC is 0.5259 and its advantage over donor-image scores against index labels is 0.1187. Neither clears the simultaneous opportunity criterion; the cross-wording advantage interval also spans zero. Frozen-reader selectivity is $-0.0111$ (95\% CI $[-0.1541,0.1185]$), so the pilot reader result does not replicate. Clinical AUROC is lower descriptively (0.8196 versus 0.6664), while control means are similar (0.6758 versus 0.6775). The cohorts use different sampling frames; these observations establish neither a between-cohort decline nor a reproducible measurement-stage separation (Appendix~\ref{app:image-readout}).
-
 \subsection{Wording changes clinical competition within the answer interface}
 \label{sec:encoding-results}
 
-The Qwen ownership pattern persists in logit coordinates (Appendix~\ref{app:response-diagnostics}), motivating a test of the answer interface.
+The second finding concerns the conditions of clinical competition. The Qwen ownership pattern persists in logit coordinates (Appendix~\ref{app:response-diagnostics}), so we test whether changing the answer interface changes a direction's relative advantage.
 
 In the registered crossover, Atelectasis, Pneumothorax, Mass, and Nodule pass independent capability calibration. On these four questions, mapping-even minus mapping-odd response energy is $-2.1786$ (95\% CI $[-2.4061,-1.9810]$): effects are larger in the component that reverses raw A-minus-B sign when the finding-to-letter mapping is exchanged. Yet all 20 random directions and the sham are also mapping-odd dominant (Appendix~\ref{app:encoding}). Aggregate mapping response therefore does not distinguish the clinical normals from generic perturbations.
 
@@ -61,15 +43,30 @@ Table~\ref{tab:mass-confirmation} reports the registered confirmation on 200 new
 
 \input{tables/table_mass_confirmation}
 
-The clinical advantage reproduces under both \textit{show} coded prompts, but the Mass effects remain below the maxima of 119 random directions, with reference ranks of 3/120. Under \textit{is}, both clinical margins are negative. Neither the cross-wording nor original-wording specificity conjunction is met. Explicit \textit{show} yes/no also has a positive clinical margin, 0.2369; its paired differences from A-present and B-present span zero. Within each response instruction, changing \textit{show} to \textit{is} reduces the clinical margin (Table~\ref{tab:mass-contrasts}). This supports wording-conditioned clinical competition, rather than an advantage attributable to answer letters alone. Mass steering increases Brier error in every cell, while all AUROC-change intervals span zero (Tables~\ref{tab:mass-brier} and~\ref{tab:mass-prediction}).
+The clinical advantage reproduces under both \textit{show} coded prompts, but the Mass effects remain below the maxima of 119 random directions, with reference ranks of 3/120. Under \textit{is}, both clinical margins are negative. Neither the cross-wording nor original-wording specificity conjunction is met. Explicit \textit{show} yes/no also has a positive clinical margin, 0.2369; its paired differences from A-present and B-present span zero. Within each response instruction, changing \textit{show} to \textit{is} reduces the clinical margin (Table~\ref{tab:mass-contrasts}). These paired wording contrasts are descriptive. They support wording-conditioned clinical competition, rather than an advantage attributable to answer letters alone. Mass steering increases Brier error in every cell, while all AUROC-change intervals span zero (Tables~\ref{tab:mass-brier} and~\ref{tab:mass-prediction}).
 
-\subsection{Paired input opportunity remains unresolved across model configurations}
+\subsection{Limits of causal and diagnostic interpretation}
+\label{sec:mechanism-results}
+
+\paragraph{Ownership, shared responses, and input closure.}
+The broader Qwen tests examine how far the attribution result extends at the same consumed block. Table~\ref{tab:mechanisms} summarizes the registered comparisons; LCB denotes a one-sided simultaneous or familywise 95\% lower confidence bound.
+
+\input{tables/table_mechanisms}
+
+All six diagonal ownership margins are negative in the six-direction by six-question matrix. Effusion's mean off-diagonal effect, 0.2909, makes it the strongest shared-alias candidate, but the random alias maximum is larger at 0.3402. The matrix therefore identifies neither a replacement clinical owner nor a shared alias under the registered comparisons (Appendix~\ref{app:ownership}). On 50 fresh within-patient Consolidation pairs, writing the measured displacement gives mean closure gain 0.0022, below the random maximum of 0.0025. Negative displacement and clinical-comparison lower bounds leave the input-closure conjunction unmet (Appendix~\ref{app:specificity-closure}).
+
+\paragraph{LLaVA reader and answer measurements.}
+\label{sec:generic-results}
+The original LLaVA Effusion and Edema readers have AUROCs 0.7788 and 0.8009 with positive selectivity intervals (Table~\ref{tab:decoding}), but neither clears the write-control conjunction. Effusion's maximum effect, 0.1470, is below absolute sham 0.1546; Edema's 0.0659 lies inside its random interval (Figure~\ref{fig:dose}; Table~\ref{tab:gates}). Paired decoding contrasts leave reader ordering unresolved (Table~\ref{tab:paired-decoding}).
+
+A 700-patient pilot admits Effusion and Cardiomegaly readers but no clean answer margin, leaving its reserved write cohort unevaluated (Appendix~\ref{app:validation-readout}). Finite text calibration selects yes/no, followed by independent validation on 700 index patients and 700 disjoint donors. Image-linked opportunity and wording dependence remain unresolved, and frozen-reader selectivity does not replicate: $-0.0111$ (95\% CI $[-0.1541,0.1185]$). The descriptive clinical AUROC change, 0.8196 to 0.6664, accompanies similar control means, 0.6758 and 0.6775. The sampling frames differ, and no between-cohort decline is established (Appendix~\ref{app:image-readout}).
+
+\paragraph{Natural paired response.}
 \label{sec:paired-opportunity}
-
-Input closure also depends on the behavior supplied by natural input differences. A separate cohort of 100 fresh Consolidation-positive/negative patient pairs matches view, sex, integer age, and the other 13 disease labels. Both models evaluate the same images under the original Consolidation yes/no prompt. Table~\ref{tab:paired-opportunity} reports each model's mean positive-minus-negative answer-logit gap. Concordance averages whether that gap is positive, giving half credit to ties. All patients and the same 5,000 bootstrap draws enter both analyses.
+A separate cohort of 100 fresh Consolidation-positive/negative patient pairs matches view, sex, integer age, and the other 13 disease labels. Both models evaluate the same images under the original yes/no prompt, with all patients and the same 5,000 bootstrap draws retained. Table~\ref{tab:paired-opportunity} reports the mean positive-minus-negative answer-logit gap and concordance, which gives half credit to zero gaps.
 
 \input{tables/table_paired_opportunity}
 
-Neither model meets the registered positive-lower-bound opportunity criterion. The direct patient-paired concordance difference, LLaVA minus Qwen, is $-0.090$ (descriptive 95\% CI $[-0.210,0.025]$); it leaves the model difference unresolved. Raw gap magnitudes retain their within-model coordinates. This fresh cohort leaves positive paired opportunity unresolved in both configurations (Appendix~\ref{app:paired-opportunity}), adding a behavioral boundary to the earlier 50-pair closure study without diagnosing its mechanism.
+Neither model meets the positive-lower-bound opportunity criterion. Their direct patient-paired concordance difference, LLaVA minus Qwen, is $-0.090$ (descriptive 95\% CI $[-0.210,0.025]$). Positive paired opportunity and the model difference remain unresolved; raw gaps retain their within-model coordinates (Appendix~\ref{app:paired-opportunity}). These measurements constrain the interpretation of input closure without identifying its mechanism.
 
 \FloatBarrier
