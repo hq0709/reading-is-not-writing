@@ -91,7 +91,11 @@ The primary family comprises the four coded cells' five Mass-minus-other
 clinical contrasts, for 20 comparisons in total. Joint resampling of the
 200 confirmation patients preserves pairing across cells and directions.
 A centered studentized max-$T$ bootstrap with 5,000 draws and seed 20260910
-gives simultaneous one-sided 95\% lower bounds. A coded cell qualifies when
+gives simultaneous one-sided 95\% lower bounds using
+Equation~\ref{eq:max-t}: each contrast's bootstrap standard deviation
+is computed once across the draws, with denominator 4,999, and held
+fixed during standardization. The degenerate-component rule is given in
+Appendix~\ref{app:simultaneous-bounds}. A coded cell qualifies when
 it is eligible, all five bounds are positive, and its positive Mass effect
 exceeds every same-cell random effect and the absolute sham effect.
 Cross-wording specificity requires all four coded cells to qualify;

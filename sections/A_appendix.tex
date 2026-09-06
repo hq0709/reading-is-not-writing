@@ -260,6 +260,48 @@ the first of these outcomes.
 \section{Complete Causal-Ownership Surface}
 \label{app:ownership}
 
+\subsection{Joint bootstrap and simultaneous lower bounds}
+\label{app:simultaneous-bounds}
+
+Equation~\ref{eq:max-t} uses the standard deviation across bootstrap
+estimates as a fixed scale for each statistic. With $\overline C^*_j$
+denoting their mean, that scale is
+\begin{equation}
+s_j=\left[\frac{1}{B-1}\sum_{b=1}^{B}
+       (C^*_{bj}-\overline C^*_j)^2\right]^{1/2}.
+\label{eq:bootstrap-scale}
+\end{equation}
+The standardized deviations are centered on the observed $\widehat C_j$,
+not on $\overline C^*_j$. For a component with $s_j\leq10^{-12}$,
+all its $Z_{bj}$ values are set to zero. If every component satisfies
+that threshold, the critical value is zero. Otherwise, each draw's
+maximum includes these zero components, and its empirical 95th percentile
+uses linear interpolation. All 5,000 draws are retained. The final
+subtraction $L_j=\widehat C_j-c_{.95}s_j$ still uses the actual $s_j$,
+including for thresholded components.
+
+The ownership matrix resamples 400 patients with replacement using seed
+20260904. Each draw applies the same patient indices to every question
+and intervention, preserving all paired baseline differences. Its clinical
+family comprises the 30 fixed contrasts $W_{q,q}-W_{q,d}$ for the six
+questions and their five alternatives. The simultaneous ownership lower
+bound for each question is the minimum of its five contrast bounds.
+The shared-alias calculation uses a separate 12-statistic family:
+for each of six directions, its mean off-diagonal effect and its mean
+excess over the five corresponding matched-direction effects.
+The Mass confirmation applies the same construction to 200 independently
+selected patients, with seed 20260910 and a separate family of 20
+Mass-minus-alternative contrasts across four coded prompt conditions
+(Appendix~\ref{app:mass-confirmation}).
+
+Direct target-minus-maximum intervals summarize a different bootstrap
+quantity. They recompute the largest competing mean in every draw and
+then subtract it from the target mean. The displayed two-sided percentile
+intervals use the 2.5th and 97.5th percentiles of those margins. The
+earlier Effusion specificity supplement uses their 5th percentile as its
+one-sided lower bound. These intervals are separate from the simultaneous
+bounds on the fixed linear contrasts in Equation~\ref{eq:max-t}.
+
 \subsection{Question-specific effects and clinical competitors}
 
 Here $q$ indexes a clinical question, $d$ indexes a steering direction, and

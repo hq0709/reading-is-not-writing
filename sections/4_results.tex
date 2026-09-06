@@ -14,14 +14,12 @@ Qwen Effusion first satisfies the reader test. Its probe reaches AUROC 0.7742 an
 
 The response at the locked dose $\alpha=+0.25$ reproduces on the patient-disjoint 400-patient cohort (Figure~\ref{fig:specificity}). Effusion changes mean $P(\mathrm{yes})$ by 0.1945, again above the random-direction 95th percentile of 0.0878 and absolute sham effect of 0.0157. None of these patients appears in the original intervention cohort, and the dose was not reselected, supporting a large and reproducible non-generic effect within ChestX-ray14.
 
-\begin{figure}[H]
+\begin{figure}[!t]
     \centering
     \includegraphics[width=0.90\textwidth]{figures/fig3_direction_specificity.pdf}
     \caption{\textbf{Qwen Effusion reproduces as a non-generic write direction, but semantic competition changes its attribution.} \textbf{(a)} Changes in mean $P(\mathrm{yes})$ at the locked dose $\alpha=+0.25$ on 400 patients absent from the original cohort. The random group contains 20 directions; its dashed segment marks p95. Diamonds show the five fixed alternative clinical normals. \textbf{(b)} The Effusion ownership contrast $O_{\mathrm{Effusion}}$ with its two-sided 95\% patient-bootstrap interval; the registered one-sided 95\% lower bound is $-0.0678$. Nodule realizes the point-estimate maximum.}
     \label{fig:specificity}
 \end{figure}
-
-\FloatBarrier
 
 \subsection{Semantic competition changes attribution, not efficacy}
 \label{sec:specificity-results}
@@ -43,7 +41,9 @@ Table~\ref{tab:mass-confirmation} reports the registered confirmation on 200 new
 
 \input{tables/table_mass_confirmation}
 
-The clinical advantage reproduces under both \textit{show} coded prompts, but the Mass effects remain below the maxima of 119 random directions, with reference ranks of 3/120. Under \textit{is}, both clinical margins are negative. Neither the cross-wording nor original-wording specificity conjunction is met. Explicit \textit{show} yes/no also has a positive clinical margin, 0.2369; its paired differences from A-present and B-present span zero. Within each response instruction, changing \textit{show} to \textit{is} reduces the clinical margin (Table~\ref{tab:mass-contrasts}). These paired wording contrasts are descriptive. They support wording-conditioned clinical competition, rather than an advantage attributable to answer letters alone. Mass steering increases Brier error in every cell, while all AUROC-change intervals span zero (Tables~\ref{tab:mass-brier} and~\ref{tab:mass-prediction}).
+The clinical advantage reproduces under both \textit{show} coded prompts, but the Mass effects remain below the maxima of 119 random directions, with reference ranks of 3/120. These 119 directions form a fixed reference family: each rank places Mass third among the 120 compared effects. This finite descriptive ranking is not a $p$-value, and failure to exceed this family's maximum does not establish nonspecificity across arbitrary direction distributions or reference-family sizes. Under \textit{is}, both clinical margins are negative. Neither the cross-wording nor original-wording specificity conjunction is met.
+
+Explicit \textit{show} yes/no also has a positive clinical margin, 0.2369; its paired differences from A-present and B-present span zero. Within each response instruction, changing \textit{show} to \textit{is} reduces the clinical margin (Table~\ref{tab:mass-contrasts}). These paired wording contrasts are descriptive. They support wording-conditioned clinical competition, rather than an advantage attributable to answer letters alone. Mass steering increases Brier error in every cell, while all AUROC-change intervals span zero (Tables~\ref{tab:mass-brier} and~\ref{tab:mass-prediction}).
 
 \subsection{Limits of causal and diagnostic interpretation}
 \label{sec:mechanism-results}
@@ -54,6 +54,9 @@ The broader Qwen tests examine how far the attribution result extends at the sam
 \input{tables/table_mechanisms}
 
 All six diagonal ownership margins are negative in the six-direction by six-question matrix. Effusion's mean off-diagonal effect, 0.2909, makes it the strongest shared-alias candidate, but the random alias maximum is larger at 0.3402. The matrix therefore identifies neither a replacement clinical owner nor a shared alias under the registered comparisons (Appendix~\ref{app:ownership}). On 50 fresh within-patient Consolidation pairs, writing the measured displacement gives mean closure gain 0.0022, below the random maximum of 0.0025. Negative displacement and clinical-comparison lower bounds leave the input-closure conjunction unmet (Appendix~\ref{app:specificity-closure}).
+
+\paragraph{Label-conditioned shifts.}
+The separate 400-patient ownership matrix cohort also permits a descriptive comparison by disease label (Appendix Tables~\ref{tab:label-conditioned-shifts} and~\ref{tab:label-conditioned-shifts-continued}); this cohort is distinct from the earlier 400-patient Effusion specificity cohort. Across the six questions and six clinical directions, the positive-minus-negative difference in mean intervention-induced logit-margin shift has a negative point estimate in 35 of 36 cells, including all six matched question--direction cells. The sole positive estimate is 0.0039 for the Nodule question under the Pneumothorax direction, with a pointwise 95\% patient-bootstrap interval of $[-0.2787,0.2827]$. The tables report pointwise 95\% intervals for this post-hoc descriptive analysis, separate from the registered primary endpoints and without multiplicity adjustment. The pattern shows why a mean affirmative shift cannot by itself be read as preferential correction in disease-positive patients; it does not establish label independence or a familywise conclusion across the 36 cells.
 
 \paragraph{LLaVA reader and answer measurements.}
 \label{sec:generic-results}

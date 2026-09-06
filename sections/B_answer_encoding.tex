@@ -43,6 +43,19 @@ registered ownership decisions retaining their original inferential status.
 
 \subsection{Label-conditioned shifts and matrix geometry}
 
+Tables~\ref{tab:label-conditioned-shifts} and~\ref{tab:label-conditioned-shifts-continued}
+report all six questions crossed with all six clinical directions on the
+same 400 patients. Positive and negative groups are defined by each
+question's disease label. Each mean is the group's mean change in the
+yes-minus-no logit margin relative to its own unperturbed outputs;
+``Difference'' subtracts the negative-group mean from the positive-group
+mean. The intervals are the pointwise 2.5th and 97.5th percentiles from
+2,000 joint patient-bootstrap draws with seed 20260906. Patient indices
+are shared across questions and directions, and group means are recomputed
+within each draw. All 2,000 draws contain both label groups for every
+question. This retrospective analysis describes disease-conditioned
+response shifts separately from the registered ownership tests.
+
 For the Effusion direction on the Effusion question, the mean logit-margin
 shift is 2.1336 among 29 label-positive patients and 2.2712 among 371
 label-negative patients. The positive-minus-negative difference is
@@ -51,6 +64,14 @@ $[-0.4443,0.1659]$ from 2,000 draws. Both groups show an upward shift,
 while their mean-shift difference remains unresolved. The Brier score,
 the mean squared difference between the yes probability and binary label,
 rises from 0.0681 to 0.1035.
+
+Across the full grid, 35 of 36 positive-minus-negative differences have
+negative point estimates. Thus a larger average affirmative shift cannot
+be read as preferential correction of disease-positive patients. The
+count describes point estimates, not a multiplicity-adjusted result;
+the pointwise intervals do not establish label independence.
+
+\input{tables/table_label_conditioned_shifts}
 
 The six-by-six matrix of mean logit-margin changes has clinical directions
 as rows and questions as columns. Its first singular component accounts
