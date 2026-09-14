@@ -32,7 +32,7 @@ def tex(s: str) -> str:
 def leaderboard():
     rows = {(r["model_key"], r["dataset_id"]): r for r in csv.DictReader((RUNS / "leaderboard.csv").open())}
     models = [m for m in ORDER if any((m, d) in rows for d, _ in DATASETS)]
-    lines = [r"\begin{table}[t]", r"\centering", r"\small",
+    lines = [r"\begin{table}[t]", r"\centering", r"\scriptsize", r"\setlength{\tabcolsep}{3.2pt}",
              r"\caption{\textbf{Read, answer, write.} For every checkpoint and dataset: number of the six concepts that are "
              r"readable at the consumed visual block (probe selectivity lower bound $>0$), answer-capable on the clean yes/no "
              r"question (AUROC lower bound $>0.5$), and owned by their concept write (steering reference and positive "
@@ -64,7 +64,7 @@ def leaderboard():
 
 
 def per_dataset(ds: str, label: str):
-    lines = [r"\begin{longtable}{llrrrrrl}",
+    lines = [r"\scriptsize", r"\setlength{\tabcolsep}{3.5pt}", r"\begin{longtable}{llrrrrrl}",
              r"\caption{\textbf{" + label + r": per-concept results of the external replication.} $S$: probe selectivity; "
              r"ans.\ AUROC: clean-answer AUROC; $W_{qq}$: mean change in $P(\mathrm{yes})$ under the concept write; "
              r"$O_q$: ownership contrast; p95: 95th percentile of the 119 random-direction writes; verdict from the "
@@ -91,7 +91,7 @@ def per_dataset(ds: str, label: str):
             aa = cc.get("answer_auroc"); aa = f"{aa:.3f}" if isinstance(aa, (int, float)) and aa == aa else "--"
             lines.append(f"{NAMES[m]} & {c} & {cc.get('selectivity', float('nan')):.3f} & {aa} & {v['W_qq']:.3f} & "
                          f"{v['O_q']:.3f} & {v['random_p95']:.3f} & {verdict} \\\\")
-    lines += [r"\bottomrule", r"\end{longtable}"]
+    lines += [r"\bottomrule", r"\end{longtable}", r"\normalsize"]
     (OUT / f"table_cf_{ds}.tex").write_text("\n".join(lines) + "\n")
 
 
