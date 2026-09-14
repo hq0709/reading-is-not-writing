@@ -29,11 +29,11 @@ def numeric_axis(ax, limits, ticks, xlabel):
     ax.set_xlim(*limits)
     ax.set_xticks(ticks)
     ax.set_xlabel(xlabel, labelpad=4, color=INK, fontsize=6.6)
-    ax.spines[["top", "right", "left"]].set_visible(False)
     ax.tick_params(axis="y", length=0, labelsize=6.4)
     ax.tick_params(axis="x", length=3, labelsize=6.4)
     ax.set_axisbelow(True)
-    ax.grid(axis="x", linewidth=0.5, alpha=0.65)
+    ax.grid(axis="y", visible=False)
+    ax.grid(axis="x", linewidth=0.6)
     ax.axvline(0, color=MUTED, linewidth=0.8, zorder=1)
 
 
@@ -110,7 +110,7 @@ def plot_ownership(ownership):
                label="Column winner"),
     ]
     fig.legend(handles=handles, loc="lower center", bbox_to_anchor=(0.54, 0.025),
-               ncol=2, frameon=False, fontsize=7.3, labelcolor=INK,
+               ncol=2, frameon=True, edgecolor="#8a8a8a", fontsize=7.3, labelcolor=INK,
                handlelength=1.2, columnspacing=2)
     save_figure(fig, "figA3_ownership_matrix")
 
