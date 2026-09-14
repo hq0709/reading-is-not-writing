@@ -1,0 +1,133 @@
+\begin{longtable}{llrrrrrl}
+\caption{\textbf{NIH ChestX-ray14: per-concept results of the external replication.} $S$: probe selectivity; ans.\ AUROC: clean-answer AUROC; $W_{qq}$: mean change in $P(\mathrm{yes})$ under the concept write; $O_q$: ownership contrast; p95: 95th percentile of the 119 random-direction writes; verdict from the simultaneous max-$T$ bounds (own = steering reference met and every lower bound $>0$).}\\
+\label{tab:cf-nih}\\
+\toprule
+Checkpoint & Concept & $S$ & ans.\ AUROC & $W_{qq}$ & $O_q$ & p95 & Verdict \\
+\midrule
+\endfirsthead
+\toprule
+Checkpoint & Concept & $S$ & ans.\ AUROC & $W_{qq}$ & $O_q$ & p95 & Verdict \\
+\midrule
+\endhead
+Qwen2.5-VL-3B & Effusion & 0.137 & 0.582 & -0.040 & -0.094 & 0.083 & competitor \\
+Qwen2.5-VL-3B & Atelectasis & 0.046 & 0.535 & -0.011 & -0.038 & 0.043 & competitor \\
+Qwen2.5-VL-3B & Pneumothorax & 0.104 & 0.432 & -0.057 & -0.176 & 0.139 & competitor \\
+Qwen2.5-VL-3B & Cardiomegaly & 0.137 & 0.615 & 0.051 & -0.109 & 0.192 & competitor \\
+Qwen2.5-VL-3B & Mass & 0.061 & 0.682 & 0.148 & -0.040 & 0.177 & competitor \\
+Qwen2.5-VL-3B & Nodule & -0.039 & 0.608 & 0.137 & -0.035 & 0.164 & competitor \\
+Qwen2.5-VL-7B & Effusion & 0.102 & 0.593 & 0.190 & -0.071 & 0.137 & competitor \\
+Qwen2.5-VL-7B & Atelectasis & 0.062 & 0.566 & 0.101 & -0.226 & 0.297 & competitor \\
+Qwen2.5-VL-7B & Pneumothorax & 0.152 & 0.508 & 0.089 & -0.102 & 0.320 & competitor \\
+Qwen2.5-VL-7B & Cardiomegaly & 0.205 & 0.742 & 0.085 & -0.219 & 0.311 & competitor \\
+Qwen2.5-VL-7B & Mass & 0.021 & 0.678 & 0.359 & -0.169 & 0.372 & competitor \\
+Qwen2.5-VL-7B & Nodule & -0.041 & 0.642 & 0.118 & -0.072 & 0.158 & competitor \\
+Qwen2.5-VL-32B & Effusion & 0.075 & 0.470 & -0.041 & -0.218 & 0.076 & competitor \\
+Qwen2.5-VL-32B & Atelectasis & 0.080 & 0.616 & 0.034 & -0.059 & 0.049 & competitor \\
+Qwen2.5-VL-32B & Pneumothorax & 0.140 & 0.623 & 0.032 & -0.056 & 0.053 & competitor \\
+Qwen2.5-VL-32B & Cardiomegaly & 0.171 & 0.670 & 0.192 & 0.106 & 0.082 & own \\
+Qwen2.5-VL-32B & Mass & 0.069 & 0.769 & 0.165 & -0.077 & 0.231 & competitor \\
+Qwen2.5-VL-32B & Nodule & 0.034 & 0.662 & 0.009 & -0.051 & 0.132 & competitor \\
+Qwen2.5-VL-72B & Effusion & 0.041 & 0.624 & -0.011 & -0.322 & 0.201 & competitor \\
+Qwen2.5-VL-72B & Atelectasis & 0.072 & 0.573 & 0.531 & 0.537 & 0.213 & own \\
+Qwen2.5-VL-72B & Pneumothorax & 0.136 & 0.478 & -0.015 & -0.498 & 0.389 & competitor \\
+Qwen2.5-VL-72B & Cardiomegaly & 0.192 & 0.659 & 0.462 & 0.256 & 0.408 & own \\
+Qwen2.5-VL-72B & Mass & 0.031 & 0.685 & 0.328 & 0.066 & 0.292 & own \\
+Qwen2.5-VL-72B & Nodule & -0.025 & 0.679 & -0.016 & -0.230 & 0.144 & competitor \\
+Qwen3-VL-4B & Effusion & 0.098 & 0.769 & 0.386 & -0.026 & 0.289 & competitor \\
+Qwen3-VL-4B & Atelectasis & 0.102 & 0.639 & 0.139 & -0.071 & 0.225 & competitor \\
+Qwen3-VL-4B & Pneumothorax & 0.062 & 0.672 & 0.002 & -0.287 & 0.047 & competitor \\
+Qwen3-VL-4B & Cardiomegaly & 0.139 & 0.726 & 0.269 & -0.084 & 0.397 & competitor \\
+Qwen3-VL-4B & Mass & 0.112 & 0.785 & -0.004 & -0.135 & 0.097 & competitor \\
+Qwen3-VL-4B & Nodule & -0.050 & 0.655 & -0.011 & -0.086 & 0.056 & competitor \\
+Qwen3-VL-8B & Effusion & 0.128 & 0.766 & 0.232 & 0.073 & 0.360 & no ref. \\
+Qwen3-VL-8B & Atelectasis & 0.069 & 0.653 & 0.036 & -0.012 & 0.049 & competitor \\
+Qwen3-VL-8B & Pneumothorax & 0.127 & 0.656 & 0.052 & -0.067 & 0.168 & competitor \\
+Qwen3-VL-8B & Cardiomegaly & 0.202 & 0.799 & 0.177 & 0.000 & 0.177 & unresolved \\
+Qwen3-VL-8B & Mass & 0.124 & 0.641 & -0.054 & -0.107 & 0.208 & competitor \\
+Qwen3-VL-8B & Nodule & -0.070 & 0.651 & -0.050 & 0.035 & 0.189 & no ref. \\
+Qwen3-VL-32B & Effusion & 0.089 & 0.713 & -0.012 & -0.140 & 0.061 & competitor \\
+Qwen3-VL-32B & Atelectasis & 0.125 & 0.674 & 0.074 & -0.039 & 0.123 & competitor \\
+Qwen3-VL-32B & Pneumothorax & 0.115 & 0.684 & 0.008 & 0.003 & 0.005 & unresolved \\
+Qwen3-VL-32B & Cardiomegaly & 0.189 & 0.709 & 0.136 & -0.039 & 0.238 & competitor \\
+Qwen3-VL-32B & Mass & 0.082 & 0.780 & 0.091 & -0.106 & 0.093 & competitor \\
+Qwen3-VL-32B & Nodule & -0.013 & 0.612 & 0.242 & 0.171 & 0.116 & own \\
+InternVL3.5-8B & Effusion & 0.074 & 0.771 & 0.008 & 0.003 & 0.013 & no ref. \\
+InternVL3.5-8B & Atelectasis & 0.045 & 0.710 & -0.004 & -0.015 & 0.028 & competitor \\
+InternVL3.5-8B & Pneumothorax & 0.062 & 0.701 & 0.001 & -0.000 & 0.003 & unresolved \\
+InternVL3.5-8B & Cardiomegaly & 0.135 & 0.753 & 0.035 & 0.002 & 0.062 & unresolved \\
+InternVL3.5-8B & Mass & 0.109 & 0.780 & 0.011 & -0.006 & 0.019 & competitor \\
+InternVL3.5-8B & Nodule & -0.057 & 0.664 & 0.007 & -0.014 & 0.023 & competitor \\
+InternVL3.5-14B & Effusion & 0.125 & 0.790 & 0.012 & 0.009 & 0.009 & own \\
+InternVL3.5-14B & Atelectasis & 0.086 & 0.726 & -0.000 & -0.010 & 0.024 & competitor \\
+InternVL3.5-14B & Pneumothorax & 0.093 & 0.721 & -0.000 & -0.000 & 0.001 & unresolved \\
+InternVL3.5-14B & Cardiomegaly & 0.182 & 0.777 & 0.021 & -0.005 & 0.037 & unresolved \\
+InternVL3.5-14B & Mass & 0.031 & 0.744 & 0.007 & 0.005 & 0.011 & no ref. \\
+InternVL3.5-14B & Nodule & -0.076 & 0.647 & -0.002 & -0.009 & 0.019 & competitor \\
+Gemma 3 4B & Effusion & 0.080 & 0.561 & -0.005 & -0.004 & 0.000 & unresolved \\
+Gemma 3 4B & Atelectasis & 0.107 & 0.535 & -0.002 & -0.002 & -0.000 & unresolved \\
+Gemma 3 4B & Pneumothorax & -0.044 & 0.595 & -0.005 & -0.014 & 0.011 & competitor \\
+Gemma 3 4B & Cardiomegaly & 0.086 & 0.627 & -0.252 & -0.238 & 0.001 & competitor \\
+Gemma 3 4B & Mass & 0.061 & 0.643 & -0.344 & -0.276 & 0.144 & competitor \\
+Gemma 3 4B & Nodule & 0.140 & 0.414 & -0.146 & -0.122 & 0.024 & competitor \\
+Gemma 3 12B & Effusion & 0.080 & 0.648 & -0.280 & -0.834 & 0.511 & competitor \\
+Gemma 3 12B & Atelectasis & 0.107 & 0.659 & -0.347 & -0.569 & 0.231 & competitor \\
+Gemma 3 12B & Pneumothorax & -0.044 & 0.660 & 0.098 & -0.172 & 0.627 & competitor \\
+Gemma 3 12B & Cardiomegaly & 0.086 & 0.516 & 0.329 & -0.194 & 0.738 & competitor \\
+Gemma 3 12B & Mass & 0.061 & 0.633 & -0.177 & -0.647 & 0.501 & competitor \\
+Gemma 3 12B & Nodule & 0.140 & 0.634 & 0.385 & 0.167 & 0.369 & own \\
+Gemma 3 27B & Effusion & 0.078 & 0.583 & 0.208 & -0.044 & 0.271 & competitor \\
+Gemma 3 27B & Atelectasis & 0.110 & 0.592 & -0.022 & -0.028 & 0.005 & competitor \\
+Gemma 3 27B & Pneumothorax & -0.040 & 0.590 & 0.375 & -0.012 & 0.397 & unresolved \\
+Gemma 3 27B & Cardiomegaly & 0.086 & 0.601 & 0.045 & 0.002 & 0.045 & unresolved \\
+Gemma 3 27B & Mass & 0.061 & 0.649 & 0.096 & -0.078 & 0.185 & competitor \\
+Gemma 3 27B & Nodule & 0.141 & 0.608 & 0.047 & -0.016 & 0.067 & competitor \\
+MedGemma 4B & Effusion & 0.108 & 0.803 & 0.084 & 0.005 & 0.133 & unresolved \\
+MedGemma 4B & Atelectasis & 0.138 & 0.784 & -0.358 & -0.558 & 0.179 & competitor \\
+MedGemma 4B & Pneumothorax & 0.109 & 0.823 & 0.044 & 0.005 & 0.194 & unresolved \\
+MedGemma 4B & Cardiomegaly & 0.198 & 0.894 & 0.192 & -0.067 & 0.370 & competitor \\
+MedGemma 4B & Mass & 0.168 & 0.834 & -0.100 & -0.273 & 0.318 & competitor \\
+MedGemma 4B & Nodule & 0.016 & 0.666 & 0.129 & 0.094 & 0.542 & no ref. \\
+MedGemma 27B & Effusion & 0.107 & 0.855 & -0.012 & -0.064 & 0.057 & competitor \\
+MedGemma 27B & Atelectasis & 0.138 & 0.755 & -0.331 & -0.446 & 0.116 & competitor \\
+MedGemma 27B & Pneumothorax & 0.109 & 0.799 & -0.005 & -0.013 & 0.050 & unresolved \\
+MedGemma 27B & Cardiomegaly & 0.197 & 0.871 & 0.645 & 0.002 & 0.646 & no ref. \\
+MedGemma 27B & Mass & 0.168 & 0.860 & -0.091 & -0.132 & 0.044 & competitor \\
+MedGemma 27B & Nodule & 0.016 & 0.662 & -0.120 & -0.203 & 0.190 & competitor \\
+Lingshu 7B & Effusion & 0.120 & 0.780 & 0.066 & 0.018 & 0.078 & no ref. \\
+Lingshu 7B & Atelectasis & 0.102 & 0.748 & 0.099 & 0.014 & 0.117 & no ref. \\
+Lingshu 7B & Pneumothorax & 0.096 & 0.796 & 0.070 & 0.010 & 0.101 & unresolved \\
+Lingshu 7B & Cardiomegaly & 0.234 & 0.778 & 0.222 & 0.170 & 0.117 & own \\
+Lingshu 7B & Mass & 0.008 & 0.809 & 0.029 & -0.086 & 0.135 & competitor \\
+Lingshu 7B & Nodule & -0.075 & 0.656 & 0.066 & 0.016 & 0.103 & no ref. \\
+Lingshu 32B & Effusion & 0.111 & 0.789 & 0.060 & -0.007 & 0.063 & unresolved \\
+Lingshu 32B & Atelectasis & 0.096 & 0.739 & 0.021 & -0.080 & 0.074 & competitor \\
+Lingshu 32B & Pneumothorax & 0.137 & 0.818 & 0.202 & 0.144 & 0.065 & own \\
+Lingshu 32B & Cardiomegaly & 0.072 & 0.860 & 0.105 & 0.051 & 0.086 & own \\
+Lingshu 32B & Mass & 0.102 & 0.861 & 0.065 & -0.077 & 0.069 & competitor \\
+Lingshu 32B & Nodule & -0.066 & 0.642 & -0.086 & -0.178 & 0.061 & competitor \\
+LLaVA-1.5-7B & Effusion & 0.110 & 0.405 & 0.038 & -0.028 & 0.094 & competitor \\
+LLaVA-1.5-7B & Atelectasis & 0.102 & 0.569 & 0.042 & -0.015 & 0.089 & competitor \\
+LLaVA-1.5-7B & Pneumothorax & 0.104 & 0.509 & -0.033 & -0.080 & 0.082 & competitor \\
+LLaVA-1.5-7B & Cardiomegaly & 0.053 & 0.519 & -0.032 & -0.133 & 0.104 & competitor \\
+LLaVA-1.5-7B & Mass & 0.087 & 0.534 & 0.049 & 0.023 & 0.056 & no ref. \\
+LLaVA-1.5-7B & Nodule & 0.031 & 0.506 & 0.010 & -0.018 & 0.047 & competitor \\
+LLaVA-1.5-13B & Effusion & 0.110 & 0.506 & 0.003 & -0.013 & 0.057 & competitor \\
+LLaVA-1.5-13B & Atelectasis & 0.102 & 0.554 & -0.045 & -0.047 & 0.021 & competitor \\
+LLaVA-1.5-13B & Pneumothorax & 0.104 & 0.564 & -0.019 & -0.037 & 0.036 & competitor \\
+LLaVA-1.5-13B & Cardiomegaly & 0.053 & 0.488 & -0.004 & -0.029 & 0.058 & competitor \\
+LLaVA-1.5-13B & Mass & 0.087 & 0.548 & 0.018 & 0.008 & 0.032 & no ref. \\
+LLaVA-1.5-13B & Nodule & 0.031 & 0.525 & 0.001 & -0.015 & 0.026 & competitor \\
+LLaVA-Med 1.5 7B & Effusion & 0.119 & 0.525 & 0.004 & -0.001 & 0.008 & competitor \\
+LLaVA-Med 1.5 7B & Atelectasis & 0.105 & 0.517 & 0.002 & -0.004 & 0.007 & competitor \\
+LLaVA-Med 1.5 7B & Pneumothorax & 0.110 & 0.483 & -0.021 & -0.038 & 0.018 & competitor \\
+LLaVA-Med 1.5 7B & Cardiomegaly & 0.061 & 0.583 & 0.024 & -0.010 & 0.034 & competitor \\
+LLaVA-Med 1.5 7B & Mass & 0.085 & 0.553 & 0.008 & -0.007 & 0.012 & competitor \\
+LLaVA-Med 1.5 7B & Nodule & 0.019 & 0.530 & -0.009 & -0.021 & 0.011 & competitor \\
+Llama 3.2 Vision 11B & Effusion & 0.128 & -- & -- & -- & -- & ineligible \\
+Llama 3.2 Vision 11B & Atelectasis & 0.054 & -- & -- & -- & -- & ineligible \\
+Llama 3.2 Vision 11B & Pneumothorax & 0.150 & -- & -- & -- & -- & ineligible \\
+Llama 3.2 Vision 11B & Cardiomegaly & 0.118 & -- & -- & -- & -- & ineligible \\
+Llama 3.2 Vision 11B & Mass & 0.001 & -- & -- & -- & -- & ineligible \\
+Llama 3.2 Vision 11B & Nodule & 0.003 & -- & -- & -- & -- & ineligible \\
+\bottomrule
+\end{longtable}
