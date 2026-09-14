@@ -283,7 +283,7 @@ def table_controls(blocks):
             ("Label-shift gap", lambda b: [b["t3"].get("all|median_label_gap", {}).get("estimate")]),
             ("$|$Wording contrast$|$ (IY$-$WY)", lambda b: [abs(v["estimate"]) for k, v in b["t3"].items() if k.endswith("wording_IY_minus_WY_O") and isinstance(v, dict) and v.get("estimate") is not None]),
             ("$|$Mapping contrast$|$ (IA$-$IB)", lambda b: [abs(v["estimate"]) for k, v in b["t3"].items() if k.endswith("mapping_IA_minus_IB_O") and isinstance(v, dict) and v.get("estimate") is not None])]
-    L = [r"\begin{table}[t]", r"\centering", r"\scriptsize", r"\setlength{\tabcolsep}{4pt}",
+    L = [r"\begin{table}[h]", r"\centering", r"\scriptsize", r"\setlength{\tabcolsep}{4pt}",
          r"\caption{\textbf{Reference family and controls.} Median and interquartile range over all cells (first four rows) or over all "
          r"blocks with the corresponding module (remaining rows), per dataset. The last row counts concept cells whose write meets the "
          r"steering reference (above the random p95 and the sham) but loses to a competing clinical direction.}",

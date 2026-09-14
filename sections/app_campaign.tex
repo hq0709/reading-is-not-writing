@@ -29,6 +29,7 @@ Tables~\ref{tab:cf-own-nih}--\ref{tab:cf-own-coco} give the ownership contrast o
 \input{tables/table_cf_own_nih}
 \input{tables/table_cf_own_chexpert}
 \input{tables/table_cf_own_coco}
+\FloatBarrier
 
 \subsection{Controls}
 \label{app:cf-controls-sec}
@@ -43,25 +44,24 @@ Table~\ref{tab:cf-controls} summarises the reference family and the per-block co
 
 Figures~\ref{fig:cf-w-nih}--\ref{fig:cf-w-coco} show the full $6\times6$ write matrix of every checkpoint; the owned diagonals are outlined.
 
-\begin{figure}[h]
+\begin{figure}[p]
     \centering
     \includegraphics[width=\textwidth]{figures/figA1_write_matrices_nih.pdf}
     \caption{Write matrices $W_{q,d}$ of every checkpoint on NIH ChestX-ray14; owned diagonals are outlined.}
     \label{fig:cf-w-nih}
 \end{figure}
 
-\begin{figure}[h]
+\begin{figure}[p]
     \centering
     \includegraphics[width=\textwidth]{figures/figA2_write_matrices_chexpert.pdf}
     \caption{Write matrices of every checkpoint on CheXpert Plus.}
     \label{fig:cf-w-chexpert}
 \end{figure}
 
-\begin{figure}[h]
+\begin{figure}[p]
     \centering
     \includegraphics[width=\textwidth]{figures/figA3_write_matrices_coco.pdf}
     \caption{Write matrices of every checkpoint on COCO.}
     \label{fig:cf-w-coco}
 \end{figure}
 
-\FloatBarrier
