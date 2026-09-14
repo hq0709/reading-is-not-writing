@@ -28,7 +28,7 @@ Clinical reader scores use the stored projection, training centering and
 scaling, and logistic coefficients. Twenty recurring-type random-label
 controls are fitted on the original training split and shared across the
 six comparisons. No reader or control parameter is fitted on validation.
-Selectivity, defined in Section~\ref{sec:protocol}, subtracts mean control
+Selectivity, defined in Section~\ref{app:seed}, subtracts mean control
 AUROC from clinical AUROC, with each control evaluated against its own type
 labels. The same 2,000 patient-bootstrap draws, seeded with 20260914, serve
 every clinical reader, every control, and clean answer capability.

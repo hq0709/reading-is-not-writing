@@ -1,102 +1,449 @@
 """Build the cf-transfer-v1 LaTeX tables for the paper from the packaged campaign results.
 
-Inputs (read-only): the campaign run root (leaderboard.csv, runs/<model>/<dataset>/summary.json, run.json).
-Outputs: tables/table_cf_leaderboard.tex (main text) and tables/table_cf_<dataset>.tex (appendix, one row per
-checkpoint x concept with S, answer AUROC, W_qq, O_q and the verdict). Numbers are copied, never recomputed.
+Inputs (read-only): the campaign run root (leaderboard.csv, runs/<model>/<dataset>/{summary.json, run.json,
+preflight.vis.last.json, template_eligibility.json}). Numbers are copied, never recomputed; the only derived
+quantities are means/medians over cells and the pass fractions that the captions define.
+
+Outputs (tables/):
+  cf_colors.tex            Morandi tints used by \\cellcolor (input by the tables)
+  table_cf_main.tex        Table: checkpoint x dataset benchmark with heat-mapped cells (sorted by chest ownership)
+  table_cf_families.tex    Table: one row per family
+  table_cf_controls.tex    Table: reference family and controls per dataset (median, IQR over blocks)
+  table_cf_seed.tex        Table: Qwen2.5-VL-7B on NIH per concept (seed replication)
+  table_cf_{nih,chexpert,coco}.tex   Appendix longtables, one row per checkpoint x concept
+  table_cf_models.tex      Appendix: checkpoint sheet (family, params, tower, tokens, templates, blocks, GPU-hours)
+  table_cf_gates.tex       Appendix: the seven preflight gates and their observed ranges
+  table_cf_leaderboard.tex thin wrapper that inputs table_cf_main.tex (kept for the existing \\input)
 """
 from __future__ import annotations
 
-import csv
 import json
+import statistics
 import sys
 from pathlib import Path
 
 RUNS = Path(sys.argv[1]) if len(sys.argv) > 1 else Path("/rodata/azradonc_dev/m253405/cf-transfer/runs")
 OUT = Path(__file__).resolve().parents[1] / "tables"
 DATASETS = [("nih", "NIH ChestX-ray14"), ("chexpert", "CheXpert Plus"), ("coco", "COCO")]
-NAMES = {"q25-3": "Qwen2.5-VL-3B", "q25-7": "Qwen2.5-VL-7B", "q25-32": "Qwen2.5-VL-32B", "q25-72": "Qwen2.5-VL-72B",
-         "q3-4": "Qwen3-VL-4B", "q3-8": "Qwen3-VL-8B", "q3-32": "Qwen3-VL-32B",
-         "iv35-8": "InternVL3.5-8B", "iv35-14": "InternVL3.5-14B", "iv35-38": "InternVL3.5-38B",
-         "gemma3-4": "Gemma 3 4B", "gemma3-12": "Gemma 3 12B", "gemma3-27": "Gemma 3 27B",
-         "medgemma-4": "MedGemma 4B", "medgemma-27": "MedGemma 27B",
-         "lingshu-7": "Lingshu 7B", "lingshu-32": "Lingshu 32B",
-         "llava15-7": "LLaVA-1.5-7B", "llava15-13": "LLaVA-1.5-13B", "llavamed-7": "LLaVA-Med 1.5 7B",
-         "llama32-11": "Llama 3.2 Vision 11B", "llama32-90": "Llama 3.2 Vision 90B"}
-ORDER = list(NAMES)
+CHEST = ("nih", "chexpert")
+TEMPLATES = ["IY", "WY", "IA", "IB", "WA", "WB"]
+CHECK = "$\\checkmark$"
+
+# checkpoint metadata: display name, family, params (B), vision tower, consumed tokens at the primary locus,
+# image size, medical fine-tune
+META = {
+    "q25-3":       ("Qwen2.5-VL-3B",        "Qwen2.5-VL",      3,  "native ViT 675M",    "576$\\to$144", "$336^2$",  False),
+    "q25-7":       ("Qwen2.5-VL-7B",        "Qwen2.5-VL",      7,  "native ViT 675M",    "576$\\to$144", "$336^2$",  False),
+    "q25-32":      ("Qwen2.5-VL-32B",       "Qwen2.5-VL",      32, "native ViT 675M",    "576$\\to$144", "$336^2$",  False),
+    "q25-72":      ("Qwen2.5-VL-72B",       "Qwen2.5-VL",      72, "native ViT 675M",    "576$\\to$144", "$336^2$",  False),
+    "q3-4":        ("Qwen3-VL-4B",          "Qwen3-VL",        4,  "SigLIP2-based",      "$\\leq$1024",  "$\\leq 512^2$", False),
+    "q3-8":        ("Qwen3-VL-8B",          "Qwen3-VL",        8,  "SigLIP2-based",      "$\\leq$1024",  "$\\leq 512^2$", False),
+    "q3-32":       ("Qwen3-VL-32B",         "Qwen3-VL",        32, "SigLIP2-based",      "$\\leq$1024",  "$\\leq 512^2$", False),
+    "iv35-8":      ("InternVL3.5-8B",       "InternVL3.5",     8,  "InternViT-300M",     "1024",         "$448^2$",  False),
+    "iv35-14":     ("InternVL3.5-14B",      "InternVL3.5",     14, "InternViT-300M",     "1024",         "$448^2$",  False),
+    "iv35-38":     ("InternVL3.5-38B",      "InternVL3.5",     38, "InternViT-6B",       "1024",         "$448^2$",  False),
+    "gemma3-4":    ("Gemma 3 4B",           "Gemma 3",         4,  "SigLIP-So400m",      "4096",         "$896^2$",  False),
+    "gemma3-12":   ("Gemma 3 12B",          "Gemma 3",         12, "SigLIP-So400m",      "4096",         "$896^2$",  False),
+    "gemma3-27":   ("Gemma 3 27B",          "Gemma 3",         27, "SigLIP-So400m",      "4096",         "$896^2$",  False),
+    "medgemma-4":  ("MedGemma 4B",          "MedGemma",        4,  "MedSigLIP",          "4096",         "$896^2$",  True),
+    "medgemma-27": ("MedGemma 27B",         "MedGemma",        27, "MedSigLIP",          "4096",         "$896^2$",  True),
+    "lingshu-7":   ("Lingshu 7B",           "Lingshu",         7,  "Qwen2.5-VL ViT",     "576$\\to$144", "$336^2$",  True),
+    "lingshu-32":  ("Lingshu 32B",          "Lingshu",         32, "Qwen2.5-VL ViT",     "576$\\to$144", "$336^2$",  True),
+    "llava15-7":   ("LLaVA-1.5-7B",         "LLaVA-1.5",       7,  "CLIP ViT-L/14-336",  "576",          "$336^2$",  False),
+    "llava15-13":  ("LLaVA-1.5-13B",        "LLaVA-1.5",       13, "CLIP ViT-L/14-336",  "576",          "$336^2$",  False),
+    "llavamed-7":  ("LLaVA-Med 1.5 7B",     "LLaVA-Med",       7,  "CLIP ViT-L/14-336",  "576",          "$336^2$",  True),
+    "llama32-11":  ("Llama 3.2 Vision 11B", "Llama 3.2 Vision", 11, "ViT-H/14",          "1601",         "$560^2$",  False),
+    "llama32-90":  ("Llama 3.2 Vision 90B", "Llama 3.2 Vision", 90, "ViT-H/14",          "1601",         "$560^2$",  False),
+}
+ORDER = list(META)
+FAMILY_ORDER = ["Qwen2.5-VL", "Qwen3-VL", "InternVL3.5", "Gemma 3", "MedGemma", "Lingshu", "LLaVA-1.5", "LLaVA-Med", "Llama 3.2 Vision"]
+NAMES = {k: v[0] for k, v in META.items()}
+
+# --------------------------------------------------------------------------------------------- colours
+COLORS = r"""% Morandi tints for the cf-transfer tables (muted, low saturation); darker = larger value
+\definecolor{cfSage1}{HTML}{EEF1EA}
+\definecolor{cfSage2}{HTML}{D9E1D2}
+\definecolor{cfSage3}{HTML}{C1CDB8}
+\definecolor{cfSage4}{HTML}{A6B79C}
+\definecolor{cfSlate1}{HTML}{ECEFF2}
+\definecolor{cfSlate2}{HTML}{D3DAE2}
+\definecolor{cfSlate3}{HTML}{B7C3D0}
+\definecolor{cfSlate4}{HTML}{98A8B9}
+\definecolor{cfTerra1}{HTML}{F5ECE9}
+\definecolor{cfTerra2}{HTML}{E9D3CC}
+\definecolor{cfTerra3}{HTML}{DAB5AA}
+\definecolor{cfTerra4}{HTML}{C9968A}
+\definecolor{cfOat1}{HTML}{F4EFE6}
+\definecolor{cfOat2}{HTML}{E8DDC8}
+\definecolor{cfGrey}{HTML}{E4E1DC}
+"""
 
 
-def tex(s: str) -> str:
-    return s.replace("_", "\\_").replace("%", "\\%")
+def shade_pos(x: float, edges: tuple[float, ...], base: str) -> str:
+    """Tint level 1..4 by thresholds (values >= edge[i] get level i+2)."""
+    level = 1 + sum(x >= e for e in edges)
+    return f"\\cellcolor{{{base}{min(level, 4)}}}"
 
 
-def leaderboard():
-    rows = {(r["model_key"], r["dataset_id"]): r for r in csv.DictReader((RUNS / "leaderboard.csv").open())}
-    models = [m for m in ORDER if any((m, d) in rows for d, _ in DATASETS)]
-    lines = [r"\begin{table}[t]", r"\centering", r"\scriptsize", r"\setlength{\tabcolsep}{3.2pt}",
-             r"\caption{\textbf{Read, answer, write.} For every checkpoint and dataset: number of the six concepts that are "
-             r"readable at the consumed visual block (probe selectivity lower bound $>0$), answer-capable on the clean yes/no "
-             r"question (AUROC lower bound $>0.5$), and owned by their concept write (steering reference and positive "
-             r"simultaneous ownership bounds). ``inel.'' marks checkpoints whose yes/no template fails the image-free mapping "
-             r"preflight, where ownership is undefined; ``--'' marks blocks not run.}",
-             r"\label{tab:cf-leaderboard}",
-             r"\begin{tabular}{l" + "ccc" * 3 + "}", r"\toprule",
-             r"& \multicolumn{3}{c}{NIH ChestX-ray14} & \multicolumn{3}{c}{CheXpert Plus} & \multicolumn{3}{c}{COCO (control)} \\",
-             r"\cmidrule(lr){2-4}\cmidrule(lr){5-7}\cmidrule(lr){8-10}",
-             r"Checkpoint & read & answer & own & read & answer & own & read & answer & own \\", r"\midrule"]
-    tot = {d: [0, 0, 0, 0] for d, _ in DATASETS}
+def shade_own(x: float | None) -> str:
+    if x is None:
+        return "\\cellcolor{cfGrey}"
+    if x < 0:
+        return shade_pos(-x, (0.02, 0.10, 0.25), "cfTerra")
+    return shade_pos(x, (0.02, 0.10, 0.25), "cfSlate")
+
+
+def fmt(x, nd=2, signed=False):
+    if x is None or (isinstance(x, float) and x != x):
+        return "--"
+    return f"{x:+.{nd}f}" if signed else f"{x:.{nd}f}"
+
+
+# --------------------------------------------------------------------------------------------- data
+def load():
+    blocks = {}
+    for mk in ORDER:
+        for ds, _ in DATASETS:
+            d = RUNS / mk / ds
+            if not (d / "summary.json").exists():
+                continue
+            s = json.loads((d / "summary.json").read_text())
+            run = json.loads((d / "run.json").read_text()) if (d / "run.json").exists() else {}
+            elig = json.loads((d / "template_eligibility.json").read_text()) if (d / "template_eligibility.json").exists() else {}
+            pf = json.loads((d / "preflight.vis.last.json").read_text()) if (d / "preflight.vis.last.json").exists() else {}
+            cal = {c: v for c, v in (s.get("calibration") or {}).items() if isinstance(v, dict)}
+            core = (s.get("core") or {}).get("per_question") or {}
+            if not cal and not core:
+                continue
+            blocks[(mk, ds)] = {"cal": cal, "core": core, "t3": s.get("t3") or {}, "run": run, "elig": elig, "pf": pf,
+                                "core_ineligible": "CORE" in (run.get("ineligible_modules") or [])}
+    return blocks
+
+
+def owned(v):
+    return bool(v.get("steering_reference") and v.get("verdict") == "fixed_family_advantage")
+
+
+def mean(xs):
+    xs = [x for x in xs if x is not None and x == x]
+    return sum(xs) / len(xs) if xs else None
+
+
+def med_iqr(xs):
+    xs = sorted(x for x in xs if x is not None and x == x)
+    if not xs:
+        return None, None, None
+    q = statistics.quantiles(xs, n=4) if len(xs) >= 2 else [xs[0], xs[0], xs[0]]
+    return statistics.median(xs), q[0], q[2]
+
+
+def block_stats(b):
+    cal, core = b["cal"], b["core"]
+    S = mean(v.get("selectivity") for v in cal.values())
+    n_read = sum(bool(v.get("readable")) for v in cal.values())
+    A = mean(v.get("answer_auroc") for v in cal.values() if "answer_auroc" in v)
+    n_ans = sum(bool(v.get("answer_capable")) for v in cal.values()) if any("answer_capable" in v for v in cal.values()) else None
+    if b["core_ineligible"] or not core:
+        O, n_own, n_cells = None, None, len(cal)
+    else:
+        O = mean(v.get("O_q") for v in core.values()); n_own = sum(owned(v) for v in core.values()); n_cells = len(core)
+    return {"S": S, "n_read": n_read, "n": n_cells, "A": A, "n_ans": n_ans, "O": O, "n_own": n_own,
+            "answer_defined": A is not None}
+
+
+# --------------------------------------------------------------------------------------------- Table 1
+def table_main(blocks):
+    models = [m for m in ORDER if any((m, d) in blocks for d, _ in DATASETS)]
+    stats = {k: block_stats(v) for k, v in blocks.items()}
+    def chest_rate(m):
+        own = tot = 0
+        for d in CHEST:
+            st = stats.get((m, d))
+            if st and st["n_own"] is not None:
+                own += st["n_own"]; tot += st["n"]
+        return (own / tot) if tot else -1, own, tot
+    def coco_rate(m):
+        st = stats.get((m, "coco"))
+        return (st["n_own"] / st["n"], st["n_own"], st["n"]) if st and st["n_own"] is not None else (None, 0, 0)
+    models.sort(key=lambda m: (-chest_rate(m)[0], -(coco_rate(m)[0] or -1), ORDER.index(m)))
+    L = [r"\begin{table}[t]", r"\centering", r"\scriptsize", r"\setlength{\tabcolsep}{2.6pt}", r"\renewcommand{\arraystretch}{1.08}",
+         r"\input{tables/cf_colors}",
+         r"\caption{\textbf{Reading, answering, and writing per checkpoint.} For each dataset: \textsc{Read} = mean probe selectivity "
+         r"$S$ over the six concepts, with the number of readable concepts (of six; selectivity lower bound $>0$) as superscript; "
+         r"\textsc{Ans} = mean clean-answer AUROC, with the number of answer-capable concepts (lower bound $>0.5$); "
+         r"\textsc{Own} = mean ownership $O_q$, with the number of owned concepts (steering reference met and all simultaneous "
+         r"lower bounds $>0$). The three right columns give the owned share of clinical cells (NIH + CheXpert), of COCO cells, "
+         r"and their ratio. Cells are shaded by value: sage for \textsc{Read}/\textsc{Ans} (darker = higher), slate for positive and "
+         r"terracotta for negative mean ownership (darker = larger magnitude); grey = ineligible yes/no template; "
+         r"``--'' = block not run. Checkpoints are sorted by clinical owned share, descending.}",
+         r"\label{tab:cf-main}",
+         r"\resizebox{\textwidth}{!}{%", r"\begin{tabular}{l@{\hspace{4pt}}ccc@{\hspace{5pt}}ccc@{\hspace{5pt}}ccc@{\hspace{5pt}}ccc}", r"\toprule",
+         r"& \multicolumn{3}{c}{NIH ChestX-ray14} & \multicolumn{3}{c}{CheXpert Plus} & \multicolumn{3}{c}{COCO (control)} & \multicolumn{3}{c}{Owned share} \\",
+         r"\cmidrule(lr){2-4}\cmidrule(lr){5-7}\cmidrule(lr){8-10}\cmidrule(lr){11-13}",
+         r"Checkpoint & \textsc{Read} & \textsc{Ans} & \textsc{Own} & \textsc{Read} & \textsc{Ans} & \textsc{Own} & \textsc{Read} & \textsc{Ans} & \textsc{Own} & clinical & COCO & ratio \\",
+         r"\midrule"]
+    agg = {d: {"S": [], "A": [], "O": [], "read": 0, "ans": 0, "own": 0, "n": 0, "n_ans": 0, "n_own": 0} for d, _ in DATASETS}
     for m in models:
         cells = []
         for d, _ in DATASETS:
-            r = rows.get((m, d))
-            if not r:
+            st = stats.get((m, d))
+            if not st:
                 cells += ["--", "--", "--"]; continue
-            if r["owned"] == "":
-                cells += [r["readable"], "--", "inel."]
+            cells.append(f"{shade_pos(st['S'], (0.05, 0.12, 0.20), 'cfSage')}{fmt(st['S'])}$^{{{st['n_read']}}}$")
+            if st["answer_defined"]:
+                cells.append(f"{shade_pos(st['A'], (0.6, 0.75, 0.9), 'cfSage')}{fmt(st['A'])}$^{{{st['n_ans']}}}$")
             else:
-                own = int(r["owned"]); cells += [r["readable"], r["answer_capable"] or "--", (r"\textbf{%d}" % own) if own else "0"]
-                tot[d][0] += int(r["readable"]); tot[d][1] += int(r["answer_capable"] or 0); tot[d][2] += own; tot[d][3] += 6
-        lines.append(f"{NAMES[m]} & " + " & ".join(cells) + r" \\")
-    lines += [r"\midrule", "Cells (share) & " + " & ".join(
-        f"{tot[d][0]} ({100 * tot[d][0] / max(tot[d][3], 1):.0f}\\%) & {tot[d][1]} ({100 * tot[d][1] / max(tot[d][3], 1):.0f}\\%) & {tot[d][2]} ({100 * tot[d][2] / max(tot[d][3], 1):.0f}\\%)"
-        for d, _ in DATASETS) + r" \\", r"\bottomrule", r"\end{tabular}", r"\end{table}"]
-    (OUT / "table_cf_leaderboard.tex").write_text("\n".join(lines) + "\n")
-    return tot
+                cells.append(r"\cellcolor{cfGrey}--")
+            if st["n_own"] is None:
+                cells.append(r"\cellcolor{cfGrey}inel.")
+            else:
+                cells.append(f"{shade_own(st['O'])}{fmt(st['O'], 2, True)}$^{{{st['n_own']}}}$")
+            agg[d]["S"].append(st["S"]); agg[d]["read"] += st["n_read"]; agg[d]["n"] += st["n"]
+            if st["answer_defined"]:
+                agg[d]["A"].append(st["A"]); agg[d]["ans"] += st["n_ans"]; agg[d]["n_ans"] += st["n"]
+            if st["n_own"] is not None:
+                agg[d]["O"].append(st["O"]); agg[d]["own"] += st["n_own"]; agg[d]["n_own"] += st["n"]
+        cr, co, ct = chest_rate(m); qr, qo, qt = coco_rate(m)
+        if ct:
+            cells.append(f"{shade_pos(cr, (0.01, 0.15, 0.35), 'cfSlate')}{100 * cr:.0f}\\% ({co}/{ct})")
+        else:
+            cells.append(r"\cellcolor{cfGrey}inel.")
+        cells.append(f"{shade_pos(qr, (0.01, 0.5, 0.9), 'cfSlate')}{100 * qr:.0f}\\% ({qo}/{qt})" if qr is not None else "--")
+        cells.append(f"{100 * cr / qr:.0f}\\%" if (ct and qr) else "--")
+        L.append(f"{NAMES[m]} & " + " & ".join(cells) + r" \\")
+    L.append(r"\midrule")
+    tot = []
+    for d, _ in DATASETS:
+        a = agg[d]
+        tot.append(f"{fmt(mean(a['S']))}$^{{{a['read']}/{a['n']}}}$")
+        tot.append(f"{fmt(mean(a['A']))}$^{{{a['ans']}/{a['n_ans']}}}$")
+        tot.append(f"{fmt(mean(a['O']), 2, True)}$^{{{a['own']}/{a['n_own']}}}$")
+    chest_own = agg["nih"]["own"] + agg["chexpert"]["own"]; chest_n = agg["nih"]["n_own"] + agg["chexpert"]["n_own"]
+    coco_share = agg["coco"]["own"] / agg["coco"]["n_own"] if agg["coco"]["n_own"] else 0
+    chest_share = chest_own / chest_n if chest_n else 0
+    tot += [f"{100 * chest_share:.0f}\\% ({chest_own}/{chest_n})", f"{100 * coco_share:.0f}\\% ({agg['coco']['own']}/{agg['coco']['n_own']})",
+            f"{100 * chest_share / coco_share:.0f}\\%" if coco_share else "--"]
+    L.append(r"\textbf{All cells} & " + " & ".join(tot) + r" \\")
+    L += [r"\bottomrule", r"\end{tabular}}", r"\end{table}"]
+    (OUT / "table_cf_main.tex").write_text("\n".join(L) + "\n")
+    (OUT / "table_cf_leaderboard.tex").write_text("\\input{tables/table_cf_main}\n")
+    return stats
 
 
-def per_dataset(ds: str, label: str):
-    lines = [r"\scriptsize", r"\setlength{\tabcolsep}{3.5pt}", r"\begin{longtable}{llrrrrrl}",
-             r"\caption{\textbf{" + label + r": per-concept results of the external replication.} $S$: probe selectivity; "
-             r"ans.\ AUROC: clean-answer AUROC; $W_{qq}$: mean change in $P(\mathrm{yes})$ under the concept write; "
-             r"$O_q$: ownership contrast; p95: 95th percentile of the 119 random-direction writes; verdict from the "
-             r"simultaneous max-$T$ bounds (own = steering reference met and every lower bound $>0$).}\\",
-             r"\label{tab:cf-" + ds + r"}\\", r"\toprule",
-             r"Checkpoint & Concept & $S$ & ans.\ AUROC & $W_{qq}$ & $O_q$ & p95 & Verdict \\", r"\midrule", r"\endfirsthead",
-             r"\toprule", r"Checkpoint & Concept & $S$ & ans.\ AUROC & $W_{qq}$ & $O_q$ & p95 & Verdict \\", r"\midrule", r"\endhead"]
+# --------------------------------------------------------------------------------------------- Table 2
+def table_families(blocks, stats):
+    L = [r"\begin{table}[t]", r"\centering", r"\scriptsize", r"\setlength{\tabcolsep}{3pt}", r"\input{tables/cf_colors}",
+         r"\caption{\textbf{Families.} Vision tower, sizes evaluated, medical fine-tuning, consumed visual tokens per image at the primary "
+         r"locus, mean probe selectivity and clean-answer AUROC over clinical cells, owned clinical and COCO cells, and the mean of three "
+         r"controls over blocks: signed dose range of $O_q$ (DOSE module), refit SD over three seeds, and $|$connector-locus median $O_q|$. "
+         r"Owned counts are shaded slate (darker = larger share).}",
+         r"\label{tab:cf-families}",
+         r"\resizebox{\textwidth}{!}{%", r"\begin{tabular}{llllrrrrrrrr}", r"\toprule",
+         r"Family & Vision tower & Sizes & Med. & Tokens & $\bar S$ & $\overline{\mathrm{AUROC}}$ & Owned clin. & Owned COCO & Dose & Refit SD & $|O_\mathrm{conn}|$ \\", r"\midrule"]
+    for fam in FAMILY_ORDER:
+        mks = [m for m in ORDER if META[m][1] == fam and any((m, d) in blocks for d, _ in DATASETS)]
+        if not mks:
+            continue
+        S, A, dose, refit, conn = [], [], [], [], []
+        own_c = tot_c = own_q = tot_q = 0
+        for m in mks:
+            for d, _ in DATASETS:
+                b = blocks.get((m, d)); st = stats.get((m, d))
+                if not b:
+                    continue
+                if d in CHEST:
+                    S += [v.get("selectivity") for v in b["cal"].values()]
+                    A += [v.get("answer_auroc") for v in b["cal"].values() if "answer_auroc" in v]
+                    if st["n_own"] is not None:
+                        own_c += st["n_own"]; tot_c += st["n"]
+                elif st["n_own"] is not None:
+                    own_q += st["n_own"]; tot_q += st["n"]
+                t3 = b["t3"]
+                for key, lst in (("all|median_signed_dose_O_range", dose), ("all|median_refit_O_sd", refit), ("all|connector_median_O", conn)):
+                    v = t3.get(key)
+                    if isinstance(v, dict) and v.get("estimate") is not None:
+                        lst.append(abs(v["estimate"]) if key.endswith("connector_median_O") else v["estimate"])
+        sizes = "/".join(f"{META[m][2]}B" for m in mks)
+        tower = META[mks[0]][3] if len({META[m][3] for m in mks}) == 1 else " / ".join(sorted({META[m][3] for m in mks}))
+        oc = f"{shade_pos(own_c / tot_c if tot_c else 0, (0.01, 0.15, 0.35), 'cfSlate')}{own_c}/{tot_c}" if tot_c else r"\cellcolor{cfGrey}inel."
+        oq = f"{shade_pos(own_q / tot_q if tot_q else 0, (0.01, 0.5, 0.9), 'cfSlate')}{own_q}/{tot_q}" if tot_q else "--"
+        L.append(f"{fam} & {tower} & {sizes} & {'yes' if META[mks[0]][6] else 'no'} & {META[mks[0]][4]} & {fmt(mean(S), 3)} & {fmt(mean(A), 3)} & {oc} & {oq} & {fmt(mean(dose), 2, True)} & {fmt(mean(refit), 3)} & {fmt(mean(conn), 3)} \\\\")
+    L += [r"\bottomrule", r"\end{tabular}}", r"\end{table}"]
+    (OUT / "table_cf_families.tex").write_text("\n".join(L) + "\n")
+
+
+# --------------------------------------------------------------------------------------------- Table 3
+def table_controls(blocks):
+    rows = [("Random-family p95 of $W$", lambda b: [v.get("random_p95") for v in b["core"].values()]),
+            ("$|$Sham write$|$", lambda b: [v.get("abs_sham") for v in b["core"].values()]),
+            ("Concept write $W_{qq}$", lambda b: [v.get("W_qq") for v in b["core"].values()]),
+            ("Ownership $O_q$", lambda b: [v.get("O_q") for v in b["core"].values()]),
+            ("Signed dose range of $O_q$", lambda b: [b["t3"].get("all|median_signed_dose_O_range", {}).get("estimate")]),
+            ("Refit SD of $O_q$ (3 seeds)", lambda b: [b["t3"].get("all|median_refit_O_sd", {}).get("estimate")]),
+            ("Connector-locus median $O_q$", lambda b: [b["t3"].get("all|connector_median_O", {}).get("estimate")]),
+            ("Label-shift gap", lambda b: [b["t3"].get("all|median_label_gap", {}).get("estimate")]),
+            ("$|$Wording contrast$|$ (IY$-$WY)", lambda b: [abs(v["estimate"]) for k, v in b["t3"].items() if k.endswith("wording_IY_minus_WY_O") and isinstance(v, dict) and v.get("estimate") is not None]),
+            ("$|$Mapping contrast$|$ (IA$-$IB)", lambda b: [abs(v["estimate"]) for k, v in b["t3"].items() if k.endswith("mapping_IA_minus_IB_O") and isinstance(v, dict) and v.get("estimate") is not None])]
+    L = [r"\begin{table}[t]", r"\centering", r"\scriptsize", r"\setlength{\tabcolsep}{4pt}",
+         r"\caption{\textbf{Reference family and controls.} Median and interquartile range over all cells (first four rows) or over all "
+         r"blocks with the corresponding module (remaining rows), per dataset. The last row counts concept cells whose write meets the "
+         r"steering reference (above the random p95 and the sham) but loses to a competing clinical direction.}",
+         r"\label{tab:cf-controls}",
+         r"\resizebox{\textwidth}{!}{%", r"\begin{tabular}{lrrrrrr}", r"\toprule",
+         r"& \multicolumn{2}{c}{NIH ChestX-ray14} & \multicolumn{2}{c}{CheXpert Plus} & \multicolumn{2}{c}{COCO (control)} \\",
+         r"\cmidrule(lr){2-3}\cmidrule(lr){4-5}\cmidrule(lr){6-7}",
+         r"Quantity & median & IQR & median & IQR & median & IQR \\", r"\midrule"]
+    for label, f in rows:
+        cells = []
+        for d, _ in DATASETS:
+            xs = []
+            for (m, dd), b in blocks.items():
+                if dd == d and not b["core_ineligible"]:
+                    xs += f(b)
+            med, lo, hi = med_iqr(xs)
+            nd = 1 if "Label" in label else 3
+            cells += [fmt(med, nd, True) if med is not None else "--", f"[{fmt(lo, nd, True)}, {fmt(hi, nd, True)}]" if med is not None else "--"]
+        L.append(f"{label} & " + " & ".join(cells) + r" \\")
+    L.append(r"\midrule")
+    cells = []
+    for d, _ in DATASETS:
+        n_ref = n_own = n_cells = 0
+        for (m, dd), b in blocks.items():
+            if dd == d and not b["core_ineligible"]:
+                for v in b["core"].values():
+                    n_cells += 1; n_ref += bool(v.get("steering_reference")); n_own += owned(v)
+        cells += [f"\\multicolumn{{2}}{{c}}{{{n_ref - n_own} of {n_cells} (reference met: {n_ref}; owned: {n_own})}}"]
+    L.append("Reference met but not owned & " + " & ".join(cells) + r" \\")
+    L += [r"\bottomrule", r"\end{tabular}}", r"\end{table}"]
+    (OUT / "table_cf_controls.tex").write_text("\n".join(L) + "\n")
+
+
+# --------------------------------------------------------------------------------------------- Table 4
+def table_seed(blocks):
+    b = blocks[("q25-7", "nih")]
+    L = [r"\begin{table}[t]", r"\centering", r"\scriptsize", r"\setlength{\tabcolsep}{4pt}", r"\input{tables/cf_colors}",
+         r"\caption{\textbf{Seed replication: Qwen2.5-VL-7B on NIH ChestX-ray14, 600 new patients.} Per concept: probe selectivity $S$, "
+         r"clean-answer AUROC, concept write $W_{qq}$, the random-family 95th percentile and the absolute sham at the same dose, the "
+         r"rank of $W_{qq}$ among the 120 compared effects, the ownership contrast $O_q$ with its 95\% percentile interval, the "
+         r"strongest competing direction, and the max-$T$ verdict. Negative ownership is shaded terracotta.}",
+         r"\label{tab:cf-seed}",
+         r"\resizebox{\textwidth}{!}{%", r"\begin{tabular}{lrrrrrrrll}", r"\toprule",
+         r"Concept & $S$ & AUROC & $W_{qq}$ & p95 & $|$sham$|$ & rank & $O_q$ [95\% CI] & Competitor & Verdict \\", r"\midrule"]
+    for c, v in b["core"].items():
+        cc = b["cal"].get(c, {}); ci = v.get("O_q_ci95_percentile") or [None, None]
+        verdict = "owned" if owned(v) else {"stronger_competitor": "competitor", "unresolved": "unresolved"}.get(v.get("verdict"), v.get("verdict"))
+        L.append(f"{c} & {fmt(cc.get('selectivity'), 3)} & {fmt(cc.get('answer_auroc'), 3)} & {fmt(v['W_qq'], 3, True)} & {fmt(v['random_p95'], 3)} & "
+                 f"{fmt(v['abs_sham'], 3)} & {v['rank_in_random_family']}/120 & {shade_own(v['O_q'])}{fmt(v['O_q'], 3, True)} [{fmt(ci[0], 3, True)}, {fmt(ci[1], 3, True)}] & {v.get('argmax_other')} & {verdict} \\\\")
+    L += [r"\bottomrule", r"\end{tabular}}", r"\end{table}"]
+    (OUT / "table_cf_seed.tex").write_text("\n".join(L) + "\n")
+
+
+# --------------------------------------------------------------------------------------------- appendix per-concept
+def table_per_dataset(blocks, ds, label):
+    L = [r"\input{tables/cf_colors}", r"\scriptsize", r"\setlength{\tabcolsep}{1.6pt}",
+         r"\begin{longtable}{llrrccrrrrrll}",
+         r"\caption{\textbf{" + label + r": every checkpoint--concept cell.} $S$: probe selectivity; AUROC: clean-answer AUROC; "
+         r"R/A: readable / answer-capable (\checkmark); $W_{qq}$: concept write; p95: random-family 95th percentile; $|$sham$|$; "
+         r"$O_q$ with 95\% percentile interval; rank of $W_{qq}$ among the 120 compared effects; strongest competitor; max-$T$ verdict. "
+         r"Owned rows are shaded slate.}\\",
+         r"\label{tab:cf-" + ds + r"}\\", r"\toprule",
+         r"Checkpoint & Concept & $S$ & AUROC & R & A & $W_{qq}$ & p95 & $|$sham$|$ & $O_q$ & 95\% CI & Competitor & Verdict \\", r"\midrule", r"\endfirsthead",
+         r"\toprule", r"Checkpoint & Concept & $S$ & AUROC & R & A & $W_{qq}$ & p95 & $|$sham$|$ & $O_q$ & 95\% CI & Competitor & Verdict \\", r"\midrule", r"\endhead",
+         r"\midrule\multicolumn{13}{r}{\emph{continued}}\\", r"\endfoot", r"\bottomrule", r"\endlastfoot"]
     for m in ORDER:
-        s = RUNS / m / ds / "summary.json"
-        if not s.exists():
+        b = blocks.get((m, ds))
+        if not b:
             continue
-        j = json.loads(s.read_text()); cal = j.get("calibration", {}); core = (j.get("core") or {}).get("per_question")
-        run = json.loads((RUNS / m / ds / "run.json").read_text()) if (RUNS / m / ds / "run.json").exists() else {}
-        if not core:
-            if cal:
-                for c, v in cal.items():
-                    if isinstance(v, dict):
-                        lines.append(f"{NAMES[m]} & {c} & {v.get('selectivity', float('nan')):.3f} & -- & -- & -- & -- & ineligible \\\\")
+        if b["core_ineligible"] or not b["core"]:
+            for c, v in b["cal"].items():
+                L.append(f"{NAMES[m]} & {c} & {fmt(v.get('selectivity'), 3)} & -- & {CHECK if v.get('readable') else ''} & & -- & -- & -- & -- & -- & -- & ineligible \\\\")
             continue
-        for c, v in core.items():
-            cc = cal.get(c, {}) if isinstance(cal.get(c, {}), dict) else {}
-            own = v.get("steering_reference") and v.get("verdict") == "fixed_family_advantage"
-            verdict = "own" if own else {"stronger_competitor": "competitor", "unresolved": "unresolved", "fixed_family_advantage": "no ref."}.get(v.get("verdict"), "--")
-            aa = cc.get("answer_auroc"); aa = f"{aa:.3f}" if isinstance(aa, (int, float)) and aa == aa else "--"
-            lines.append(f"{NAMES[m]} & {c} & {cc.get('selectivity', float('nan')):.3f} & {aa} & {v['W_qq']:.3f} & "
-                         f"{v['O_q']:.3f} & {v['random_p95']:.3f} & {verdict} \\\\")
-    lines += [r"\bottomrule", r"\end{longtable}", r"\normalsize"]
-    (OUT / f"table_cf_{ds}.tex").write_text("\n".join(lines) + "\n")
+        for c, v in b["core"].items():
+            cc = b["cal"].get(c, {}); ci = v.get("O_q_ci95_percentile") or [None, None]
+            is_owned = owned(v)
+            verdict = "owned" if is_owned else {"stronger_competitor": "competitor", "unresolved": "unresolved", "fixed_family_advantage": "no reference"}.get(v.get("verdict"), "--")
+            pre = r"\rowcolor{cfSlate2}" if is_owned else ""
+            L.append(f"{pre}{NAMES[m]} & {c} & {fmt(cc.get('selectivity'), 3)} & {fmt(cc.get('answer_auroc'), 3)} & "
+                     f"{CHECK if cc.get('readable') else ''} & {CHECK if cc.get('answer_capable') else ''} & "
+                     f"{fmt(v['W_qq'], 3, True)} & {fmt(v['random_p95'], 3)} & {fmt(v['abs_sham'], 3)} & {fmt(v['O_q'], 3, True)} & "
+                     f"[{fmt(ci[0], 2, True)}, {fmt(ci[1], 2, True)}] & {v.get('argmax_other')} & {verdict} \\\\")
+    L += [r"\end{longtable}", r"\normalsize"]
+    (OUT / f"table_cf_{ds}.tex").write_text("\n".join(L) + "\n")
+
+
+# --------------------------------------------------------------------------------------------- appendix sheets
+def table_models(blocks):
+    L = [r"\begin{table}[h]", r"\centering", r"\scriptsize", r"\setlength{\tabcolsep}{3pt}",
+         r"\caption{\textbf{Checkpoint sheet.} Family, parameters, vision tower, consumed visual tokens per image at the primary locus, "
+         r"input image size, eligible question templates after the image-free mapping gate (I/W: ``is''/``show'' wording; Y: yes/no; "
+         r"A/B: letter mappings), completed dataset blocks, and GPU-hours of scoring (A100-80GB).}",
+         r"\label{tab:cf-models}",
+         r"\resizebox{\textwidth}{!}{%", r"\begin{tabular}{llrllllr}", r"\toprule",
+         r"Checkpoint & Family & Params & Vision tower & Tokens & Image & Templates & Blocks (GPU-h) \\", r"\midrule"]
+    for m in ORDER:
+        present = [(d, blocks[(m, d)]) for d, _ in DATASETS if (m, d) in blocks]
+        if not present:
+            continue
+        name, fam, params, tower, tokens, img, _ = META[m]
+        elig = present[0][1]["elig"]
+        temps = "".join(t for t in TEMPLATES if elig.get(t, {}).get("eligible", True)) if elig else "all"
+        temps = "all" if temps == "".join(TEMPLATES) else temps
+        parts = []
+        for d, b in present:
+            gh = b["run"].get("gpu_hours"); done = b["run"].get("status") == "COMPLETE"
+            dsn = {'nih': 'NIH', 'chexpert': 'CXP', 'coco': 'COCO'}[d]; star = '' if done else '*'
+            parts.append(f"{dsn}{star} ({gh:.0f})" if gh is not None else dsn)
+        L.append(f"{name} & {fam} & {params}B & {tower} & {tokens} & {img} & {temps} & " + ", ".join(parts) + r" \\")
+    L += [r"\bottomrule", r"\end{tabular}}", r"\end{table}"]
+    (OUT / "table_cf_models.tex").write_text("\n".join(L) + "\n")
+
+
+def table_gates(blocks):
+    A = B = G = 0.0; cons_lo = cons_hi = None; lg_lo = lg_hi = None; outside = 0.0; D = {}; fails = {}
+    for (m, d), b in blocks.items():
+        c = (b["pf"] or {}).get("checks")
+        if not c:
+            continue
+        A = max(A, c["A_determinism_max_abs_diff"]); B = max(B, c["B_alpha0_max_abs_diff"]); G = max(G, c["G_fp32_vs_model_logits"]["max_abs_diff"])
+        r = c["C_reach"]; cons_lo = r["consumer_max_abs_change"] if cons_lo is None else min(cons_lo, r["consumer_max_abs_change"]); cons_hi = r["consumer_max_abs_change"] if cons_hi is None else max(cons_hi, r["consumer_max_abs_change"])
+        lg_lo = r["answer_logit_max_abs_change"] if lg_lo is None else min(lg_lo, r["answer_logit_max_abs_change"]); lg_hi = r["answer_logit_max_abs_change"] if lg_hi is None else max(lg_hi, r["answer_logit_max_abs_change"])
+        outside = max(outside, r["locus_change_outside_consumed_tokens"])
+        D.setdefault(META[m][1], []).append(c["D_batch_vs_single"]["max_abs_candidate_logit_diff"])
+        el = b["elig"]
+        bad = "".join(t for t in TEMPLATES if el and not el.get(t, {}).get("eligible", True))
+        if bad:
+            fails.setdefault(NAMES[m], set()).add(bad)
+    d_all = [x for xs in D.values() for x in xs]
+    d_over = ", ".join(f"{f} ($\\leq${max(xs):.2f})" for f, xs in D.items() if max(xs) > 0.25)
+    e_txt = "; ".join(f"{k}: {'/'.join(sorted(v))}" for k, v in sorted(fails.items()))
+    rows = [("A", "Determinism", "identical answer logits on a repeated forward", f"max difference {A:g}"),
+            ("B", "Identity at $\\alpha=0$", "the armed hook with zero dose changes nothing", f"max difference {B:g}"),
+            ("C", "Reach", "the write changes the consumer input and the answer logits; no change outside consumed tokens",
+             f"consumer change {cons_lo:.2f}--{cons_hi:.2f}; answer logits {lg_lo:.2f}--{lg_hi:.2f}; outside consumed tokens {outside:g}"),
+            ("D", "Batch consistency", "single- vs batched-forward answer logits within 0.25", f"{min(d_all):.2f}--{max(d_all):.2f}; above tolerance (declared, neutralised by fixed batch composition): {d_over}"),
+            ("E", "Semantic mapping", "image-free ``present/absent'' statements map to the right answer token under each template", f"failing templates: {e_txt}"),
+            ("F", "Throughput", "rows per second recorded for scheduling", "3.8--35 rows/s"),
+            ("G", "fp32 answer logits", "fp32 logits recomputed from the final hidden state agree with the model's bf16 logits", f"max difference {G:.2f}")]
+    L = [r"\begin{table}[h]", r"\centering", r"\scriptsize", r"\setlength{\tabcolsep}{4pt}",
+         r"\caption{\textbf{Preflight gates.} Each block is scored only after the seven checks below run on 16 held-out rows at both loci; "
+         r"the right column gives the range observed over all completed blocks.}",
+         r"\label{tab:cf-gates}",
+         r"\begin{tabular}{clp{4.3cm}p{6.0cm}}", r"\toprule", r"Gate & Name & Criterion & Observed \\", r"\midrule"]
+    for g, name, crit, obs in rows:
+        L.append(f"{g} & {name} & {crit} & {obs} \\\\")
+    L += [r"\bottomrule", r"\end{tabular}", r"\end{table}"]
+    (OUT / "table_cf_gates.tex").write_text("\n".join(L) + "\n")
 
 
 if __name__ == "__main__":
-    tot = leaderboard()
+    (OUT / "cf_colors.tex").write_text(COLORS)
+    blocks = load()
+    stats = table_main(blocks)
+    table_families(blocks, stats)
+    table_controls(blocks)
+    table_seed(blocks)
     for ds, label in DATASETS:
-        per_dataset(ds, label)
-    print({d: t for d, t in tot.items()})
+        table_per_dataset(blocks, ds, label)
+    table_models(blocks)
+    table_gates(blocks)
+    print(f"{len(blocks)} blocks -> tables written to {OUT}")

@@ -1,5 +1,7 @@
-\section{Experimental Design}
-\label{sec:protocol}
+\section{Seed study: registered protocol}
+\label{app:seed}
+
+The two-model study that motivated the evaluation registered the procedures below; Appendix~\ref{app:seed-results} reports its results and Appendix~\ref{app:seed-boundary} its boundary analyses.
 
 \paragraph{Data and split.}
 We use NIH ChestX-ray14 \citep{wang2017chestxray}, whose findings are mined from radiology reports. A deterministic hash of patient identity assigns rows to disjoint train, validation, and test partitions. The registered manifest contains 18,212 training images and 5,343 test images from 1,659 test patients. The three cells pair LLaVA-1.5-7B with Effusion and Edema, and Qwen2.5-VL-7B with Effusion. All reported uncertainty clusters by patient. Prompts appear in Appendix~\ref{app:protocol}; exact run identifiers appear in Appendix~\ref{app:runs}.
@@ -62,19 +64,3 @@ We next register a paired sensitivity study on 200 patients from the causal-owne
 \paragraph{Independent Mass confirmation.}
 We prospectively test Mass on 200 patients absent from all preceding Qwen intervention cohorts, retaining the crossover's 200 calibration patients. Two question wordings (\textit{show}, \textit{is}) cross explicit yes/no, A-present, and B-present instructions; the original yes/no prompt is a seventh anchor. At $\alpha=+0.25$, each cell receives six clinical directions, 119 random directions, and a sham. The four coded cells share 20 clinical comparisons with simultaneous 95\% lower bounds. Confirmation requires positive bounds and Mass effects above every random effect and absolute sham, either across all four coded cells or both original-wording cells. Appendix~\ref{app:mass-confirmation} specifies calibration and paired descriptive contrasts.
 
-\subsection{Benchmark protocol: reading, answering, and writing across checkpoints}
-\label{sec:benchmark}
-
-The campaign applies one registered procedure (\texttt{cf-transfer-v1}) to every checkpoint and dataset; the seed cells above are its first instance. Appendix~\ref{app:cf-transfer} lists the grid, the adapters, and the per-block acceptance decisions.
-
-\paragraph{Grid.}
-22 checkpoints from nine families (Qwen2.5-VL 3B/7B/32B/72B, Qwen3-VL 4B/8B/32B, InternVL3.5 8B/14B/38B, Gemma~3 4B/12B/27B, MedGemma 4B/27B, Lingshu 7B/32B, LLaVA-1.5 7B/13B, LLaVA-Med 1.5 7B, Llama~3.2 Vision 11B/90B) are evaluated on NIH ChestX-ray14 (Effusion, Atelectasis, Pneumothorax, Cardiomegaly, Mass, Nodule), CheXpert Plus (Effusion, Atelectasis, Pneumothorax, Cardiomegaly, Consolidation, Edema), and, as a natural-object control, COCO (person, dog, car, chair, bottle, bicycle). Each dataset has one fixed, patient-disjoint cohort chosen by seeded hashes: 20,000 training, 400 calibration, and 600 test rows, plus 16 preflight rows.
-
-\paragraph{Locus and write.}
-For every checkpoint the primary locus is the output of the final visual block whose output the language model consumes, restricted to the token positions the consumer reads (CLS or padding rows are excluded where the consumer drops them); the connector output is a second locus. Features are pooled over the same tokens, and the write of Eq.~\ref{eq:intervention} is applied to the same tokens, so reading and writing use identical positions. Directions follow Eqs.~\ref{eq:lift}--\ref{eq:intervention} with the 512-d seed-0 projection, train-only scaling, and three fit seeds; a coordinate-permutation sham and 119 seed-0 random unit directions form the reference family. The main modules use $\alpha=+0.25$.
-
-\paragraph{Acceptance gates.}
-Before any block is scored, seven checks run on the 16 preflight rows at both loci: (A) bitwise determinism on repeat, (B) identity at $\alpha=0$, (C) reach---the write changes the consumer input and the answer logits and nothing outside the consumed tokens, (D) batch-versus-single consistency within 0.25 logits, (E) image-free semantic mapping---the model maps ``the finding is present/absent'' statements to the right answer token under each of six question templates, (F) throughput, and (G) agreement between fp32 answer logits recomputed from the final hidden state and the model's own logits. Two measurement facts shape the design: bf16 model logits fall on a coarse lattice, so every answer logit is recomputed in fp32; and bf16 kernels are shape dependent, so every contrast of a question (clean, concept, competitors, sham, random) is scored in one fixed batch composition, which neutralises the (D) deviations that several families show. Templates that fail (E) are \emph{ineligible} for that checkpoint and their cells are recorded as such rather than scored.
-
-\paragraph{Graded outcomes.}
-With 2,000 bootstrap draws over test rows, a concept is \emph{readable} when the selectivity of Eq.~\ref{eq:selectivity} has a one-sided 95\% lower bound above zero (at least ten positives and negatives; 20 type-conditioned random-label controls); \emph{answerable} when the clean yes/no answer's AUROC has a lower bound above 0.5; and \emph{owned} when its write meets the steering reference ($W_{q,q}>0$, above the 95th percentile of the random family and above the absolute sham) and every simultaneous max-$T$ lower bound of $W_{q,q}-W_{q,d}$ over the five competitors (Eq.~\ref{eq:max-t}) is positive. Every block also reports its controls: the signed dose range of $O_q$ over $\alpha\in\{-0.5,\dots,0.5\}$, the refit standard deviation over three seeds, the connector-locus ownership, the label-shift gap, and the wording and mapping contrasts between the six templates.

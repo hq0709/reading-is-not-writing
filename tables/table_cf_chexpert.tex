@@ -1,130 +1,134 @@
+\input{tables/cf_colors}
 \scriptsize
-\setlength{\tabcolsep}{3.5pt}
-\begin{longtable}{llrrrrrl}
-\caption{\textbf{CheXpert Plus: per-concept results of the external replication.} $S$: probe selectivity; ans.\ AUROC: clean-answer AUROC; $W_{qq}$: mean change in $P(\mathrm{yes})$ under the concept write; $O_q$: ownership contrast; p95: 95th percentile of the 119 random-direction writes; verdict from the simultaneous max-$T$ bounds (own = steering reference met and every lower bound $>0$).}\\
+\setlength{\tabcolsep}{1.6pt}
+\begin{longtable}{llrrccrrrrrll}
+\caption{\textbf{CheXpert Plus: every checkpoint--concept cell.} $S$: probe selectivity; AUROC: clean-answer AUROC; R/A: readable / answer-capable (\checkmark); $W_{qq}$: concept write; p95: random-family 95th percentile; $|$sham$|$; $O_q$ with 95\% percentile interval; rank of $W_{qq}$ among the 120 compared effects; strongest competitor; max-$T$ verdict. Owned rows are shaded slate.}\\
 \label{tab:cf-chexpert}\\
 \toprule
-Checkpoint & Concept & $S$ & ans.\ AUROC & $W_{qq}$ & $O_q$ & p95 & Verdict \\
+Checkpoint & Concept & $S$ & AUROC & R & A & $W_{qq}$ & p95 & $|$sham$|$ & $O_q$ & 95\% CI & Competitor & Verdict \\
 \midrule
 \endfirsthead
 \toprule
-Checkpoint & Concept & $S$ & ans.\ AUROC & $W_{qq}$ & $O_q$ & p95 & Verdict \\
+Checkpoint & Concept & $S$ & AUROC & R & A & $W_{qq}$ & p95 & $|$sham$|$ & $O_q$ & 95\% CI & Competitor & Verdict \\
 \midrule
 \endhead
-Qwen2.5-VL-3B & Effusion & 0.228 & 0.658 & -0.191 & -0.178 & 0.063 & competitor \\
-Qwen2.5-VL-3B & Atelectasis & 0.171 & 0.619 & -0.018 & -0.016 & 0.059 & competitor \\
-Qwen2.5-VL-3B & Pneumothorax & 0.005 & 0.446 & -0.034 & -0.044 & 0.106 & competitor \\
-Qwen2.5-VL-3B & Cardiomegaly & 0.256 & 0.634 & 0.026 & -0.054 & 0.156 & competitor \\
-Qwen2.5-VL-3B & Consolidation & 0.180 & 0.573 & -0.002 & -0.026 & 0.060 & competitor \\
-Qwen2.5-VL-3B & Edema & 0.185 & 0.506 & -0.021 & -0.083 & 0.133 & competitor \\
-Qwen2.5-VL-7B & Effusion & 0.234 & 0.676 & 0.075 & 0.008 & 0.114 & no ref. \\
-Qwen2.5-VL-7B & Atelectasis & 0.351 & 0.851 & 0.208 & -0.049 & 0.266 & competitor \\
-Qwen2.5-VL-7B & Pneumothorax & -0.028 & 0.606 & 0.106 & -0.099 & 0.372 & competitor \\
-Qwen2.5-VL-7B & Cardiomegaly & 0.243 & 0.693 & 0.140 & -0.004 & 0.213 & unresolved \\
-Qwen2.5-VL-7B & Consolidation & 0.203 & 0.565 & 0.119 & -0.149 & 0.245 & competitor \\
-Qwen2.5-VL-7B & Edema & 0.178 & 0.520 & 0.040 & -0.177 & 0.212 & competitor \\
-Qwen2.5-VL-32B & Effusion & 0.240 & 0.681 & -0.069 & -0.066 & 0.125 & competitor \\
-Qwen2.5-VL-32B & Atelectasis & 0.065 & 0.925 & -0.146 & -0.187 & 0.029 & competitor \\
-Qwen2.5-VL-32B & Pneumothorax & 0.060 & 0.532 & 0.021 & -0.124 & 0.088 & competitor \\
-Qwen2.5-VL-32B & Cardiomegaly & 0.220 & 0.732 & -0.159 & -0.186 & 0.077 & competitor \\
-Qwen2.5-VL-32B & Consolidation & 0.198 & 0.704 & -0.003 & -0.053 & 0.157 & competitor \\
-Qwen2.5-VL-32B & Edema & 0.187 & 0.647 & -0.005 & -0.022 & 0.084 & competitor \\
-Qwen3-VL-4B & Effusion & 0.230 & 0.898 & 0.398 & -0.015 & 0.308 & competitor \\
-Qwen3-VL-4B & Atelectasis & 0.278 & 0.657 & 0.026 & -0.016 & 0.034 & competitor \\
-Qwen3-VL-4B & Pneumothorax & 0.049 & 0.451 & 0.015 & -0.231 & 0.282 & competitor \\
-Qwen3-VL-4B & Cardiomegaly & 0.246 & 0.854 & 0.098 & -0.008 & 0.104 & competitor \\
-Qwen3-VL-4B & Consolidation & 0.245 & 0.789 & 0.807 & 0.094 & 0.428 & own \\
-Qwen3-VL-4B & Edema & 0.176 & 0.816 & 0.593 & 0.092 & 0.426 & own \\
-Qwen3-VL-8B & Effusion & 0.226 & 0.889 & 0.370 & -0.069 & 0.296 & competitor \\
-Qwen3-VL-8B & Atelectasis & 0.164 & 0.791 & 0.009 & -0.000 & 0.009 & competitor \\
-Qwen3-VL-8B & Pneumothorax & 0.062 & 0.466 & 0.203 & -0.095 & 0.390 & competitor \\
-Qwen3-VL-8B & Cardiomegaly & 0.218 & 0.766 & 0.072 & -0.000 & 0.072 & competitor \\
-Qwen3-VL-8B & Consolidation & 0.213 & 0.798 & 0.352 & -0.038 & 0.315 & competitor \\
-Qwen3-VL-8B & Edema & 0.162 & 0.787 & 0.333 & -0.061 & 0.375 & competitor \\
-Qwen3-VL-32B & Effusion & 0.237 & 0.899 & 0.083 & -0.035 & 0.151 & competitor \\
-Qwen3-VL-32B & Atelectasis & 0.065 & 0.899 & 0.023 & 0.001 & 0.023 & unresolved \\
-Qwen3-VL-32B & Pneumothorax & 0.130 & 0.607 & 0.011 & 0.001 & 0.018 & unresolved \\
-Qwen3-VL-32B & Cardiomegaly & 0.243 & 0.862 & 0.091 & -0.026 & 0.117 & competitor \\
-Qwen3-VL-32B & Consolidation & 0.191 & 0.878 & 0.024 & -0.124 & 0.103 & competitor \\
-Qwen3-VL-32B & Edema & 0.161 & 0.782 & 0.237 & 0.045 & 0.187 & own \\
-InternVL3.5-8B & Effusion & 0.253 & 0.946 & 0.011 & -0.006 & 0.028 & competitor \\
-InternVL3.5-8B & Atelectasis & 0.211 & 0.918 & -0.007 & -0.014 & 0.012 & competitor \\
-InternVL3.5-8B & Pneumothorax & -0.000 & 0.630 & 0.004 & 0.004 & 0.004 & own \\
-InternVL3.5-8B & Cardiomegaly & 0.217 & 0.930 & 0.038 & -0.005 & 0.056 & competitor \\
-InternVL3.5-8B & Consolidation & 0.256 & 0.932 & 0.022 & 0.013 & 0.023 & no ref. \\
-InternVL3.5-8B & Edema & 0.175 & 0.829 & 0.026 & -0.000 & 0.027 & unresolved \\
-InternVL3.5-14B & Effusion & 0.262 & 0.942 & 0.041 & 0.012 & 0.023 & own \\
-InternVL3.5-14B & Atelectasis & -0.092 & 0.896 & 0.005 & -0.003 & 0.008 & competitor \\
-InternVL3.5-14B & Pneumothorax & -0.007 & 0.696 & -0.000 & 0.000 & 0.001 & unresolved \\
-InternVL3.5-14B & Cardiomegaly & 0.272 & 0.915 & 0.007 & -0.008 & 0.032 & competitor \\
-InternVL3.5-14B & Consolidation & 0.295 & 0.942 & 0.010 & 0.009 & 0.013 & no ref. \\
-InternVL3.5-14B & Edema & 0.217 & 0.857 & 0.009 & -0.004 & 0.020 & competitor \\
-Gemma 3 4B & Effusion & 0.252 & 0.567 & 0.007 & -0.001 & 0.008 & unresolved \\
-Gemma 3 4B & Atelectasis & 0.110 & 0.537 & -0.000 & -0.000 & 0.000 & competitor \\
-Gemma 3 4B & Pneumothorax & 0.037 & 0.612 & -0.651 & -0.654 & 0.003 & competitor \\
-Gemma 3 4B & Cardiomegaly & 0.228 & 0.560 & -0.017 & -0.018 & 0.000 & competitor \\
-Gemma 3 4B & Consolidation & 0.208 & 0.414 & -0.312 & -0.349 & 0.035 & competitor \\
-Gemma 3 4B & Edema & 0.221 & 0.460 & -0.534 & -0.580 & 0.047 & competitor \\
-Gemma 3 12B & Effusion & 0.252 & 0.534 & -0.239 & -0.831 & 0.483 & competitor \\
-Gemma 3 12B & Atelectasis & 0.110 & 0.451 & 0.190 & -0.127 & 0.283 & competitor \\
-Gemma 3 12B & Pneumothorax & 0.037 & 0.611 & -0.004 & -0.712 & 0.509 & competitor \\
-Gemma 3 12B & Cardiomegaly & 0.228 & 0.489 & 0.007 & -0.473 & 0.773 & competitor \\
-Gemma 3 12B & Consolidation & 0.208 & 0.523 & 0.202 & -0.259 & 0.472 & competitor \\
-Gemma 3 12B & Edema & 0.221 & 0.520 & 0.499 & 0.149 & 0.469 & own \\
-Gemma 3 27B & Effusion & 0.252 & 0.610 & 0.226 & -0.026 & 0.251 & competitor \\
-Gemma 3 27B & Atelectasis & 0.110 & 0.459 & 0.003 & -0.000 & 0.003 & unresolved \\
-Gemma 3 27B & Pneumothorax & 0.037 & 0.601 & 0.209 & -0.006 & 0.216 & unresolved \\
-Gemma 3 27B & Cardiomegaly & 0.228 & 0.614 & 0.028 & -0.000 & 0.028 & unresolved \\
-Gemma 3 27B & Consolidation & 0.211 & 0.486 & 0.159 & -0.029 & 0.186 & competitor \\
-Gemma 3 27B & Edema & 0.221 & 0.510 & 0.068 & 0.000 & 0.068 & unresolved \\
-MedGemma 4B & Effusion & 0.256 & 0.965 & 0.115 & -0.204 & 0.181 & competitor \\
-MedGemma 4B & Atelectasis & 0.259 & 0.802 & -0.030 & -0.082 & 0.048 & competitor \\
-MedGemma 4B & Pneumothorax & 0.007 & 0.702 & 0.015 & -0.602 & 0.402 & competitor \\
-MedGemma 4B & Cardiomegaly & 0.271 & 0.943 & 0.221 & 0.045 & 0.185 & own \\
-MedGemma 4B & Consolidation & 0.256 & 0.942 & 0.005 & -0.201 & 0.154 & competitor \\
-MedGemma 4B & Edema & 0.183 & 0.839 & 0.352 & 0.101 & 0.232 & own \\
-MedGemma 27B & Effusion & 0.257 & 0.962 & 0.095 & -0.007 & 0.064 & unresolved \\
-MedGemma 27B & Atelectasis & 0.259 & 0.858 & 0.007 & 0.002 & 0.008 & unresolved \\
-MedGemma 27B & Pneumothorax & 0.007 & 0.686 & -0.133 & -0.065 & 0.124 & competitor \\
-MedGemma 27B & Cardiomegaly & 0.271 & 0.958 & 0.382 & 0.033 & 0.390 & no ref. \\
-MedGemma 27B & Consolidation & 0.256 & 0.952 & 0.082 & -0.017 & 0.168 & unresolved \\
-MedGemma 27B & Edema & 0.184 & 0.832 & -0.139 & -0.283 & 0.272 & competitor \\
-Lingshu 7B & Effusion & 0.268 & 0.928 & 0.297 & 0.097 & 0.084 & own \\
-Lingshu 7B & Atelectasis & 0.288 & 0.922 & -0.016 & -0.088 & 0.056 & competitor \\
-Lingshu 7B & Pneumothorax & -0.037 & 0.645 & 0.364 & 0.092 & 0.133 & own \\
-Lingshu 7B & Cardiomegaly & 0.261 & 0.921 & 0.270 & 0.009 & 0.168 & unresolved \\
-Lingshu 7B & Consolidation & 0.280 & 0.931 & 0.124 & -0.054 & 0.133 & competitor \\
-Lingshu 7B & Edema & 0.192 & 0.824 & 0.477 & 0.211 & 0.210 & own \\
-Lingshu 32B & Effusion & 0.271 & 0.944 & 0.165 & 0.027 & 0.089 & own \\
-Lingshu 32B & Atelectasis & 0.238 & 0.966 & 0.072 & -0.036 & 0.058 & competitor \\
-Lingshu 32B & Pneumothorax & 0.029 & 0.683 & 0.117 & 0.024 & 0.105 & own \\
-Lingshu 32B & Cardiomegaly & 0.246 & 0.888 & 0.169 & 0.110 & 0.112 & own \\
-Lingshu 32B & Consolidation & 0.249 & 0.932 & 0.129 & 0.028 & 0.096 & own \\
-Lingshu 32B & Edema & 0.195 & 0.829 & 0.237 & 0.115 & 0.154 & own \\
-LLaVA-1.5-7B & Effusion & 0.248 & 0.533 & 0.061 & 0.002 & 0.088 & unresolved \\
-LLaVA-1.5-7B & Atelectasis & 0.149 & 0.519 & -0.018 & -0.087 & 0.078 & competitor \\
-LLaVA-1.5-7B & Pneumothorax & 0.032 & 0.561 & -0.032 & -0.099 & 0.093 & competitor \\
-LLaVA-1.5-7B & Cardiomegaly & 0.221 & 0.419 & 0.066 & 0.027 & 0.096 & no ref. \\
-LLaVA-1.5-7B & Consolidation & 0.197 & 0.488 & 0.018 & -0.029 & 0.086 & competitor \\
-LLaVA-1.5-7B & Edema & 0.154 & 0.574 & 0.043 & -0.004 & 0.086 & competitor \\
-LLaVA-1.5-13B & Effusion & 0.248 & 0.512 & 0.019 & -0.003 & 0.047 & competitor \\
-LLaVA-1.5-13B & Atelectasis & 0.149 & 0.556 & -0.021 & -0.032 & 0.018 & competitor \\
-LLaVA-1.5-13B & Pneumothorax & 0.032 & 0.584 & -0.000 & -0.011 & 0.031 & competitor \\
-LLaVA-1.5-13B & Cardiomegaly & 0.221 & 0.405 & 0.027 & 0.001 & 0.048 & unresolved \\
-LLaVA-1.5-13B & Consolidation & 0.197 & 0.401 & 0.020 & 0.014 & 0.026 & no ref. \\
-LLaVA-1.5-13B & Edema & 0.154 & 0.596 & 0.030 & -0.009 & 0.054 & competitor \\
-LLaVA-Med 1.5 7B & Effusion & 0.219 & 0.584 & 0.011 & 0.003 & 0.010 & own \\
-LLaVA-Med 1.5 7B & Atelectasis & 0.303 & 0.653 & 0.007 & -0.002 & 0.008 & competitor \\
-LLaVA-Med 1.5 7B & Pneumothorax & 0.032 & 0.533 & 0.001 & -0.021 & 0.018 & competitor \\
-LLaVA-Med 1.5 7B & Cardiomegaly & 0.228 & 0.570 & 0.021 & -0.028 & 0.038 & competitor \\
-LLaVA-Med 1.5 7B & Consolidation & 0.224 & 0.563 & 0.019 & -0.003 & 0.017 & competitor \\
-LLaVA-Med 1.5 7B & Edema & 0.125 & 0.628 & 0.007 & -0.019 & 0.018 & competitor \\
-Llama 3.2 Vision 11B & Effusion & 0.256 & -- & -- & -- & -- & ineligible \\
-Llama 3.2 Vision 11B & Atelectasis & 0.071 & -- & -- & -- & -- & ineligible \\
-Llama 3.2 Vision 11B & Pneumothorax & 0.076 & -- & -- & -- & -- & ineligible \\
-Llama 3.2 Vision 11B & Cardiomegaly & 0.233 & -- & -- & -- & -- & ineligible \\
-Llama 3.2 Vision 11B & Consolidation & 0.209 & -- & -- & -- & -- & ineligible \\
-Llama 3.2 Vision 11B & Edema & 0.132 & -- & -- & -- & -- & ineligible \\
+\midrule\multicolumn{13}{r}{\emph{continued}}\\
+\endfoot
 \bottomrule
+\endlastfoot
+Qwen2.5-VL-3B & Effusion & 0.228 & 0.658 & $\checkmark$ & $\checkmark$ & -0.191 & 0.063 & 0.025 & -0.178 & [-0.18, -0.17] & Atelectasis & competitor \\
+Qwen2.5-VL-3B & Atelectasis & 0.171 & 0.619 &  &  & -0.018 & 0.059 & 0.049 & -0.016 & [-0.02, -0.01] & Consolidation & competitor \\
+Qwen2.5-VL-3B & Pneumothorax & 0.005 & 0.446 &  &  & -0.034 & 0.106 & 0.003 & -0.044 & [-0.05, -0.04] & Cardiomegaly & competitor \\
+Qwen2.5-VL-3B & Cardiomegaly & 0.256 & 0.634 & $\checkmark$ & $\checkmark$ & +0.026 & 0.156 & 0.049 & -0.054 & [-0.06, -0.05] & Consolidation & competitor \\
+Qwen2.5-VL-3B & Consolidation & 0.180 & 0.573 & $\checkmark$ &  & -0.002 & 0.060 & 0.009 & -0.026 & [-0.03, -0.02] & Atelectasis & competitor \\
+Qwen2.5-VL-3B & Edema & 0.185 & 0.506 & $\checkmark$ &  & -0.021 & 0.133 & 0.032 & -0.083 & [-0.09, -0.08] & Atelectasis & competitor \\
+Qwen2.5-VL-7B & Effusion & 0.234 & 0.676 & $\checkmark$ & $\checkmark$ & +0.075 & 0.114 & 0.056 & +0.008 & [+0.00, +0.01] & Consolidation & no reference \\
+Qwen2.5-VL-7B & Atelectasis & 0.351 & 0.851 &  &  & +0.208 & 0.266 & 0.009 & -0.049 & [-0.05, -0.04] & Edema & competitor \\
+Qwen2.5-VL-7B & Pneumothorax & -0.028 & 0.606 &  &  & +0.106 & 0.372 & 0.077 & -0.099 & [-0.10, -0.09] & Effusion & competitor \\
+Qwen2.5-VL-7B & Cardiomegaly & 0.243 & 0.693 & $\checkmark$ & $\checkmark$ & +0.140 & 0.213 & 0.138 & -0.004 & [-0.01, +0.00] & Atelectasis & unresolved \\
+Qwen2.5-VL-7B & Consolidation & 0.203 & 0.565 & $\checkmark$ &  & +0.119 & 0.245 & 0.102 & -0.149 & [-0.16, -0.14] & Atelectasis & competitor \\
+Qwen2.5-VL-7B & Edema & 0.178 & 0.520 & $\checkmark$ &  & +0.040 & 0.212 & 0.314 & -0.177 & [-0.18, -0.17] & Cardiomegaly & competitor \\
+Qwen2.5-VL-32B & Effusion & 0.240 & 0.681 & $\checkmark$ & $\checkmark$ & -0.069 & 0.125 & 0.073 & -0.066 & [-0.07, -0.06] & Pneumothorax & competitor \\
+Qwen2.5-VL-32B & Atelectasis & 0.065 & 0.925 &  &  & -0.146 & 0.029 & 0.060 & -0.187 & [-0.20, -0.18] & Cardiomegaly & competitor \\
+Qwen2.5-VL-32B & Pneumothorax & 0.060 & 0.532 &  &  & +0.021 & 0.088 & 0.016 & -0.124 & [-0.13, -0.12] & Cardiomegaly & competitor \\
+Qwen2.5-VL-32B & Cardiomegaly & 0.220 & 0.732 & $\checkmark$ & $\checkmark$ & -0.159 & 0.077 & 0.293 & -0.186 & [-0.20, -0.18] & Edema & competitor \\
+Qwen2.5-VL-32B & Consolidation & 0.198 & 0.704 & $\checkmark$ & $\checkmark$ & -0.003 & 0.157 & 0.001 & -0.053 & [-0.06, -0.05] & Pneumothorax & competitor \\
+Qwen2.5-VL-32B & Edema & 0.187 & 0.647 & $\checkmark$ & $\checkmark$ & -0.005 & 0.084 & 0.045 & -0.022 & [-0.03, -0.02] & Pneumothorax & competitor \\
+Qwen3-VL-4B & Effusion & 0.230 & 0.898 & $\checkmark$ & $\checkmark$ & +0.398 & 0.308 & 0.118 & -0.015 & [-0.02, -0.01] & Consolidation & competitor \\
+Qwen3-VL-4B & Atelectasis & 0.278 & 0.657 &  &  & +0.026 & 0.034 & 0.023 & -0.016 & [-0.02, -0.01] & Consolidation & competitor \\
+Qwen3-VL-4B & Pneumothorax & 0.049 & 0.451 &  &  & +0.015 & 0.282 & 0.143 & -0.231 & [-0.25, -0.21] & Atelectasis & competitor \\
+Qwen3-VL-4B & Cardiomegaly & 0.246 & 0.854 & $\checkmark$ & $\checkmark$ & +0.098 & 0.104 & 0.054 & -0.008 & [-0.01, -0.01] & Edema & competitor \\
+\rowcolor{cfSlate2}Qwen3-VL-4B & Consolidation & 0.245 & 0.789 & $\checkmark$ & $\checkmark$ & +0.807 & 0.428 & 0.001 & +0.094 & [+0.08, +0.11] & Edema & owned \\
+\rowcolor{cfSlate2}Qwen3-VL-4B & Edema & 0.176 & 0.816 & $\checkmark$ & $\checkmark$ & +0.593 & 0.426 & 0.150 & +0.092 & [+0.07, +0.11] & Consolidation & owned \\
+Qwen3-VL-8B & Effusion & 0.226 & 0.889 & $\checkmark$ & $\checkmark$ & +0.370 & 0.296 & 0.149 & -0.069 & [-0.08, -0.06] & Pneumothorax & competitor \\
+Qwen3-VL-8B & Atelectasis & 0.164 & 0.791 &  &  & +0.009 & 0.009 & 0.007 & -0.000 & [-0.00, -0.00] & Effusion & competitor \\
+Qwen3-VL-8B & Pneumothorax & 0.062 & 0.466 &  &  & +0.203 & 0.390 & 0.015 & -0.095 & [-0.11, -0.08] & Consolidation & competitor \\
+Qwen3-VL-8B & Cardiomegaly & 0.218 & 0.766 & $\checkmark$ & $\checkmark$ & +0.072 & 0.072 & 0.071 & -0.000 & [-0.00, -0.00] & Effusion & competitor \\
+Qwen3-VL-8B & Consolidation & 0.213 & 0.798 & $\checkmark$ & $\checkmark$ & +0.352 & 0.315 & 0.225 & -0.038 & [-0.06, -0.02] & Pneumothorax & competitor \\
+Qwen3-VL-8B & Edema & 0.162 & 0.787 & $\checkmark$ & $\checkmark$ & +0.333 & 0.375 & 0.152 & -0.061 & [-0.07, -0.05] & Pneumothorax & competitor \\
+Qwen3-VL-32B & Effusion & 0.237 & 0.899 & $\checkmark$ & $\checkmark$ & +0.083 & 0.151 & 0.037 & -0.035 & [-0.05, -0.03] & Atelectasis & competitor \\
+Qwen3-VL-32B & Atelectasis & 0.065 & 0.899 &  &  & +0.023 & 0.023 & 0.021 & +0.001 & [+0.00, +0.00] & Cardiomegaly & unresolved \\
+Qwen3-VL-32B & Pneumothorax & 0.130 & 0.607 & $\checkmark$ & $\checkmark$ & +0.011 & 0.018 & 0.004 & +0.001 & [-0.00, +0.00] & Effusion & unresolved \\
+Qwen3-VL-32B & Cardiomegaly & 0.243 & 0.862 & $\checkmark$ & $\checkmark$ & +0.091 & 0.117 & 0.045 & -0.026 & [-0.04, -0.02] & Atelectasis & competitor \\
+Qwen3-VL-32B & Consolidation & 0.191 & 0.878 & $\checkmark$ & $\checkmark$ & +0.024 & 0.103 & 0.028 & -0.124 & [-0.14, -0.11] & Edema & competitor \\
+\rowcolor{cfSlate2}Qwen3-VL-32B & Edema & 0.161 & 0.782 & $\checkmark$ & $\checkmark$ & +0.237 & 0.187 & 0.091 & +0.045 & [+0.03, +0.06] & Effusion & owned \\
+InternVL3.5-8B & Effusion & 0.253 & 0.946 & $\checkmark$ & $\checkmark$ & +0.011 & 0.028 & 0.012 & -0.006 & [-0.01, -0.00] & Cardiomegaly & competitor \\
+InternVL3.5-8B & Atelectasis & 0.211 & 0.918 &  &  & -0.007 & 0.012 & 0.001 & -0.014 & [-0.02, -0.01] & Edema & competitor \\
+\rowcolor{cfSlate2}InternVL3.5-8B & Pneumothorax & -0.000 & 0.630 &  & $\checkmark$ & +0.004 & 0.004 & 0.000 & +0.004 & [+0.00, +0.00] & Cardiomegaly & owned \\
+InternVL3.5-8B & Cardiomegaly & 0.217 & 0.930 & $\checkmark$ & $\checkmark$ & +0.038 & 0.056 & 0.013 & -0.005 & [-0.01, -0.00] & Edema & competitor \\
+InternVL3.5-8B & Consolidation & 0.256 & 0.932 & $\checkmark$ & $\checkmark$ & +0.022 & 0.023 & 0.003 & +0.013 & [+0.01, +0.02] & Edema & no reference \\
+InternVL3.5-8B & Edema & 0.175 & 0.829 & $\checkmark$ & $\checkmark$ & +0.026 & 0.027 & 0.018 & -0.000 & [-0.00, +0.00] & Consolidation & unresolved \\
+\rowcolor{cfSlate2}InternVL3.5-14B & Effusion & 0.262 & 0.942 & $\checkmark$ & $\checkmark$ & +0.041 & 0.023 & 0.014 & +0.012 & [+0.01, +0.02] & Consolidation & owned \\
+InternVL3.5-14B & Atelectasis & -0.092 & 0.896 &  &  & +0.005 & 0.008 & 0.006 & -0.003 & [-0.00, -0.00] & Consolidation & competitor \\
+InternVL3.5-14B & Pneumothorax & -0.007 & 0.696 &  & $\checkmark$ & -0.000 & 0.001 & 0.001 & +0.000 & [-0.00, +0.00] & Effusion & unresolved \\
+InternVL3.5-14B & Cardiomegaly & 0.272 & 0.915 & $\checkmark$ & $\checkmark$ & +0.007 & 0.032 & 0.022 & -0.008 & [-0.01, -0.01] & Effusion & competitor \\
+InternVL3.5-14B & Consolidation & 0.295 & 0.942 & $\checkmark$ & $\checkmark$ & +0.010 & 0.013 & 0.022 & +0.009 & [+0.01, +0.01] & Pneumothorax & no reference \\
+InternVL3.5-14B & Edema & 0.217 & 0.857 & $\checkmark$ & $\checkmark$ & +0.009 & 0.020 & 0.007 & -0.004 & [-0.01, -0.00] & Pneumothorax & competitor \\
+Gemma 3 4B & Effusion & 0.252 & 0.567 & $\checkmark$ & $\checkmark$ & +0.007 & 0.008 & 0.019 & -0.001 & [-0.00, -0.00] & Atelectasis & unresolved \\
+Gemma 3 4B & Atelectasis & 0.110 & 0.537 &  &  & -0.000 & 0.000 & 0.003 & -0.000 & [-0.00, -0.00] & Cardiomegaly & competitor \\
+Gemma 3 4B & Pneumothorax & 0.037 & 0.612 &  &  & -0.651 & 0.003 & 0.003 & -0.654 & [-0.69, -0.62] & Consolidation & competitor \\
+Gemma 3 4B & Cardiomegaly & 0.228 & 0.560 & $\checkmark$ &  & -0.017 & 0.000 & 0.932 & -0.018 & [-0.03, -0.01] & Atelectasis & competitor \\
+Gemma 3 4B & Consolidation & 0.208 & 0.414 & $\checkmark$ &  & -0.312 & 0.035 & 0.035 & -0.349 & [-0.38, -0.32] & Atelectasis & competitor \\
+Gemma 3 4B & Edema & 0.221 & 0.460 & $\checkmark$ &  & -0.534 & 0.047 & 0.047 & -0.580 & [-0.61, -0.54] & Atelectasis & competitor \\
+Gemma 3 12B & Effusion & 0.252 & 0.534 & $\checkmark$ &  & -0.239 & 0.483 & 0.462 & -0.831 & [-0.86, -0.81] & Edema & competitor \\
+Gemma 3 12B & Atelectasis & 0.110 & 0.451 &  &  & +0.190 & 0.283 & 0.108 & -0.127 & [-0.15, -0.10] & Edema & competitor \\
+Gemma 3 12B & Pneumothorax & 0.037 & 0.611 &  &  & -0.004 & 0.509 & 0.005 & -0.712 & [-0.74, -0.68] & Edema & competitor \\
+Gemma 3 12B & Cardiomegaly & 0.228 & 0.489 & $\checkmark$ &  & +0.007 & 0.773 & 0.567 & -0.473 & [-0.51, -0.44] & Edema & competitor \\
+Gemma 3 12B & Consolidation & 0.208 & 0.523 & $\checkmark$ &  & +0.202 & 0.472 & 0.259 & -0.259 & [-0.29, -0.23] & Edema & competitor \\
+\rowcolor{cfSlate2}Gemma 3 12B & Edema & 0.221 & 0.520 & $\checkmark$ &  & +0.499 & 0.469 & 0.283 & +0.149 & [+0.12, +0.17] & Atelectasis & owned \\
+Gemma 3 27B & Effusion & 0.252 & 0.610 & $\checkmark$ & $\checkmark$ & +0.226 & 0.251 & 0.251 & -0.026 & [-0.04, -0.02] & Edema & competitor \\
+Gemma 3 27B & Atelectasis & 0.110 & 0.459 &  &  & +0.003 & 0.003 & 0.001 & -0.000 & [-0.00, -0.00] & Cardiomegaly & unresolved \\
+Gemma 3 27B & Pneumothorax & 0.037 & 0.601 &  &  & +0.209 & 0.216 & 0.207 & -0.006 & [-0.01, -0.00] & Edema & unresolved \\
+Gemma 3 27B & Cardiomegaly & 0.228 & 0.614 & $\checkmark$ & $\checkmark$ & +0.028 & 0.028 & 0.028 & -0.000 & [-0.00, +0.00] & Atelectasis & unresolved \\
+Gemma 3 27B & Consolidation & 0.211 & 0.486 & $\checkmark$ &  & +0.159 & 0.186 & 0.041 & -0.029 & [-0.04, -0.02] & Edema & competitor \\
+Gemma 3 27B & Edema & 0.221 & 0.510 & $\checkmark$ &  & +0.068 & 0.068 & 0.065 & +0.000 & [-0.00, +0.00] & Cardiomegaly & unresolved \\
+MedGemma 4B & Effusion & 0.256 & 0.965 & $\checkmark$ & $\checkmark$ & +0.115 & 0.181 & 0.028 & -0.204 & [-0.24, -0.17] & Cardiomegaly & competitor \\
+MedGemma 4B & Atelectasis & 0.259 & 0.802 &  &  & -0.030 & 0.048 & 0.021 & -0.082 & [-0.10, -0.06] & Cardiomegaly & competitor \\
+MedGemma 4B & Pneumothorax & 0.007 & 0.702 &  & $\checkmark$ & +0.015 & 0.402 & 0.009 & -0.602 & [-0.64, -0.57] & Edema & competitor \\
+\rowcolor{cfSlate2}MedGemma 4B & Cardiomegaly & 0.271 & 0.943 & $\checkmark$ & $\checkmark$ & +0.221 & 0.185 & 0.184 & +0.045 & [+0.02, +0.07] & Edema & owned \\
+MedGemma 4B & Consolidation & 0.256 & 0.942 & $\checkmark$ & $\checkmark$ & +0.005 & 0.154 & 0.045 & -0.201 & [-0.23, -0.17] & Effusion & competitor \\
+\rowcolor{cfSlate2}MedGemma 4B & Edema & 0.183 & 0.839 & $\checkmark$ & $\checkmark$ & +0.352 & 0.232 & 0.088 & +0.101 & [+0.07, +0.13] & Atelectasis & owned \\
+MedGemma 27B & Effusion & 0.257 & 0.962 & $\checkmark$ & $\checkmark$ & +0.095 & 0.064 & 0.142 & -0.007 & [-0.02, +0.01] & Cardiomegaly & unresolved \\
+MedGemma 27B & Atelectasis & 0.259 & 0.858 &  &  & +0.007 & 0.008 & 0.025 & +0.002 & [+0.00, +0.00] & Cardiomegaly & unresolved \\
+MedGemma 27B & Pneumothorax & 0.007 & 0.686 &  & $\checkmark$ & -0.133 & 0.124 & 0.135 & -0.065 & [-0.08, -0.05] & Atelectasis & competitor \\
+MedGemma 27B & Cardiomegaly & 0.271 & 0.958 & $\checkmark$ & $\checkmark$ & +0.382 & 0.390 & 0.368 & +0.033 & [+0.02, +0.04] & Edema & no reference \\
+MedGemma 27B & Consolidation & 0.256 & 0.952 & $\checkmark$ & $\checkmark$ & +0.082 & 0.168 & 0.127 & -0.017 & [-0.03, -0.00] & Cardiomegaly & unresolved \\
+MedGemma 27B & Edema & 0.184 & 0.832 & $\checkmark$ & $\checkmark$ & -0.139 & 0.272 & 0.168 & -0.283 & [-0.31, -0.26] & Cardiomegaly & competitor \\
+\rowcolor{cfSlate2}Lingshu 7B & Effusion & 0.268 & 0.928 & $\checkmark$ & $\checkmark$ & +0.297 & 0.084 & 0.144 & +0.097 & [+0.09, +0.10] & Pneumothorax & owned \\
+Lingshu 7B & Atelectasis & 0.288 & 0.922 &  &  & -0.016 & 0.056 & 0.096 & -0.088 & [-0.10, -0.08] & Edema & competitor \\
+\rowcolor{cfSlate2}Lingshu 7B & Pneumothorax & -0.037 & 0.645 &  & $\checkmark$ & +0.364 & 0.133 & 0.159 & +0.092 & [+0.09, +0.10] & Effusion & owned \\
+Lingshu 7B & Cardiomegaly & 0.261 & 0.921 & $\checkmark$ & $\checkmark$ & +0.270 & 0.168 & 0.030 & +0.009 & [-0.00, +0.02] & Edema & unresolved \\
+Lingshu 7B & Consolidation & 0.280 & 0.931 & $\checkmark$ & $\checkmark$ & +0.124 & 0.133 & 0.075 & -0.054 & [-0.06, -0.05] & Effusion & competitor \\
+\rowcolor{cfSlate2}Lingshu 7B & Edema & 0.192 & 0.824 & $\checkmark$ & $\checkmark$ & +0.477 & 0.210 & 0.009 & +0.211 & [+0.20, +0.22] & Effusion & owned \\
+\rowcolor{cfSlate2}Lingshu 32B & Effusion & 0.271 & 0.944 & $\checkmark$ & $\checkmark$ & +0.165 & 0.089 & 0.004 & +0.027 & [+0.02, +0.03] & Consolidation & owned \\
+Lingshu 32B & Atelectasis & 0.238 & 0.966 &  &  & +0.072 & 0.058 & 0.021 & -0.036 & [-0.04, -0.03] & Consolidation & competitor \\
+\rowcolor{cfSlate2}Lingshu 32B & Pneumothorax & 0.029 & 0.683 &  & $\checkmark$ & +0.117 & 0.105 & 0.010 & +0.024 & [+0.02, +0.03] & Atelectasis & owned \\
+\rowcolor{cfSlate2}Lingshu 32B & Cardiomegaly & 0.246 & 0.888 & $\checkmark$ & $\checkmark$ & +0.169 & 0.112 & 0.070 & +0.110 & [+0.10, +0.12] & Effusion & owned \\
+\rowcolor{cfSlate2}Lingshu 32B & Consolidation & 0.249 & 0.932 & $\checkmark$ & $\checkmark$ & +0.129 & 0.096 & 0.080 & +0.028 & [+0.02, +0.03] & Edema & owned \\
+\rowcolor{cfSlate2}Lingshu 32B & Edema & 0.195 & 0.829 & $\checkmark$ & $\checkmark$ & +0.237 & 0.154 & 0.097 & +0.115 & [+0.11, +0.12] & Effusion & owned \\
+LLaVA-1.5-7B & Effusion & 0.248 & 0.533 & $\checkmark$ &  & +0.061 & 0.088 & 0.030 & +0.002 & [+0.00, +0.00] & Edema & unresolved \\
+LLaVA-1.5-7B & Atelectasis & 0.149 & 0.519 &  &  & -0.018 & 0.078 & 0.062 & -0.087 & [-0.09, -0.08] & Edema & competitor \\
+LLaVA-1.5-7B & Pneumothorax & 0.032 & 0.561 &  &  & -0.032 & 0.093 & 0.010 & -0.099 & [-0.10, -0.10] & Edema & competitor \\
+LLaVA-1.5-7B & Cardiomegaly & 0.221 & 0.419 & $\checkmark$ &  & +0.066 & 0.096 & 0.058 & +0.027 & [+0.03, +0.03] & Effusion & no reference \\
+LLaVA-1.5-7B & Consolidation & 0.197 & 0.488 & $\checkmark$ &  & +0.018 & 0.086 & 0.047 & -0.029 & [-0.03, -0.03] & Edema & competitor \\
+LLaVA-1.5-7B & Edema & 0.154 & 0.574 & $\checkmark$ &  & +0.043 & 0.086 & 0.103 & -0.004 & [-0.01, -0.00] & Effusion & competitor \\
+LLaVA-1.5-13B & Effusion & 0.248 & 0.512 & $\checkmark$ &  & +0.019 & 0.047 & 0.030 & -0.003 & [-0.01, -0.00] & Pneumothorax & competitor \\
+LLaVA-1.5-13B & Atelectasis & 0.149 & 0.556 &  &  & -0.021 & 0.018 & 0.005 & -0.032 & [-0.03, -0.03] & Consolidation & competitor \\
+LLaVA-1.5-13B & Pneumothorax & 0.032 & 0.584 &  &  & -0.000 & 0.031 & 0.020 & -0.011 & [-0.01, -0.01] & Consolidation & competitor \\
+LLaVA-1.5-13B & Cardiomegaly & 0.221 & 0.405 & $\checkmark$ &  & +0.027 & 0.048 & 0.014 & +0.001 & [-0.00, +0.00] & Consolidation & unresolved \\
+LLaVA-1.5-13B & Consolidation & 0.197 & 0.401 & $\checkmark$ &  & +0.020 & 0.026 & 0.016 & +0.014 & [+0.01, +0.02] & Edema & no reference \\
+LLaVA-1.5-13B & Edema & 0.154 & 0.596 & $\checkmark$ & $\checkmark$ & +0.030 & 0.054 & 0.021 & -0.009 & [-0.01, -0.01] & Consolidation & competitor \\
+\rowcolor{cfSlate2}LLaVA-Med 1.5 7B & Effusion & 0.219 & 0.584 & $\checkmark$ & $\checkmark$ & +0.011 & 0.010 & 0.005 & +0.003 & [+0.00, +0.00] & Atelectasis & owned \\
+LLaVA-Med 1.5 7B & Atelectasis & 0.303 & 0.653 &  &  & +0.007 & 0.008 & 0.002 & -0.002 & [-0.00, -0.00] & Effusion & competitor \\
+LLaVA-Med 1.5 7B & Pneumothorax & 0.032 & 0.533 &  &  & +0.001 & 0.018 & 0.017 & -0.021 & [-0.02, -0.02] & Effusion & competitor \\
+LLaVA-Med 1.5 7B & Cardiomegaly & 0.228 & 0.570 & $\checkmark$ &  & +0.021 & 0.038 & 0.002 & -0.028 & [-0.03, -0.03] & Effusion & competitor \\
+LLaVA-Med 1.5 7B & Consolidation & 0.224 & 0.563 & $\checkmark$ &  & +0.019 & 0.017 & 0.007 & -0.003 & [-0.00, -0.00] & Effusion & competitor \\
+LLaVA-Med 1.5 7B & Edema & 0.125 & 0.628 & $\checkmark$ & $\checkmark$ & +0.007 & 0.018 & 0.001 & -0.019 & [-0.02, -0.02] & Effusion & competitor \\
+Llama 3.2 Vision 11B & Effusion & 0.256 & -- & $\checkmark$ & & -- & -- & -- & -- & -- & -- & ineligible \\
+Llama 3.2 Vision 11B & Atelectasis & 0.071 & -- &  & & -- & -- & -- & -- & -- & -- & ineligible \\
+Llama 3.2 Vision 11B & Pneumothorax & 0.076 & -- &  & & -- & -- & -- & -- & -- & -- & ineligible \\
+Llama 3.2 Vision 11B & Cardiomegaly & 0.233 & -- & $\checkmark$ & & -- & -- & -- & -- & -- & -- & ineligible \\
+Llama 3.2 Vision 11B & Consolidation & 0.209 & -- & $\checkmark$ & & -- & -- & -- & -- & -- & -- & ineligible \\
+Llama 3.2 Vision 11B & Edema & 0.132 & -- & $\checkmark$ & & -- & -- & -- & -- & -- & -- & ineligible \\
 \end{longtable}
 \normalsize

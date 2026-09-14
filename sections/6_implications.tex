@@ -1,0 +1,14 @@
+\section{Implications}
+\label{sec:implications}
+
+\paragraph{For interpretability and steering practice.}
+A probe direction that reads a clinical concept is not a handle on it. Steering studies that report a large answer change against random and sham controls have shown that the write reaches the answer, not that the label names the direction; the matched-competitor comparison is the missing test, and it is cheap once the competitors' directions exist. The write matrix $W$ should be reported whenever probe normals are used as interventions, and ownership should be the quantity compared across layers, doses, and models.
+
+\paragraph{For model builders.}
+The same write vector produces different ownership in different language models. A vision tower that exposes a finding linearly does not determine whether the model uses that finding; the connector and the language model do. Ownership on the chest sets rises with the reader in some families (Qwen2.5-VL from 7B to 72B, Lingshu from 7B to 32B) and not in others (Gemma~3, InternVL3.5), and medical fine-tuning of the reader (Lingshu, MedGemma on CheXpert) is where ownership appears most often. The benchmark grades the reader; it can be run on a new checkpoint in about ten GPU-hours per chest dataset.
+
+\paragraph{For clinical evaluation.}
+Readability and answer accuracy are the quantities most often reported for medical VLMs, and both are high in this grid; neither guarantees that the concept the model exposes is the concept it uses. A checkpoint whose Effusion direction moves the Effusion answer less than its Nodule direction does answers Effusion questions through a shared abnormality signal. Evaluations that certify concept use for deployment should include the write test, and should include a natural-image control to separate a mechanism failure from a concept failure.
+
+\paragraph{Scope.}
+The grades condition on one direction construction (a 512-d projection and logistic normals with three fit seeds), one relative dose per module, six templates, pooled consumed-token features, and one primary and one connector locus; the largest two checkpoints are graded on NIH (72B) or deferred (90B). Bootstrap intervals quantify uncertainty over patients. Selectivity against type-conditioned random-label controls measures an advantage over nuisance-label tasks; report-derived labels, disease co-occurrence, and acquisition correlates remain candidate sources of the shared write signal, and the evaluation grades the outcome without identifying which. Ownership establishes whether a labelled direction is the model's own; it is not a claim of diagnostic benefit, which the seed study found absent for Mass steering.

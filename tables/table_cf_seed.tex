@@ -1,0 +1,21 @@
+\begin{table}[t]
+\centering
+\scriptsize
+\setlength{\tabcolsep}{4pt}
+\input{tables/cf_colors}
+\caption{\textbf{Seed replication: Qwen2.5-VL-7B on NIH ChestX-ray14, 600 new patients.} Per concept: probe selectivity $S$, clean-answer AUROC, concept write $W_{qq}$, the random-family 95th percentile and the absolute sham at the same dose, the rank of $W_{qq}$ among the 120 compared effects, the ownership contrast $O_q$ with its 95\% percentile interval, the strongest competing direction, and the max-$T$ verdict. Negative ownership is shaded terracotta.}
+\label{tab:cf-seed}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lrrrrrrrll}
+\toprule
+Concept & $S$ & AUROC & $W_{qq}$ & p95 & $|$sham$|$ & rank & $O_q$ [95\% CI] & Competitor & Verdict \\
+\midrule
+Effusion & 0.102 & 0.593 & +0.190 & 0.137 & 0.017 & 2/120 & \cellcolor{cfTerra2}-0.071 [-0.080, -0.062] & Nodule & competitor \\
+Atelectasis & 0.062 & 0.566 & +0.101 & 0.297 & 0.096 & 55/120 & \cellcolor{cfTerra3}-0.226 [-0.233, -0.219] & Nodule & competitor \\
+Pneumothorax & 0.152 & 0.508 & +0.089 & 0.320 & 0.113 & 52/120 & \cellcolor{cfTerra3}-0.102 [-0.108, -0.096] & Effusion & competitor \\
+Cardiomegaly & 0.205 & 0.742 & +0.085 & 0.311 & 0.158 & 33/120 & \cellcolor{cfTerra3}-0.219 [-0.227, -0.211] & Atelectasis & competitor \\
+Mass & 0.021 & 0.678 & +0.359 & 0.372 & 0.092 & 10/120 & \cellcolor{cfTerra3}-0.169 [-0.178, -0.160] & Effusion & competitor \\
+Nodule & -0.041 & 0.642 & +0.118 & 0.158 & 0.055 & 15/120 & \cellcolor{cfTerra2}-0.072 [-0.081, -0.063] & Effusion & competitor \\
+\bottomrule
+\end{tabular}}
+\end{table}

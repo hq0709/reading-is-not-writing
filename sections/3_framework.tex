@@ -1,0 +1,54 @@
+\section{Reading, Answering, and Writing at a Consumed Locus}
+\label{sec:framework}
+
+The evaluation asks three questions about a concept $c$ in a checkpoint $M$ on a dataset with binary labels: can $c$ be read from the visual representation the language model consumes, does $M$ answer the question about $c$, and does writing $c$'s own direction move $c$'s answer more than any alternative? Each question has a fixed estimator and a fixed decision rule; nothing is chosen after seeing the outcome.
+
+\subsection{Consumed locus and matched read--write positions}
+\label{sec:locus}
+
+Every VLM in the grid passes an image through a vision tower and hands a specific tensor to a connector or merger that produces the language model's inputs. The \emph{primary locus} is the output of the last visual block whose output that consumer reads, restricted to the token positions the consumer actually uses (CLS or padding rows are excluded where the consumer drops them); the \emph{connector locus} is the consumer's output. Table~\ref{tab:cf-models} names the block for every family. For image $i$ and consumed token $t$ let $\hvec_{it}\in\R^D$ be the block output; mean pooling over the consumed tokens gives the read vector $\hvec_i$. The write acts on the same tokens,
+\begin{equation}
+\hvec'_{it}=\hvec_{it}+\alpha\,\lVert\hvec_{it}\rVert_2\,\hat\wvec_c,
+\label{eq:intervention}
+\end{equation}
+so that the dose $\alpha$ is a fraction of each token's own norm and is comparable across families whose activation scales differ by orders of magnitude. Reading and writing therefore use the same representation and the same positions.
+
+\subsection{Directions, controls, and the reference family}
+\label{sec:directions}
+
+A fixed seed-0 Gaussian matrix $R\in\R^{D\times512}$ projects every checkpoint to a common readout dimension; featurewise scale $\boldsymbol s$ is fitted on training rows only; logistic regression ($C=1$, 2{,}000 iterations) is fitted per concept with three seeds. The write direction lifts the positive-class coefficient $\boldsymbol\beta_c$ back to the consumed space,
+\begin{equation}
+\hat\wvec_c=\frac{R\left(\boldsymbol\beta_c\oslash\max(\boldsymbol s,10^{-8})\right)}{\left\lVert R\left(\boldsymbol\beta_c\oslash\max(\boldsymbol s,10^{-8})\right)\right\rVert_2}.
+\label{eq:lift}
+\end{equation}
+Two families of controls bracket the concept direction. For reading, 20 control probes are fitted to random labels drawn within recurring image types (view, sex, and age decade on chest sets; aspect and area buckets on COCO) so that they have the same capacity and the same nuisance structure as the concept probe; selectivity is
+\begin{equation}
+S=\operatorname{AUROC}(y,r)-\tfrac{1}{20}\textstyle\sum_{k}\operatorname{AUROC}(y^{\mathrm{ctrl}}_k,r^{\mathrm{ctrl}}_k).
+\label{eq:selectivity}
+\end{equation}
+For writing, the \emph{reference family} contains 119 seed-0 random unit directions, a coordinate-permutation sham of $\hat\wvec_c$ (same coordinates, scrambled arrangement), and the five directions of the other clinical concepts, all written at the same dose to the same images.
+
+\subsection{Ownership}
+\label{sec:ownership}
+
+For question $q$ and direction $d$, $W_{q,d}$ is the paired mean change in $P(\mathrm{yes})$ of $q$ under a write along $d$, where $P(\mathrm{yes})=\sigma(\ell_{\mathrm{yes}}-\ell_{\mathrm{no}})$ at the first answer position and each log-probability is the maximum over case and leading-space variants that tokenise to one token. The $6\times6$ matrix $W$ over concept questions and concept directions is the object of interest (Figure~\ref{fig:write-matrices}). Ownership is the diagonal margin
+\begin{equation}
+O_q=W_{q,q}-\max_{d\neq q}W_{q,d},
+\label{eq:margin}
+\end{equation}
+the advantage of the concept's own direction over its strongest clinical competitor on the concept's own question. A large $W_{q,q}$ shows that $d=q$ can write the answer; only $O_q>0$ shows that the label names the effective direction. Uncertainty over patients is quantified by 2{,}000 bootstrap draws of test rows with the maximum recomputed inside every draw, and the 30 contrasts $W_{q,q}-W_{q,d}$ receive simultaneous 95\% lower bounds from a centred studentised max-$T$ bootstrap (Appendix~\ref{app:simultaneous-bounds}).
+
+\subsection{Graded outcomes}
+\label{sec:grades}
+
+\begin{itemize}[leftmargin=*,itemsep=1pt,topsep=2pt]
+\item \textbf{Readable:} the one-sided 95\% lower bound of $S$ is above zero, with at least ten positives and ten negatives among the test rows.
+\item \textbf{Answerable:} the one-sided 95\% lower bound of the clean-answer AUROC on the yes/no question is above $0.5$.
+\item \textbf{Owned:} the write meets the \emph{steering reference}---$W_{q,q}>0$, above the 95th percentile of the 119 random writes, and above the absolute sham---and every simultaneous lower bound of $W_{q,q}-W_{q,d}$ is positive. A cell with any simultaneous upper bound below zero has a \emph{stronger competitor}; the rest are \emph{unresolved}.
+\end{itemize}
+Every block additionally reports the signed dose range of $O_q$ over $\alpha\in\{-0.5,\ldots,+0.5\}$, the standard deviation of $O_q$ over the three fit seeds, ownership at the connector locus, the label-shift gap (the answer change when test labels are permuted within type), and the wording (\emph{is} versus \emph{show}) and mapping (A-present versus B-present) contrasts of $O_q$ across six question templates.
+
+\subsection{Acceptance gates}
+\label{sec:gates}
+
+Seven checks run on 16 held-out preflight rows at both loci before a block is scored (Table~\ref{tab:cf-gates}): (A) bitwise determinism on repeat; (B) identity at $\alpha=0$; (C) reach---the write changes the consumer's input and the answer logits and nothing outside the consumed tokens; (D) batch-versus-single consistency of answer logits; (E) image-free semantic mapping---the model maps ``the finding is present/absent'' statements to the intended answer token under each template; (F) throughput; (G) agreement of fp32 answer logits recomputed from the final hidden state with the model's own logits. Two measurement facts fixed the scoring design: bf16 model logits lie on a 0.125 lattice, so every answer logit is recomputed in fp32; and bf16 kernels are shape dependent, so every contrast of a question---clean, concept, five competitors, sham, and random writes---is scored in one fixed batch composition. Templates that fail (E) are \emph{ineligible} for that checkpoint and are graded as such rather than scored.

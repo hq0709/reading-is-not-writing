@@ -44,7 +44,7 @@ of a generated clinical report.
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=\linewidth]{figures/figA1_prompt_score.pdf}
+\includegraphics[width=\textwidth]{figures/figA1_prompt_score.pdf}
 \caption{\textbf{The registered prompts share one template and one answer score.}
 The six findings instantiate an otherwise fixed yes/no question, and every
 model uses the same first-answer-position scoring sequence.}
@@ -225,9 +225,9 @@ interpret each result against the rule registered for that experiment.
 
 \subsection{From registered design to statistical decisions}
 
-Figure~\ref{fig:provenance-chain} connects the experimental design to the
-patient-level estimates and their statistical interpretation. Model, visual
-locus, dose rule, and cohort selection are specified before each test.
+Model, visual locus, dose rule, and cohort selection are specified before
+each test, and every estimate traces to a registered cohort and a fixed
+decision rule.
 Ownership and aliasing use 400 patients and 304,800 evaluations; closure
 uses 50 patient pairs and 6,450 evaluations. Evaluation counts include the
 perturbation conditions applied to each study, while the bootstrap resamples
@@ -236,16 +236,6 @@ patient-bootstrap bounds with the registered clinical, random, and sham
 comparisons. Closure requires the displacement and gain comparisons to
 satisfy the registered conjunction.
 
-\begin{figure}[H]
-\centering
-\includegraphics[width=\linewidth]{figures/figA2_provenance.pdf}
-\caption{\textbf{Registered designs connect patient-level estimates to
-statistical decisions.} The two experiments evaluate different patient
-cohorts under prespecified dose rules. Their bootstrap and comparator
-requirements yield zero named owners, no detected shared alias, and no
-confirmed input closure.}
-\label{fig:provenance-chain}
-\end{figure}
 
 The decision step distinguishes an observed effect from a supported causal
 interpretation. Neither the six named ownership tests nor the shared-alias
@@ -305,7 +295,7 @@ bounds on the fixed linear contrasts in Equation~\ref{eq:max-t}.
 \subsection{Question-specific effects and clinical competitors}
 
 Here $q$ indexes a clinical question, $d$ indexes a steering direction, and
-$W_{q,d}$ retains its definition from Section~\ref{sec:protocol}.  Rows in
+$W_{q,d}$ retains its definition from Section~\ref{app:seed}.  Rows in
 Figure~\ref{fig:ownership-matrix} are directions and columns are questions, so
 the named comparison lies on the diagonal.  The column-wise ownership margin
 $O_q$ is positive only when that diagonal exceeds every clinical competitor.
@@ -318,7 +308,7 @@ original Effusion comparison.
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=\linewidth]{figures/figA3_ownership_matrix.pdf}
+\includegraphics[width=\textwidth]{figures/figA3_ownership_matrix.pdf}
 \caption{\textbf{Every clinical question is moved most by an off-diagonal
 direction.} Outlined cells mark the named diagonals, and orange triangles
 mark each column's strongest clinical direction. The continuous color scale
@@ -390,7 +380,7 @@ pattern does not confirm the shared-alias hypothesis.
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=\linewidth]{figures/figA4_shared_alias.pdf}
+\includegraphics[width=\textwidth]{figures/figA4_shared_alias.pdf}
 \caption{\textbf{Effusion is the strongest shared-alias candidate but remains
 below the registered random-control maximum.} Both panels use a common
 $P(\mathrm{yes})$-change axis and zero baseline. Markers indicate point
@@ -472,7 +462,7 @@ eligible reader and positive point estimates.
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=\linewidth]{figures/figA5_input_closure.pdf}
+\includegraphics[width=\textwidth]{figures/figA5_input_closure.pdf}
 \caption{\textbf{The Consolidation direction is readable, but its measured
 write does not reliably close the paired input gap.} Panel (a) shows the reader
 estimate and two-sided 95\% interval. Panels (b) and (d) show point estimates
@@ -531,8 +521,8 @@ the answer computation.
 
 \subsection{Does the write reach the consumed pathway?}
 
-Figure~\ref{fig:forward-path} locates the intervention relative to the
-connector or merger and answer logits. A captured activation must be
+The intervention sits at the final visual block whose output the
+connector or merger reads (Figure~\ref{fig:framework}). A captured activation must be
 consumed downstream for its modification to test the model's behavior.
 The zero-dose check tests whether installing the hook changes the
 unperturbed computation; the nonzero-dose checks test whether a write
@@ -540,14 +530,6 @@ propagates beyond the captured block. The diagram locates both checks
 along the forward path and shows where their downstream witnesses are
 measured.
 
-\begin{figure}[H]
-\centering
-\includegraphics[width=\linewidth]{figures/figA6_forward_path.pdf}
-\caption{\textbf{A valid intervention must enter the consumed forward path
-and reach the answer logits.} The same hook is tested at zero and nonzero dose
-before its scientific outcomes are interpreted.}
-\label{fig:forward-path}
-\end{figure}
 
 The path checks distinguish a valid manipulation from a change to an
 unused activation. They make the observed answer effects attributable to
@@ -630,7 +612,7 @@ determine whether the response is unusual for that perturbation scale.
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=\linewidth]{figures/fig2_dose_responses.pdf}
+\includegraphics[width=\textwidth]{figures/figA12_seed_dose.pdf}
 \caption{\textbf{Comparable readers become different writers at the consumed final visual block.} The dashed curve is the raw change in mean $P(\mathrm{yes})$ under the target probe normal on the same 200 held-out images per cell. Shaded bands show the 5th--95th percentile across 20 equal-norm random directions at the six controlled nonzero doses; crosses show the coordinate-permutation sham. The concept-consistent rule uses $\operatorname{sign}(\alpha)\Delta(\alpha)$, accounting for the negative-dose maxima in the two LLaVA cells.}
 \label{fig:dose}
 \end{figure}
