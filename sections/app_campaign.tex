@@ -24,7 +24,7 @@ Nineteen checkpoints are complete on all three datasets with every module (the w
 \subsection{Ownership of every concept}
 \label{app:cf-tables}
 
-Tables~\ref{tab:cf-own-nih}--\ref{tab:cf-own-coco} give the ownership contrast of every concept cell; the write matrices behind them are in Figures~\ref{fig:cf-w-nih}--\ref{fig:cf-w-coco}.
+Tables~\ref{tab:cf-own-nih}--\ref{tab:cf-own-coco} give the ownership contrast of every concept cell; the structure of the write matrices behind them is summarised in Figure~\ref{fig:cf-w-structure}, and Figure~\ref{fig:cf-examples} shows the grades on single images.
 
 \input{tables/table_cf_own_nih}
 \input{tables/table_cf_own_chexpert}
@@ -39,29 +39,26 @@ Table~\ref{tab:cf-controls} summarises the reference family and the per-block co
 \input{tables/table_cf_controls}
 
 
-\subsection{Write matrices of every checkpoint}
+\subsection{Write structure across the grid}
 \label{app:cf-figures}
 
-Figures~\ref{fig:cf-w-nih}--\ref{fig:cf-w-coco} show the full $6\times6$ write matrix of every checkpoint; the owned diagonals are outlined.
+Figure~\ref{fig:cf-w-structure} condenses the $6\times6$ write matrices of every completed checkpoint. The top row is the cell-wise median matrix per dataset. The bottom row shows where the write goes: each written direction on the left is joined to the questions it moves on the right, with band width proportional to the mean positive answer change across checkpoints; bands that land on the writer's own question are coloured and bands that land elsewhere are grey. The share of the write that lands on its own question is 24\% on NIH and 22\% on CheXpert against 79\% on COCO; on the chest sets the largest sinks are the Cardiomegaly question on NIH and the Edema and Effusion questions on CheXpert, which receive writes from every direction.
 
 \begin{figure}[p]
     \centering
-    \includegraphics[width=\textwidth]{figures/figA1_write_matrices_nih.pdf}
-    \caption{Write matrices $W_{q,d}$ of every checkpoint on NIH ChestX-ray14; owned diagonals are outlined.}
-    \label{fig:cf-w-nih}
+    \includegraphics[width=\textwidth]{figures/figA1_write_structure.pdf}
+    \caption{\textbf{Write structure across the grid.} (a--c) Cell-wise median of the write matrix $W_{q,d}$ over completed checkpoints on NIH ChestX-ray14, CheXpert Plus, and COCO. (d--f) Where the write goes: bands join each written direction $d$ (left) to the questions $q$ it moves (right), with width proportional to the mean over checkpoints of $\max(W_{q,d},0)$; coloured bands land on the writer's own question, grey bands on another. The share of the write that lands on its own question is printed under each panel.}
+    \label{fig:cf-w-structure}
 \end{figure}
+
+\subsection{Per-image examples}
+\label{app:cf-examples}
+
+Figure~\ref{fig:cf-examples} shows the grades on single test images. For a chest example the pool is the test rows on which the finding is labelled present, the probe reads it (probability above $0.5$), and the clean answer is No; for a natural-image example the pool is the rows on which the probe reads the label correctly and the clean answer is No. Within the pool, rows are split by whether the concept's own write or the strongest competing write raises the answer more, and the row shown is the one nearest the median gap among rows where either write raises the answer by at least $0.2$; the last line of each example gives how many rows of the pool share its ordering, so that each example carries its own base rate.
 
 \begin{figure}[p]
     \centering
-    \includegraphics[width=\textwidth]{figures/figA2_write_matrices_chexpert.pdf}
-    \caption{Write matrices of every checkpoint on CheXpert Plus.}
-    \label{fig:cf-w-chexpert}
+    \includegraphics[width=\textwidth]{figures/figA2_examples.pdf}
+    \caption{\textbf{Reading, answering, and writing on single images.} For each image: the question, the report label with the probe's reading, the clean answer, the answer under the concept's own write, and the answer under the strongest competing write, all at $\alpha=+0.25$ ($P(\mathrm{yes})$ in parentheses). A check on the write line means the concept's own direction raises its answer more than every competing direction on that image; a cross means a competitor raises it more. The first four chest examples are deficit cells of Qwen2.5-VL-7B; the next two are owned cells (Lingshu 32B Edema, Qwen2.5-VL-72B Atelectasis); the natural-image examples are owned cells of Qwen2.5-VL-7B, Lingshu 32B, and MedGemma 4B. The last line of each example counts the rows of its pool on which the same write wins.}
+    \label{fig:cf-examples}
 \end{figure}
-
-\begin{figure}[p]
-    \centering
-    \includegraphics[width=\textwidth]{figures/figA3_write_matrices_coco.pdf}
-    \caption{Write matrices of every checkpoint on COCO.}
-    \label{fig:cf-w-coco}
-\end{figure}
-

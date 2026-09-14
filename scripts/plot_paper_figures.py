@@ -17,7 +17,8 @@ Main text
   fig5_same_write       same write, different reader: ownership of Gemma 3 4B/12B/27B and MedGemma 4B/27B
   fig6_ladders          size ladders: Qwen2.5-VL, Qwen3-VL (NIH), Lingshu (CheXpert)
 Appendix
-  figA1/A2/A3_write_matrices_{nih,chexpert,coco}   the write matrix of every checkpoint
+  figA1_write_structure  median write matrix per dataset (top) and own write vs strongest competitor per cell (bottom)
+  figA2_examples         ten representative per-image examples (image, question, label, probe, clean / own / competitor answers)
 """
 from __future__ import annotations
 
@@ -32,7 +33,9 @@ import matplotlib.pyplot as plt                         # noqa: E402
 from matplotlib.colors import LinearSegmentedColormap, TwoSlopeNorm   # noqa: E402
 from matplotlib.lines import Line2D                     # noqa: E402
 from matplotlib.text import Text                        # noqa: E402
-from matplotlib.patches import FancyArrowPatch, FancyBboxPatch, Rectangle   # noqa: E402
+from matplotlib.ticker import MaxNLocator               # noqa: E402
+from matplotlib.patches import FancyArrowPatch, FancyBboxPatch, PathPatch, Rectangle   # noqa: E402
+from matplotlib.path import Path as MPath               # noqa: E402
 from matplotlib.transforms import Bbox, offset_copy     # noqa: E402
 import numpy as np                                      # noqa: E402
 
@@ -56,7 +59,8 @@ SHORT = {"q25-3": "Q2.5-3B", "q25-7": "Q2.5-7B", "q25-32": "Q2.5-32B", "q25-72":
          "llavamed-7": "LLaVA-Med", "llama32-11": "Llama-11B", "llama32-90": "Llama-90B"}
 ORDER = list(NAMES)
 CONCEPT_COLOR = {"Effusion": fs.ROSE, "Atelectasis": fs.SAGE, "Pneumothorax": fs.HAZE, "Cardiomegaly": fs.OAT, "Mass": fs.LILAC,
-                 "Nodule": fs.SLATE, "Consolidation": fs.MUSTARD, "Edema": fs.TERRACOTTA}
+                 "Nodule": fs.SLATE, "Consolidation": fs.MUSTARD, "Edema": fs.TERRACOTTA,
+                 "person": fs.ROSE, "dog": fs.SAGE, "car": fs.HAZE, "chair": fs.OAT, "bottle": fs.LILAC, "bicycle": fs.MUSTARD}
 DS_COL, DS_MK, DS_LAB = fs.DATASET_COLOR, fs.DATASET_MARKER, fs.DATASET_LABEL
 SHORT_CONCEPT = {"Effusion": "Effus.", "Atelectasis": "Atel.", "Pneumothorax": "Pneu.", "Cardiomegaly": "Card.",
                  "Mass": "Mass", "Nodule": "Nodule", "Consolidation": "Cons.", "Edema": "Edema",
@@ -133,9 +137,13 @@ def text_bboxes(fig):
         for t in items:
             if t.get_visible() and t.get_text().strip():      # Text.get_window_extent: the glyph box only, never a leader arrow
                 out.append((f"{ax.get_label() or 'ax'}:{t.get_text()[:28]!r}", Text.get_window_extent(t, r)))
-        for axis in ("x", "y"):
-            for t in (ax.get_xticklabels() if axis == "x" else ax.get_yticklabels()):
-                if t.get_visible() and t.get_text().strip():
+        for axis, xa in (("x", ax.xaxis), ("y", ax.yaxis)):
+            if not ax.axison:
+                break
+            lo, hi = sorted(xa.get_view_interval())
+            for tk in xa.get_major_ticks():
+                t = tk.label1
+                if t.get_visible() and t.get_text().strip() and lo - 1e-9 <= tk.get_loc() <= hi + 1e-9:
                     out.append((f"{ax.get_label() or 'ax'}:tick{axis}:{t.get_text()[:20]!r}", t.get_window_extent(r)))
         if ax.get_legend() is not None:
             out.append((f"{ax.get_label() or 'ax'}:legend", ax.get_legend().get_window_extent(r)))
@@ -621,46 +629,447 @@ def fig5_same_write(blocks):
 
 
 # ============================================================================================== fig6: size ladders
-LADDERS = [("(a)  Qwen2.5-VL on NIH\nownership appears at 32B and 72B", [("q25-3", "3B"), ("q25-7", "7B"), ("q25-32", "32B"), ("q25-72", "72B")], "nih"),
-           ("(b)  Qwen3-VL on NIH\nonly Nodule, at 32B", [("q3-4", "4B"), ("q3-8", "8B"), ("q3-32", "32B")], "nih"),
-           ("(c)  Lingshu on CheXpert\nfive of six owned at 32B", [("lingshu-7", "7B"), ("lingshu-32", "32B")], "chexpert")]
+LADDERS = [("Qwen2.5-VL, NIH", [("q25-3", 3, "3B"), ("q25-7", 7, "7B"), ("q25-32", 32, "32B"), ("q25-72", 72, "72B")], "nih"),
+           ("Qwen3-VL, NIH", [("q3-4", 4, "4B"), ("q3-8", 8, "8B"), ("q3-32", 32, "32B")], "nih"),
+           ("Lingshu, CheXpert", [("lingshu-7", 7, "7B"), ("lingshu-32", 32, "32B")], "chexpert")]
+LADDER_MARKERS = ["o", "s", "^", "D", "v", "P"]
+LEGEND_FRAME = dict(frameon=True, facecolor="white", edgecolor="#8a8a8a", fontsize=6.5, handlelength=2.0, borderpad=0.4, labelspacing=0.25, handletextpad=0.5)
+
+
+def sampled_display_points(ax, lines, n=25):
+    """Display coordinates of every marker and of n samples along every segment of the given lines."""
+    pts = []
+    for ln in lines:
+        x, y = np.asarray(ln.get_xdata(), float), np.asarray(ln.get_ydata(), float)
+        if ax.get_xscale() == "log":
+            xs = np.concatenate([np.geomspace(x[i], x[i + 1], n) for i in range(len(x) - 1)]) if len(x) > 1 else x
+            ys = np.concatenate([np.interp(np.log(np.geomspace(x[i], x[i + 1], n)), np.log(x[i:i + 2]), y[i:i + 2]) for i in range(len(x) - 1)]) if len(x) > 1 else y
+        else:
+            xs = np.concatenate([np.linspace(x[i], x[i + 1], n) for i in range(len(x) - 1)]) if len(x) > 1 else x
+            ys = np.concatenate([np.linspace(y[i], y[i + 1], n) for i in range(len(x) - 1)]) if len(x) > 1 else y
+        pts.append(ax.transData.transform(np.column_stack([xs, ys])))
+    return np.vstack(pts) if pts else np.zeros((0, 2))
+
+
+def bbox_hits(bb, pts, margin_pt, fig):
+    m = margin_pt * fig.dpi / 72
+    return ((pts[:, 0] > bb.x0 - m) & (pts[:, 0] < bb.x1 + m) & (pts[:, 1] > bb.y0 - m) & (pts[:, 1] < bb.y1 + m)).any()
+
+
+def free_legend(fig, ax, handles, pts, locs=("lower right", "upper left", "lower left", "upper right"), **kw):
+    """Framed legend at the first location whose frame (plus 3 pt) contains no data point; None if no corner is free."""
+    for loc in locs:
+        lg = ax.legend(handles=handles, loc=loc, **kw)
+        fig.canvas.draw(); bb = lg.get_window_extent(fig.canvas.get_renderer())
+        if not bbox_hits(bb, pts, 3, fig):
+            return lg
+        lg.remove()
+    return None
+
+
+def tint(color, strength=0.8):
+    """Mix a colour with white: strength 1 = the colour itself, 0 = white (no alpha, so overlaps stay opaque)."""
+    from matplotlib.colors import to_rgb, to_hex
+    c = np.array(to_rgb(color)); return to_hex(strength * c + (1 - strength))
 
 
 def fig6_ladders(blocks):
-    f, axes = plt.subplots(1, 3, figsize=(fs.WIDTH, 2.9), constrained_layout=True, sharey=True, gridspec_kw={"width_ratios": [4, 3, 2.5]})
-    pad = {4: 0.85, 3: 0.85, 2: 0.80}
+    f, axes = plt.subplots(1, 3, figsize=(fs.WIDTH, 2.55), constrained_layout=True, sharey=True)
+    panels, emph_names = [], []
     for ax, (title, sizes, ds), letter in zip(axes, LADDERS, "abc"):
         ax.set_label(letter)
-        sizes = [(m, l) for m, l in sizes if (m, ds) in blocks]
-        concepts = list(blocks[(sizes[0][0], ds)]["s"]["core"]["per_question"]); xs = np.arange(len(sizes))
-        ends = []
-        for c in concepts:
-            col = CONCEPT_COLOR[c]
-            ys = [O_of(blocks, mk, ds)[c] for mk, _ in sizes]; ow = [c in owned_set(blocks[(mk, ds)]["s"]) for mk, _ in sizes]
-            ax.plot(xs, ys, color=col, lw=1.3, zorder=2)
+        sizes = [(m, b, l) for m, b, l in sizes if (m, ds) in blocks]
+        concepts = list(blocks[(sizes[0][0], ds)]["s"]["core"]["per_question"]); xs = np.array([b for _, b, _ in sizes], float)
+        O_last = O_of(blocks, sizes[-1][0], ds); emph = max(concepts, key=lambda c: O_last[c]); emph_names.append(emph)
+        handles, data_lines, mk_iter = [], [], iter(["o", "s", "^", "v", "P"])
+        order = [emph] + [c for c in concepts if c != emph]          # emphasised series drawn last (on top), listed first
+        for c in reversed(order):
+            ys = np.array([O_of(blocks, m, ds)[c] for m, _, _ in sizes]); ow = [c in owned_set(blocks[(m, ds)]["s"]) for m, _, _ in sizes]
+            if c == emph:
+                col, mk, lw, ms = CONCEPT_COLOR[c], "D", 1.7, 4.2
+            else:
+                col, mk, lw, ms = tint(CONCEPT_COLOR[c], 0.8), next(mk_iter), 0.9, 2.6
+            data_lines += ax.plot(xs, ys, color=col, ls=(0, (4, 2)), lw=lw, zorder=3 if c != emph else 5)
             for x, y, o in zip(xs, ys, ow):
-                ax.plot(x, y, marker="o", ms=4.8, mfc=col if o else "white", mec=col, mew=1.2, ls="none", zorder=3)
-            ends.append((ys[-1], SHORT_CONCEPT.get(c, c), col))
-        ax.axhline(0, color=fs.CHANCE, lw=0.8, ls="--", zorder=1)
-        ax.set_xticks(xs); ax.set_xticklabels([l for _, l in sizes], fontsize=7.5); ax.set_xlim(-0.3, len(sizes) - 1 + pad[len(sizes)])
-        ax.set_title(title, fontsize=8, loc="left", pad=5, linespacing=1.2); ax.grid(False, axis="x"); ax.set_xlabel("model size", fontsize=7.5)
-        ax._ends = (ends, xs[-1])
-    axes[0].set_ylim(-0.6, 0.66)
-    lo, hi = axes[0].get_ylim(); step = 0.098 * (hi - lo)
-    for ax in axes:
-        ends, xl = ax._ends
-        ly = repel([e[0] for e in ends], step, lo + step * 0.6, hi - step * 0.6)
-        for (y0, name, col), y1 in zip(ends, ly):
-            ax.annotate(name, (xl, y0), xytext=(xl + 0.14, y1), textcoords="data", fontsize=8, color=col, va="center", ha="left",
-                        arrowprops=dict(arrowstyle="-", color=col, lw=0.45, alpha=0.7, shrinkA=0, shrinkB=3) if abs(y1 - y0) > 0.004 else None)
-    axes[0].set_ylabel("ownership $O_q$  (filled: owned)", fontsize=8)
+                data_lines += ax.plot(x, y, marker=mk, ms=ms, mfc=col, mec=fs.CHARCOAL if o else col, mew=0.7 if o else 0.5, ls="none", zorder=4 if c != emph else 6)
+            handles.append(Line2D([], [], color=col, ls=(0, (4, 2)), lw=lw, marker=mk, ms=ms, mfc=col, mec=col, label=c))
+        handles = handles[::-1]
+        ax.set_xscale("log", base=2); ax.set_xlim(xs[0] / 1.45, xs[-1] * 1.8)
+        ax.set_xticks(xs); ax.set_xticklabels([l for _, _, l in sizes]); ax.xaxis.set_minor_locator(plt.NullLocator())
+        ax.tick_params(labelsize=8)
+        ax.grid(True, which="major", axis="both", ls=":", lw=0.5, color="#8a8a8a", alpha=0.6)
+        for sp in ax.spines.values():
+            sp.set_visible(True); sp.set_edgecolor("#8a8a8a"); sp.set_linewidth(0.7)
+        ax.set_title(f"({letter})  {title}", fontsize=9.5, pad=5); ax.set_xlabel("model size", fontsize=8.5)
+        panels.append((ax, handles, data_lines))
+    axes[0].set_ylim(-0.6, 0.65); axes[0].set_yticks([-0.6, -0.3, 0, 0.3, 0.6]); axes[0].set_ylabel("ownership $O_q$  (ringed: owned)", fontsize=8.5)
+    for ax, _, _ in panels:
+        ax.axhline(0, color="#9a9a9a", ls="--", lw=0.9, zorder=2)
+    f.canvas.draw()
+    locs = ("upper left", "upper right", "lower right", "lower left")
+    chosen = None
+    for variant in (dict(fontsize=6.5), dict(fontsize=6.0), dict(fontsize=6.0, ncol=2)):    # one variant for all panels, for a uniform look
+        lgs = []
+        for ax, handles, data_lines in panels:
+            pts = sampled_display_points(ax, data_lines)
+            lgs.append(free_legend(f, ax, handles, pts, locs=locs, **{**LEGEND_FRAME, **variant}))
+        if all(lg is not None for lg in lgs):
+            chosen = variant; break
+        for lg in lgs:
+            if lg is not None:
+                lg.remove()
+    if chosen is None:
+        allh = panels[0][1] + [h for h in panels[2][1] if h.get_label() not in {h0.get_label() for h0 in panels[0][1]}]
+        f.set_size_inches(fs.WIDTH, 2.85)
+        f.legend(handles=allh, loc="outside lower center", ncol=4, **{**LEGEND_FRAME, "columnspacing": 1.2})
+        print("  fig6: no free corner in some panel -> one shared legend below")
+    else:
+        for lg in lgs:
+            lg.get_frame().set_linewidth(0.6)
+        print("  fig6: legends inside every panel:", chosen, [(ax.get_label(), lg._loc) for (ax, _, _), lg in zip(panels, lgs)], "emphasised:", emph_names)
     check_overlaps(f, "fig6_ladders")
     fs.save(f, FIG / "fig6_ladders")
 
 
+# ============================================================================================== figA1: write structure
+FAMILY = [("q25", "Qwen2.5-VL", fs.ROSE), ("q3", "Qwen3-VL", fs.SAGE), ("iv35", "InternVL3.5", fs.HAZE), ("gemma3", "Gemma 3", fs.OAT),
+          ("medgemma", "MedGemma", fs.LILAC), ("lingshu", "Lingshu", fs.MUSTARD), ("llava15", "LLaVA-1.5", fs.TERRACOTTA),
+          ("llavamed", "LLaVA-Med", fs.SLATE), ("llama32", "Llama 3.2", "#7F9C9A")]
+
+
+def family_of(mk):
+    for pre, name, col in FAMILY:
+        if mk.split("-")[0] == pre:
+            return name, col
+    return mk, fs.GREY
+
+
+def place_note(fig, ax, text, candidates, pts, **kw):
+    """Corner note at the candidate (axes fraction) with the fewest data points within its box (+4 pt)."""
+    fig.canvas.draw(); r = fig.canvas.get_renderer(); best = None
+    for (x, y, ha, va) in candidates:
+        t = ax.text(x, y, text, transform=ax.transAxes, ha=ha, va=va, **kw); bb = t.get_window_extent(r)
+        m = 4 * fig.dpi / 72
+        n = int(((pts[:, 0] > bb.x0 - m) & (pts[:, 0] < bb.x1 + m) & (pts[:, 1] > bb.y0 - m) & (pts[:, 1] < bb.y1 + m)).sum())
+        t.remove()
+        if best is None or n < best[0]:
+            best = (n, x, y, ha, va)
+    n, x, y, ha, va = best
+    if n:
+        print(f"  WARNING: note {text!r} overlaps {n} point(s) at its best position")
+    return ax.text(x, y, text, transform=ax.transAxes, ha=ha, va=va, **kw)
+
+
+def grid_note(fig, ax, text, pts, above, n=6, **kw):
+    """Region note placed by search over an n x n grid of axes-fraction positions restricted to one half-plane of the
+    identity line (equal limits, so fy > fx is 'above'); score = min distance (points) from the text box to any data
+    point and to the axes edges; the best-scoring position wins."""
+    fig.canvas.draw(); r = fig.canvas.get_renderer(); axbb = ax.get_window_extent(r)
+    probe = ax.text(0.5, 0.5, text, transform=ax.transAxes, ha="center", va="center", **kw); tb = probe.get_window_extent(r); probe.remove()
+    w, h = tb.width, tb.height; best = None
+    for i in range(1, n + 1):
+        for j in range(1, n + 1):
+            fx, fy = i / (n + 1), j / (n + 1)
+            if (fy > fx) != above:
+                continue
+            cx, cy = axbb.x0 + fx * axbb.width, axbb.y0 + fy * axbb.height
+            x0, x1, y0, y1 = cx - w / 2, cx + w / 2, cy - h / 2, cy + h / 2
+            edge = min(x0 - axbb.x0, axbb.x1 - x1, y0 - axbb.y0, axbb.y1 - y1)
+            # identity line in display space runs corner to corner; keep the box on its side: distance of the nearest corner
+            corners = np.array([[x0, y0], [x1, y0], [x0, y1], [x1, y1]])
+            fc = (corners - [axbb.x0, axbb.y0]) / [axbb.width, axbb.height]
+            side = (fc[:, 1] - fc[:, 0]) * (1 if above else -1)
+            line_d = side.min() * min(axbb.width, axbb.height) / np.sqrt(2)
+            if len(pts):
+                dx = np.maximum(0, np.maximum(x0 - pts[:, 0], pts[:, 0] - x1)); dy = np.maximum(0, np.maximum(y0 - pts[:, 1], pts[:, 1] - y1))
+                pd = float(np.sqrt(dx ** 2 + dy ** 2).min())
+            else:
+                pd = 1e9
+            score = min(pd, edge, line_d) * 72 / fig.dpi
+            if best is None or score > best[0]:
+                best = (score, fx, fy)
+    score, fx, fy = best
+    if score < 2:
+        print(f"  WARNING: note {text!r} placed with only {score:.1f} pt clearance")
+    return ax.text(fx, fy, text, transform=ax.transAxes, ha="center", va="center", **kw)
+
+
+def table1_order(blocks):
+    """Checkpoints in the order of Table 1: clinical owned share desc., then COCO owned share desc., then catalogue order."""
+    def rate(mk, dss):
+        cells = [(c, v) for ds in dss if (mk, ds) in blocks for c, v in blocks[(mk, ds)]["s"]["core"]["per_question"].items()]
+        return sum(owned(v) for _, v in cells) / len(cells) if cells else -1
+    mks = [m for m in ORDER if any((m, d) in blocks for d in DATASETS)]
+    return sorted(mks, key=lambda m: (-rate(m, ("nih", "chexpert")), -rate(m, ("coco",)), ORDER.index(m)))
+
+
+def figA1_write_structure(blocks):
+    FW, FH = fs.WIDTH, 5.75; P = 1.35; gap = 0.34; x0 = 0.62
+    f = plt.figure(figsize=(FW, FH))
+    # ---- top row: median write matrix per dataset
+    meds = {}
+    for ds in DATASETS:
+        keys = [(mk, d) for (mk, d) in blocks if d == ds]
+        concepts = list(blocks[keys[0]]["s"]["core"]["per_question"])
+        Ws = np.stack([wmatrix(blocks[k]["s"])[1] for k in keys])
+        meds[ds] = (concepts, np.nanmedian(Ws, axis=0), len(keys))
+    vlim = round_up(np.nanmax([np.nanmax(np.abs(M)) for _, M, _ in meds.values()])); norm = sym_norm(vlim)
+    y_top = FH - 0.42 - P
+    for k, ds in enumerate(DATASETS):
+        concepts, M, n = meds[ds]
+        ax = f.add_axes(rect(FW, FH, x0 + k * (P + gap), y_top, P, P), label=f"med{k}")
+        xe, ye = heat(ax, M, norm); lab = [SHORT_CONCEPT.get(c, c) for c in concepts]
+        heat_ticks(ax, xe, ye, lab, lab if k == 0 else [""] * len(lab))
+        for i in range(len(concepts)):
+            heat_cell_marks(ax, xe, ye, i, i, outline=True)
+            for j in range(len(concepts)):
+                v = M[i, j]
+                col = "white" if lum(DIV(norm(v))) < 0.5 else fs.INK
+                txt = "0.00" if abs(v) < 0.005 else f"{v:+.2f}"          # no signed zero
+                ax.text((xe[j] + xe[j + 1]) / 2, (ye[i] + ye[i + 1]) / 2, txt, ha="center", va="center", fontsize=ANNOT_SIZE, color=col, zorder=6)
+        ax.set_title(f"({'abc'[k]})  {DS_LAB[ds].replace(' (control)', '')}\nmedian $W_{{q,d}}$ over {n} checkpoints", fontsize=8, pad=4, linespacing=1.2)
+        if k == 0:
+            ax.set_ylabel("question $q$", fontsize=8, labelpad=3)
+    cax = f.add_axes(rect(FW, FH, 1.55, y_top - 0.50, 2.4, 0.07), label="cbar")
+    heat_colorbar(f, cax, norm, "median $W_{q,d}$: change in $P(\\mathrm{yes}\\mid q)$ under the write of $d$ (column);  outlined: diagonal $d=q$",
+                  ticks=[-vlim, -vlim / 2, 0, vlim / 2, vlim])
+    # ---- bottom: write-flow band charts ("where does the write go"), one per dataset
+    BAR_W_IN, GAP_FRAC, PH, PW = 0.05, 0.04, 2.3, 1.72
+    xl = 0.10; pgap = (FW - 2 * xl - 3 * PW) / 2; y0 = 0.36
+    summary = {}
+    for k, ds in enumerate(DATASETS):
+        keys = [(mk, d) for (mk, d) in blocks if d == ds]
+        concepts = list(blocks[keys[0]]["s"]["core"]["per_question"]); n = len(concepts)
+        Pm = np.nanmean(np.stack([np.maximum(wmatrix(blocks[kk]["s"])[1], 0.0) for kk in keys]), axis=0)   # P[q, d] = mean over checkpoints of max(W_qd, 0)
+        total = float(Pm.sum()); own_share = float(np.trace(Pm) / total)
+        summary[ds] = dict(total=total, diag=float(np.trace(Pm)), own_share=own_share, n=len(keys), outflow={c: float(Pm[:, j_].sum()) for j_, c in enumerate(concepts)},
+                           inflow={c: float(Pm[i_, :].sum()) for i_, c in enumerate(concepts)})
+        ax = f.add_axes(rect(FW, FH, xl + k * (PW + pgap), y0, PW, PH), label=f"flow{k}")
+        ax.set_xlim(-0.45, 1.45); ax.set_ylim(-0.11, 1.09); ax.set_axis_off(); ax.grid(False)
+        bar_w = BAR_W_IN / (PW / 1.9)                        # 0.05 in expressed in data units
+        usable = 1.0 - GAP_FRAC * (n - 1)
+        out_h = {c: usable * Pm[:, j_].sum() / total for j_, c in enumerate(concepts)}
+        in_h = {c: usable * Pm[i_, :].sum() / total for i_, c in enumerate(concepts)}
+        # node spans, top to bottom in concept order
+        left, right, yt = {}, {}, 1.0
+        for c in concepts:
+            left[c] = (yt - out_h[c], yt); yt = yt - out_h[c] - GAP_FRAC
+        yt = 1.0
+        for c in concepts:
+            right[c] = (yt - in_h[c], yt); yt = yt - in_h[c] - GAP_FRAC
+        # band sub-spans: on the writer d in question order, on the question q in writer order
+        lcur = {c: left[c][1] for c in concepts}; rcur = {c: right[c][1] for c in concepts}
+        bands = []
+        for j_, d in enumerate(concepts):
+            for i_, q in enumerate(concepts):
+                w = usable * Pm[i_, j_] / total
+                if w <= 0:
+                    continue
+                yl1, yl0 = lcur[d], lcur[d] - w; lcur[d] = yl0
+                bands.append((d, q, yl0, yl1))
+        rb = {}
+        for j_, d in enumerate(concepts):
+            for i_, q in enumerate(concepts):
+                w = usable * Pm[i_, j_] / total
+                if w <= 0:
+                    continue
+                yr1, yr0 = rcur[q], rcur[q] - w; rcur[q] = yr0
+                rb[(d, q)] = (yr0, yr1)
+        for d, q, yl0, yl1 in bands:
+            yr0, yr1 = rb[(d, q)]
+            verts = [(0, yl1), (0.5, yl1), (0.5, yr1), (1, yr1), (1, yr0), (0.5, yr0), (0.5, yl0), (0, yl0), (0, yl1)]
+            codes = [MPath.MOVETO, MPath.CURVE4, MPath.CURVE4, MPath.CURVE4, MPath.LINETO, MPath.CURVE4, MPath.CURVE4, MPath.CURVE4, MPath.CLOSEPOLY]
+            own = d == q
+            ax.add_patch(PathPatch(MPath(verts, codes), facecolor=CONCEPT_COLOR.get(d, fs.SLATE) if own else "#c9c6c0", edgecolor="none",
+                                   alpha=0.9 if own else 0.75, zorder=3 if own else 2))
+        for c in concepts:
+            ax.add_patch(Rectangle((-bar_w, left[c][0]), bar_w, left[c][1] - left[c][0], facecolor=CONCEPT_COLOR.get(c, fs.SLATE), edgecolor="none", zorder=4))
+            ax.add_patch(Rectangle((1, right[c][0]), bar_w, right[c][1] - right[c][0], facecolor=fs.CHARCOAL, edgecolor="none", zorder=4))
+        # node labels, repelled vertically where nodes are thin
+        step = 9.0 / (PH * 72 / 1.11)          # 9 pt in data units (axes spans 1.11 data units over PH inches)
+        for side, spans, x, ha in (("L", left, -bar_w - 0.05, "right"), ("R", right, 1 + bar_w + 0.05, "left")):
+            cs = list(concepts); ys = [(spans[c][0] + spans[c][1]) / 2 for c in cs]
+            ly = repel(ys, step, 0.0, 1.0)
+            for c, y_, y_lab in zip(cs, ys, ly):
+                ax.text(x, y_lab, SHORT_CONCEPT.get(c, c), ha=ha, va="center", fontsize=7, color=fs.INK)
+        ax.text(0.5, -0.075, f"own-question share of the write: {100 * own_share:.0f}%", ha="center", va="center", fontsize=7.5, color=fs.INK)
+        ax.text(-bar_w / 2, 1.025, "write $d$", ha="center", va="bottom", fontsize=7, color=fs.MUTED)
+        ax.text(1 + bar_w / 2, 1.025, "question $q$", ha="center", va="bottom", fontsize=7, color=fs.MUTED)
+        ax.set_title(f"({'def'[k]})  {DS_LAB[ds].replace(' (control)', '')}\nwhere the write goes", fontsize=8, pad=3, linespacing=1.2)
+    f.text(0.5, 0.16 / FH, "coloured: write lands on its own question;   grey: write lands on another question", ha="center", va="center", fontsize=7, color=fs.INK)
+    print("  figA1 write flow (mean over checkpoints of max(W_qd, 0)):")
+    for ds, v in summary.items():
+        print(f"    {ds:8s} n={v['n']} total={v['total']:.3f} diagonal={v['diag']:.3f} own_share={100 * v['own_share']:.1f}%")
+        print("      outflow by written direction:", {c: round(x, 3) for c, x in v["outflow"].items()})
+        print("      inflow by question:          ", {c: round(x, 3) for c, x in v["inflow"].items()})
+    check_overlaps(f, "figA1_write_structure")
+    fs.save(f, FIG / "figA1_write_structure")
+
+
+# ============================================================================================== figA2: per-image examples
+EXAMPLE_SPEC = [("q25-7", "nih", "Effusion", "deficit"), ("q25-7", "nih", "Atelectasis", "deficit"), ("q25-7", "chexpert", "Effusion", "deficit"),
+                ("q25-7", "chexpert", "Consolidation", "deficit"), ("lingshu-32", "chexpert", "Edema", "owned"), ("q25-72", "nih", "Atelectasis", "owned"),
+                ("q25-7", "coco", "dog", "coco"), ("q25-7", "coco", "chair", "coco"), ("lingshu-32", "coco", "person", "coco"), ("medgemma-4", "coco", "car", "coco")]
+DATA_ROOT = {"nih": Path("/rodata/azradonc_dev/m253405/cache/nih"), "chexpert": Path("/rodata/azradonc_dev/m253405/cf-transfer/data/chexpert/images"),
+             "coco": Path("/rodata/azradonc_dev/m253405/cf-transfer/data/coco")}
+
+
+def norm_row_id(ds, rid):
+    return str(int(rid)).zfill(12) if ds == "coco" else str(rid)
+
+
+def block_rows(mk, ds, concept):
+    """Per test row of a block and question concept: label, probe probability, clean p, p under every concept write."""
+    import pandas as pd
+    import pyarrow.parquet as pq
+    d = RUNS / mk / ds
+    lab = pd.read_csv(d / "manifests" / "labels.csv"); lab["row_id"] = [norm_row_id(ds, r) for r in lab.row_id]
+    lab = lab[lab.concept == concept].set_index("row_id")["label"]
+    coh = pd.read_csv(d / "manifests" / "cohort.csv"); coh["row_id"] = [norm_row_id(ds, r) for r in coh.row_id]
+    test = coh[coh.role == "test"].set_index("row_id")["relative_image_path"]
+    ps = pq.read_table(d / "probe_scores.vis.last.parquet", filters=[("probe_kind", "=", "real"), ("fit_seed", "=", 0), ("concept", "=", concept), ("role", "=", "test")]).to_pandas()
+    ps = ps.set_index("row_id")["probability"]
+    core = pq.read_table(d / "outcomes" / "CORE.parquet", columns=["row_id", "direction_id", "direction_kind", "p_present"],
+                         filters=[("template_id", "=", "IY"), ("fit_seed", "=", 0), ("concept", "=", concept), ("sample_status", "=", "OK")]).to_pandas()
+    core = core[core.direction_kind.isin(["baseline", "concept"])]
+    concepts = list(json.loads((d / "summary.json").read_text())["core"]["per_question"])
+    piv = core.pivot_table(index="row_id", columns="direction_id", values="p_present", aggfunc="first")
+    rows = []
+    for r in test.index:
+        if r not in piv.index or r not in ps.index or r not in lab.index or not np.isfinite(lab[r]):
+            continue
+        pr = piv.loc[r]
+        if "baseline" not in pr or any(f"concept:{c}" not in pr or not np.isfinite(pr[f"concept:{c}"]) for c in concepts):
+            continue
+        p0 = float(pr["baseline"]); pw = {c: float(pr[f"concept:{c}"]) for c in concepts}
+        comp = max((c for c in concepts if c != concept), key=lambda c: pw[c] - p0)
+        rows.append(dict(row_id=r, label=int(lab[r]), probe=float(ps[r]), p_clean=p0, p_own=pw[concept], comp=comp, p_comp=pw[comp], image=DATA_ROOT[ds] / test[r]))
+    question = json.loads((d / "prompts.json").read_text())[f"{ds}|{concept}|IY"]["question"]
+    return rows, concepts, question
+
+
+def pick_example(mk, ds, concept, kind, used_rows=(), used_concepts=()):
+    """Representative example for one slot (see EXAMPLE_SPEC), delta rule.
+    Pool M: chest -> label present, probe > 0.5, clean p < 0.5; COCO -> label present with probe > 0.5 or absent with probe < 0.5, clean p < 0.5.
+    d_own = own-write p - clean p; d_comp = strongest-competitor p - clean p (competitor = concept whose write raises the target most on that row).
+    deficit slots: rows with d_comp > d_own; owned / coco slots: rows with d_own > d_comp; the shown row needs max(d_own, d_comp) >= 0.2
+    (floor relaxed to 0.1, then 0 if the slot is empty, reported); among candidates the row whose |d_comp - d_own| is nearest the median.
+    'count' = rows of M with the slot's ordering (no floor); shown as the representativeness line."""
+    rows, concepts, question = block_rows(mk, ds, concept)
+    O = O_of(blocks_global, mk, ds)
+    order = [concept] + sorted((c for c in concepts if c != concept and c not in used_concepts), key=lambda c: abs(O[c] - O[concept]))
+    levels = []
+    for c_used in order:
+        if c_used != concept:
+            rows, concepts, question = block_rows(mk, ds, c_used)
+        if kind == "coco":
+            pool = [x for x in rows if x["p_clean"] < 0.5 and ((x["label"] == 1 and x["probe"] > 0.5) or (x["label"] == 0 and x["probe"] < 0.5))]
+        else:
+            pool = [x for x in rows if x["label"] == 1 and x["probe"] > 0.5 and x["p_clean"] < 0.5]
+        for x in pool:
+            x["d_own"] = x["p_own"] - x["p_clean"]; x["d_comp"] = x["p_comp"] - x["p_clean"]
+        direction = (lambda x: x["d_comp"] > x["d_own"]) if kind == "deficit" else (lambda x: x["d_own"] > x["d_comp"])
+        ordered = [x for x in pool if direction(x)]
+        for floor in (0.2, 0.1, 0.0):
+            cands = [x for x in ordered if max(x["d_own"], x["d_comp"]) >= floor and x["row_id"] not in used_rows]
+            if kind != "deficit":                      # owned / COCO slots: show a row whose competitor answer stays No, when any exists
+                below = [x for x in cands if x["p_comp"] < 0.5]
+                cands = below or cands
+            levels.append(f"{c_used} floor={floor}: M={len(pool)} ordered={len(ordered)} candidates={len(cands)}")
+            if not cands:
+                continue
+            gaps = [abs(x["d_comp"] - x["d_own"]) for x in cands]; med = float(np.median(gaps))
+            best = dict(min(cands, key=lambda x: (abs(abs(x["d_comp"] - x["d_own"]) - med), x["row_id"])))
+            best.update(mk=mk, ds=ds, concept=c_used, kind=kind, question=question, label="present" if best["label"] == 1 else "absent",
+                        M=len(pool), count=len(ordered), median_gap=med, floor=floor, relaxed=(c_used != concept or floor != 0.2), requested=concept, levels=levels)
+            return best
+    raise RuntimeError(f"no example for {mk}/{ds}/{concept}: " + "; ".join(levels))
+
+
+def wrap_to_width(fig, text, x_in, max_w_in, fontsize, **kw):
+    """Wrap `text` so that every rendered line is narrower than max_w_in; returns the lines."""
+    import textwrap
+    r = fig.canvas.get_renderer()
+    for width in range(48, 18, -2):
+        lines = textwrap.wrap(text, width)
+        ok = True
+        for ln in lines:
+            t = fig.text(0, 0, ln, fontsize=fontsize, **kw); w = t.get_window_extent(r).width / fig.dpi; t.remove()
+            if w > max_w_in:
+                ok = False; break
+        if ok:
+            return lines
+    return textwrap.wrap(text, 18)
+
+
+def mark(fig, x_in, y_in, ok, FW, FH):
+    """Small rounded square with a white check or cross glyph (DejaVu Sans carries both glyphs)."""
+    fig.text(x_in / FW, y_in / FH, "✓" if ok else "✗", fontsize=5.6, color="white", ha="center", va="center", family="DejaVu Sans",
+             fontweight="bold", bbox=dict(boxstyle="round,pad=0.22,rounding_size=0.25", fc=fs.SAGE if ok else fs.TERRACOTTA, ec="none"), zorder=6)
+
+
+def figA2_examples(blocks):
+    from PIL import Image
+    FW, FH = fs.WIDTH, 7.35; IMG = 1.05; col_x = [0.15, 2.90]; text_dx = 0.13; text_w = 2.75 - 0.15 - IMG - text_dx - 0.06
+    row_pitch = 1.40; top = FH - 0.22; line_h = 0.118      # 7 pt at 1.2 line spacing
+    f = plt.figure(figsize=(FW, FH)); f.canvas.draw()
+    report = []
+    global blocks_global; blocks_global = blocks
+    used_rows, used_concepts = set(), {}
+    for k, (mk, ds, concept, kind) in enumerate(EXAMPLE_SPEC):
+        if (mk, ds) not in blocks:
+            print(f"  WARNING: block {mk}/{ds} missing; example skipped"); continue
+        ex = pick_example(mk, ds, concept, kind, used_rows, used_concepts.get((mk, ds), set())); report.append(ex); concept = ex["concept"]
+        used_rows.add(ex["row_id"]); used_concepts.setdefault((mk, ds), set()).add(concept)
+        r, c = divmod(k, 2); x0 = col_x[c]; y_top = top - r * row_pitch
+        im = Image.open(ex["image"]); im = im.convert("L") if ds != "coco" else im.convert("RGB"); iw, ih = im.size
+        axi = f.add_axes(rect(FW, FH, x0, y_top - IMG, IMG, IMG), label=f"img{k}")     # fixed square box: longer side fits, shorter side centred
+        sc = 1.0 / max(iw, ih); w_, h_ = iw * sc, ih * sc
+        axi.imshow(im, cmap="gray" if ds != "coco" else None, interpolation="lanczos", extent=((1 - w_) / 2, (1 + w_) / 2, (1 + h_) / 2, (1 - h_) / 2))
+        axi.set_xlim(0, 1); axi.set_ylim(1, 0); axi.set_aspect("equal"); axi.set_xticks([]); axi.set_yticks([]); axi.grid(False); axi.set_facecolor("white")
+        for sp in axi.spines.values():
+            sp.set_edgecolor("#8a8a8a"); sp.set_linewidth(0.6)
+        f.text((x0 + IMG / 2) / FW, (y_top - IMG - 0.05) / FH, f"{DS_LAB[ds].replace(' (control)', '')}\n{NAMES[mk]}", ha="center", va="top", fontsize=6.5, color=fs.MUTED, linespacing=1.15)
+        # text block
+        tx = x0 + IMG + text_dx; y = y_top - 0.04
+        qlines = wrap_to_width(f, ex["question"], tx, text_w, 7, style="italic")
+        if len(qlines) > 3:
+            print(f"  WARNING: question of example {k + 1} needs {len(qlines)} lines")
+        lines = [(ln, dict(style="italic"), None) for ln in qlines]
+        probe_ok = (ex["probe"] > 0.5) == (ex["label"] == "present")
+        own_ok = ex["d_own"] > ex["d_comp"]
+        yn = lambda p: "Yes" if p > 0.5 else "No"
+        who = "competing write" if ex["kind"] == "deficit" else "own write"
+        lines += [(f"label: {concept} present" if ex["label"] == "present" else f"label: no {concept}", {}, None), (f"probe reads {ex['probe']:.2f}", {}, probe_ok),
+                  (f"clean: {yn(ex['p_clean'])} ({ex['p_clean']:.2f})", {}, None),
+                  (f"{concept} write: {yn(ex['p_own'])} ({ex['p_own']:.2f})", {}, own_ok),
+                  (f"{ex['comp']} write: {yn(ex['p_comp'])} ({ex['p_comp']:.2f})", {}, None),
+                 ]
+        lines += [(ln, dict(fontsize=6.5, color=fs.MUTED), None) for ln in wrap_to_width(f, f"{who} moves it more on {ex['count']} of {ex['M']} such rows", tx, text_w, 6.5)]
+        for txt, kw, ok in lines:
+            t = f.text(tx / FW, y / FH, txt, ha="left", va="top", **{"fontsize": 7, "color": fs.INK, **kw})
+            if ok is not None:
+                bb = t.get_window_extent(f.canvas.get_renderer())
+                mark(f, bb.x1 / f.dpi + 0.09, y - 0.045, ok, FW, FH)
+            y -= line_h
+        ex["own_ok"] = own_ok; ex["probe_ok"] = probe_ok
+    check_overlaps(f, "figA2_examples")
+    fs.save(f, FIG / "figA2_examples")
+    print("  figA2 examples (delta rule):")
+    for ex in report:
+        print(f"    {ex['mk']:>10s} {ex['ds']:8s} {ex['row_id']:36s} {ex['concept']:13s} [{ex['kind']}] label={ex['label']} probe={ex['probe']:.2f}{'✓' if ex['probe_ok'] else '✗'} "
+              f"clean={ex['p_clean']:.2f} own={ex['p_own']:.2f}{'✓' if ex['own_ok'] else '✗'} comp={ex['comp']} {ex['p_comp']:.2f} "
+              f"d_own={ex['d_own']:+.3f} d_comp={ex['d_comp']:+.3f} count/M={ex['count']}/{ex['M']} median_gap={ex['median_gap']:.3f} floor={ex['floor']}"
+              f"{' RELAXED from ' + ex['requested'] if ex['relaxed'] else ''}")
+        if ex["relaxed"]:
+            for lv in ex["levels"]:
+                print("        tried", lv)
+    return report
+
+
 # ============================================================================================== main
 KEEP = {"fig1_framework", "fig2_overview", "fig3_example", "fig4_write_matrices", "fig5_same_write", "fig6_ladders",
-        "figA1_write_matrices_nih", "figA2_write_matrices_chexpert", "figA3_write_matrices_coco"}
+        "figA1_write_structure", "figA2_examples"}
 
 
 def main(only=None):
@@ -669,9 +1078,8 @@ def main(only=None):
     jobs = {"fig1_framework": lambda: fig1_framework(blocks), "fig2_overview": lambda: fig2_overview(blocks),
             "fig3_example": lambda: fig3_example(blocks), "fig4_write_matrices": lambda: fig4_write_matrices(blocks),
             "fig5_same_write": lambda: fig5_same_write(blocks), "fig6_ladders": lambda: fig6_ladders(blocks),
-            "figA1_write_matrices_nih": lambda: matrices_all(blocks, "nih", "figA1_write_matrices_nih"),
-            "figA2_write_matrices_chexpert": lambda: matrices_all(blocks, "chexpert", "figA2_write_matrices_chexpert"),
-            "figA3_write_matrices_coco": lambda: matrices_all(blocks, "coco", "figA3_write_matrices_coco")}
+            "figA1_write_structure": lambda: figA1_write_structure(blocks), "figA2_examples": lambda: figA2_examples(blocks)}
+    # matrices_all (one matrix per checkpoint) is kept for reference but not part of the paper's figure set
     for name, fn in jobs.items():
         if only and name not in only:
             continue
