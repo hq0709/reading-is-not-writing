@@ -53,7 +53,6 @@ META = {
     "llava15-13":  ("LLaVA-1.5-13B",        "LLaVA-1.5",       13, "CLIP ViT-L/14-336",  "576",          "$336^2$",  False),
     "llavamed-7":  ("LLaVA-Med 1.5 7B",     "LLaVA-Med",       7,  "CLIP ViT-L/14-336",  "576",          "$336^2$",  True),
     "llama32-11":  ("Llama 3.2 Vision 11B", "Llama 3.2 Vision", 11, "ViT-H/14",          "1601",         "$560^2$",  False),
-    "llama32-90":  ("Llama 3.2 Vision 90B", "Llama 3.2 Vision", 90, "ViT-H/14",          "1601",         "$560^2$",  False),
 }
 ORDER = list(META)
 FAMILY_ORDER = ["Qwen2.5-VL", "Qwen3-VL", "InternVL3.5", "Gemma 3", "MedGemma", "Lingshu", "LLaVA-1.5", "LLaVA-Med", "Llama 3.2 Vision"]
