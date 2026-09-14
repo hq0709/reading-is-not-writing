@@ -1,0 +1,31 @@
+\section{Seed-study boundary analyses}
+\label{app:seed-boundary}
+
+These analyses belong to the original two-model study and delimit its causal and diagnostic interpretation; they are unchanged by the campaign.
+
+
+\subsection{Ownership, shared responses, and input closure}
+\label{sec:mechanism-results}
+The broader Qwen tests examine how far the attribution result extends at the same consumed block. Table~\ref{tab:mechanisms} summarizes the registered comparisons; LCB denotes a one-sided simultaneous or familywise 95\% lower confidence bound.
+
+\input{tables/table_mechanisms}
+
+All six diagonal ownership margins are negative in the six-direction by six-question matrix. Effusion's mean off-diagonal effect, 0.2909, makes it the strongest shared-alias candidate, but the random alias maximum is larger at 0.3402. The matrix therefore identifies neither a replacement clinical owner nor a shared alias under the registered comparisons (Appendix~\ref{app:ownership}). On 50 fresh within-patient Consolidation pairs, writing the measured displacement gives mean closure gain 0.0022, below the random maximum of 0.0025. Negative displacement and clinical-comparison lower bounds leave the input-closure conjunction unmet (Appendix~\ref{app:specificity-closure}).
+
+\subsection{Label-conditioned shifts}
+The separate 400-patient ownership matrix cohort also permits a descriptive comparison by disease label (Appendix Tables~\ref{tab:label-conditioned-shifts} and~\ref{tab:label-conditioned-shifts-continued}); this cohort is distinct from the earlier 400-patient Effusion specificity cohort. Across the six questions and six clinical directions, the positive-minus-negative difference in mean intervention-induced logit-margin shift has a negative point estimate in 35 of 36 cells, including all six matched question--direction cells. The sole positive estimate is 0.0039 for the Nodule question under the Pneumothorax direction, with a pointwise 95\% patient-bootstrap interval of $[-0.2787,0.2827]$. The tables report pointwise 95\% intervals for this post-hoc descriptive analysis, separate from the registered primary endpoints and without multiplicity adjustment. The pattern shows why a mean affirmative shift cannot by itself be read as preferential correction in disease-positive patients; it does not establish label independence or a familywise conclusion across the 36 cells.
+
+\subsection{LLaVA reader and answer measurements}
+\label{sec:generic-results}
+The original LLaVA Effusion and Edema readers have AUROCs 0.7788 and 0.8009 with positive selectivity intervals (Table~\ref{tab:decoding}), but neither clears the write-control conjunction. Effusion's maximum effect, 0.1470, is below absolute sham 0.1546; Edema's 0.0659 lies inside its random interval (Figure~\ref{fig:dose}; Table~\ref{tab:gates}). Paired decoding contrasts leave reader ordering unresolved (Table~\ref{tab:paired-decoding}).
+
+A 700-patient pilot admits Effusion and Cardiomegaly readers but no clean answer margin, leaving its reserved write cohort unevaluated (Appendix~\ref{app:validation-readout}). Finite text calibration selects yes/no, followed by independent validation on 700 index patients and 700 disjoint donors. Image-linked opportunity and wording dependence remain unresolved, and frozen-reader selectivity does not replicate: $-0.0111$ (95\% CI $[-0.1541,0.1185]$). The descriptive clinical AUROC change, 0.8196 to 0.6664, accompanies similar control means, 0.6758 and 0.6775. The sampling frames differ, and no between-cohort decline is established (Appendix~\ref{app:image-readout}).
+
+\subsection{Natural paired response}
+\label{sec:paired-opportunity}
+A separate cohort of 100 fresh Consolidation-positive/negative patient pairs matches view, sex, integer age, and the other 13 disease labels. Both models evaluate the same images under the original yes/no prompt, with all patients and the same 5,000 bootstrap draws retained. Table~\ref{tab:paired-opportunity} reports the mean positive-minus-negative answer-logit gap and concordance, which gives half credit to zero gaps.
+
+\input{tables/table_paired_opportunity}
+
+Neither model meets the positive-lower-bound opportunity criterion. Their direct patient-paired concordance difference, LLaVA minus Qwen, is $-0.090$ (descriptive 95\% CI $[-0.210,0.025]$). Positive paired opportunity and the model difference remain unresolved; raw gaps retain their within-model coordinates (Appendix~\ref{app:paired-opportunity}). These measurements constrain the interpretation of input closure without identifying its mechanism.
+

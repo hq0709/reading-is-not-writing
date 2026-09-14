@@ -24,7 +24,7 @@ On NIH, 50 of 114 cells are readable, 77 are answerable, and 35 are both; 10 are
 
 \begin{figure}[t]
     \centering
-    \includegraphics[width=0.58\textwidth]{figures/cf_F3_effusion_across_blocks.pdf}
+    \includegraphics[width=0.8\textwidth]{figures/cf_F3_effusion_across_blocks.pdf}
     \caption{\textbf{Effusion in every chest block.} Ownership $O_{\mathrm{Effusion}}$ with 95\% percentile intervals for all 36 checkpoint--dataset blocks on NIH and CheXpert, sorted by estimate.}
     \label{fig:cf-effusion}
 \end{figure}
@@ -70,7 +70,7 @@ Figure~\ref{fig:cf-ladders} follows four families across sizes on the chest sets
 \subsection{Controls}
 \label{sec:controls}
 
-Every block carries the same controls (Figure~\ref{fig:cf-controls}). The reference family behaves as designed: owned cells sit beyond the 119 random writes and the sham, and the sham never exceeds an owned concept write (Figure~\ref{fig:cf-reference}). Writes at the connector locus are inert in every family: the connector-locus median ownership is within $\pm0.03$ of zero for all blocks except Gemma~3 12B on NIH ($-0.07$), while the primary-locus write moves answers by up to $0.9$. Refits over three seeds change ownership by a median of $0.02$--$0.06$ per block (up to $0.18$ for the Gemma family). Relabelling shifts the answer far more than the concept write on COCO (label-shift gaps of $-3$ to $-18$) and by less than $1$ on most chest blocks. The wording and mapping contrasts between templates are small for most families and large for Mass in Qwen2.5-VL and for bottle in Gemma~3 4B, reproducing the prompt dependence of Section~\ref{sec:encoding-results} (Appendix~\ref{app:cf-transfer}).
+Every block carries the same controls (Figure~\ref{fig:cf-controls}, Appendix~\ref{app:cf-figures}). The reference family behaves as designed: owned cells sit beyond the 119 random writes and the sham, and the sham never exceeds an owned concept write (Figure~\ref{fig:cf-reference}). Writes at the connector locus are inert in every family: the connector-locus median ownership is within $\pm0.03$ of zero for all blocks except Gemma~3 12B on NIH ($-0.07$), while the primary-locus write moves answers by up to $0.9$. Refits over three seeds change ownership by a median of $0.02$--$0.06$ per block (up to $0.18$ for the Gemma family). Relabelling shifts the answer far more than the concept write on COCO (label-shift gaps of $-3$ to $-18$) and by less than $1$ on most chest blocks. The wording and mapping contrasts between templates are small for most families and large for Mass in Qwen2.5-VL and for bottle in Gemma~3 4B, reproducing the prompt dependence of Section~\ref{sec:encoding-results} (Appendix~\ref{app:cf-transfer}).
 
 \begin{figure}[t]
     \centering
@@ -79,11 +79,5 @@ Every block carries the same controls (Figure~\ref{fig:cf-controls}). The refere
     \label{fig:cf-reference}
 \end{figure}
 
-\begin{figure}[t]
-    \centering
-    \includegraphics[width=\textwidth]{figures/cf_F9_controls.pdf}
-    \caption{\textbf{Controls per block.} Connector-locus median ownership, refit standard deviation over three seeds, and label-shift gap for every block with the full module set.}
-    \label{fig:cf-controls}
-\end{figure}
 
 \FloatBarrier
