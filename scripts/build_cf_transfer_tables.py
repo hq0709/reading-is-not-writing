@@ -10,8 +10,8 @@ Outputs (tables/):
   table_cf_families.tex    Table: one row per family
   table_cf_controls.tex    Table: reference family and controls per dataset (median, IQR over blocks)
   table_cf_seed.tex        Table: Qwen2.5-VL-7B on NIH per concept (seed replication)
-  table_cf_{nih,chexpert,coco}.tex   Appendix longtables, one row per checkpoint x concept
-  table_cf_models.tex      Appendix: checkpoint sheet (family, params, tower, tokens, templates, blocks, GPU-hours)
+  table_cf_own_{nih,chexpert,coco}.tex   Appendix: compact ownership tables, checkpoint x concept, O_q per cell
+  table_cf_models.tex      Appendix: checkpoint sheet (family, params, tower, tokens, image size, templates)
   table_cf_gates.tex       Appendix: the seven preflight gates and their observed ranges
   table_cf_leaderboard.tex thin wrapper that inputs table_cf_main.tex (kept for the existing \\input)
 """
@@ -166,7 +166,7 @@ def table_main(blocks):
         st = stats.get((m, "coco"))
         return (st["n_own"] / st["n"], st["n_own"], st["n"]) if st and st["n_own"] is not None else (None, 0, 0)
     models.sort(key=lambda m: (-chest_rate(m)[0], -(coco_rate(m)[0] or -1), ORDER.index(m)))
-    L = [r"\begin{table}[t]", r"\centering", r"\scriptsize", r"\setlength{\tabcolsep}{2.6pt}", r"\renewcommand{\arraystretch}{1.08}",
+    L = [r"\begin{table}[t]", r"\centering", r"\scriptsize", r"\setlength{\tabcolsep}{2pt}", r"\renewcommand{\arraystretch}{1.08}",
          r"\input{tables/cf_colors}",
          r"\caption{\textbf{Reading, answering, and writing per checkpoint.} For each dataset: \textsc{Read} = mean probe selectivity "
          r"$S$ over the six concepts, with the number of readable concepts (of six; selectivity lower bound $>0$) as superscript; "
@@ -177,10 +177,10 @@ def table_main(blocks):
          r"terracotta for negative mean ownership (darker = larger magnitude); grey = ineligible yes/no template; "
          r"``--'' = block not run. Checkpoints are sorted by clinical owned share, descending.}",
          r"\label{tab:cf-main}",
-         r"\resizebox{\textwidth}{!}{%", r"\begin{tabular}{l@{\hspace{4pt}}ccc@{\hspace{5pt}}ccc@{\hspace{5pt}}ccc@{\hspace{5pt}}ccc}", r"\toprule",
+         r"\resizebox{\textwidth}{!}{%", r"\begin{tabular}{l@{\hspace{3pt}}ccc@{\hspace{4pt}}ccc@{\hspace{4pt}}ccc@{\hspace{4pt}}ccc}", r"\toprule",
          r"& \multicolumn{3}{c}{NIH ChestX-ray14} & \multicolumn{3}{c}{CheXpert Plus} & \multicolumn{3}{c}{COCO (control)} & \multicolumn{3}{c}{Owned share} \\",
          r"\cmidrule(lr){2-4}\cmidrule(lr){5-7}\cmidrule(lr){8-10}\cmidrule(lr){11-13}",
-         r"Checkpoint & \textsc{Read} & \textsc{Ans} & \textsc{Own} & \textsc{Read} & \textsc{Ans} & \textsc{Own} & \textsc{Read} & \textsc{Ans} & \textsc{Own} & clinical & COCO & ratio \\",
+         r"Checkpoint & \textsc{Read} & \textsc{Ans} & \textsc{Own} & \textsc{Read} & \textsc{Ans} & \textsc{Own} & \textsc{Read} & \textsc{Ans} & \textsc{Own} & clin. & COCO & ratio \\",
          r"\midrule"]
     agg = {d: {"S": [], "A": [], "O": [], "read": 0, "ans": 0, "own": 0, "n": 0, "n_ans": 0, "n_own": 0} for d, _ in DATASETS}
     for m in models:
@@ -205,10 +205,10 @@ def table_main(blocks):
                 agg[d]["O"].append(st["O"]); agg[d]["own"] += st["n_own"]; agg[d]["n_own"] += st["n"]
         cr, co, ct = chest_rate(m); qr, qo, qt = coco_rate(m)
         if ct:
-            cells.append(f"{shade_pos(cr, (0.01, 0.15, 0.35), 'cfSlate')}{100 * cr:.0f}\\% ({co}/{ct})")
+            cells.append(f"{shade_pos(cr, (0.01, 0.15, 0.35), 'cfSlate')}{100 * cr:.0f}\\%")
         else:
             cells.append(r"\cellcolor{cfGrey}inel.")
-        cells.append(f"{shade_pos(qr, (0.01, 0.5, 0.9), 'cfSlate')}{100 * qr:.0f}\\% ({qo}/{qt})" if qr is not None else "--")
+        cells.append(f"{shade_pos(qr, (0.01, 0.5, 0.9), 'cfSlate')}{100 * qr:.0f}\\%" if qr is not None else "--")
         cells.append(f"{100 * cr / qr:.0f}\\%" if (ct and qr) else "--")
         L.append(f"{NAMES[m]} & " + " & ".join(cells) + r" \\")
     L.append(r"\midrule")
@@ -221,13 +221,12 @@ def table_main(blocks):
     chest_own = agg["nih"]["own"] + agg["chexpert"]["own"]; chest_n = agg["nih"]["n_own"] + agg["chexpert"]["n_own"]
     coco_share = agg["coco"]["own"] / agg["coco"]["n_own"] if agg["coco"]["n_own"] else 0
     chest_share = chest_own / chest_n if chest_n else 0
-    tot += [f"{100 * chest_share:.0f}\\% ({chest_own}/{chest_n})", f"{100 * coco_share:.0f}\\% ({agg['coco']['own']}/{agg['coco']['n_own']})",
-            f"{100 * chest_share / coco_share:.0f}\\%" if coco_share else "--"]
+    tot += [f"{100 * chest_share:.0f}\\%", f"{100 * coco_share:.0f}\\%", f"{100 * chest_share / coco_share:.0f}\\%" if coco_share else "--"]
     L.append(r"\textbf{All cells} & " + " & ".join(tot) + r" \\")
     L += [r"\bottomrule", r"\end{tabular}}", r"\end{table}"]
     (OUT / "table_cf_main.tex").write_text("\n".join(L) + "\n")
     (OUT / "table_cf_leaderboard.tex").write_text("\\input{tables/table_cf_main}\n")
-    return stats
+    return stats, models
 
 
 # --------------------------------------------------------------------------------------------- Table 2
@@ -338,48 +337,59 @@ def table_seed(blocks):
     (OUT / "table_cf_seed.tex").write_text("\n".join(L) + "\n")
 
 
-# --------------------------------------------------------------------------------------------- appendix per-concept
-def table_per_dataset(blocks, ds, label):
-    L = [r"\input{tables/cf_colors}", r"\scriptsize", r"\setlength{\tabcolsep}{1.6pt}",
-         r"\begin{longtable}{llrrccrrrrrll}",
-         r"\caption{\textbf{" + label + r": every checkpoint--concept cell.} $S$: probe selectivity; AUROC: clean-answer AUROC; "
-         r"R/A: readable / answer-capable (\checkmark); $W_{qq}$: concept write; p95: random-family 95th percentile; $|$sham$|$; "
-         r"$O_q$ with 95\% percentile interval; rank of $W_{qq}$ among the 120 compared effects; strongest competitor; max-$T$ verdict. "
-         r"Owned rows are shaded slate.}\\",
-         r"\label{tab:cf-" + ds + r"}\\", r"\toprule",
-         r"Checkpoint & Concept & $S$ & AUROC & R & A & $W_{qq}$ & p95 & $|$sham$|$ & $O_q$ & 95\% CI & Competitor & Verdict \\", r"\midrule", r"\endfirsthead",
-         r"\toprule", r"Checkpoint & Concept & $S$ & AUROC & R & A & $W_{qq}$ & p95 & $|$sham$|$ & $O_q$ & 95\% CI & Competitor & Verdict \\", r"\midrule", r"\endhead",
-         r"\midrule\multicolumn{13}{r}{\emph{continued}}\\", r"\endfoot", r"\bottomrule", r"\endlastfoot"]
-    for m in ORDER:
-        b = blocks.get((m, ds))
-        if not b:
-            continue
+# --------------------------------------------------------------------------------------------- appendix ownership tables
+def table_ownership(blocks, ds, label, order):
+    """Compact checkpoint x concept table of O_q for one dataset (same checkpoint order as Table 1)."""
+    models = [m for m in order if (m, ds) in blocks]
+    concepts = None
+    for m in models:
+        b = blocks[(m, ds)]
+        if b["core"]:
+            concepts = list(b["core"].keys()); break
+    if concepts is None:
+        concepts = list(next(iter(blocks[(m, ds)]["cal"].keys())) for m in models[:1])
+    L = [r"\begin{table}[h]", r"\centering", r"\scriptsize", r"\setlength{\tabcolsep}{4pt}", r"\renewcommand{\arraystretch}{1.08}",
+         r"\input{tables/cf_colors}",
+         r"\caption{\textbf{Ownership on " + label + r".} Each cell is the ownership contrast $O_q$ of the concept's own write against its strongest "
+         r"clinical competitor at $\alpha=+0.25$. Cells are shaded slate for positive and terracotta for negative values (darker = larger magnitude, "
+         r"thresholds $0.02$, $0.10$, $0.25$). Bold marks owned cells (steering reference met and all simultaneous lower bounds $>0$). "
+         r"A dagger marks cells whose write meets the steering reference but loses to a competitor. Grey ``inel.'' marks checkpoints whose "
+         r"yes/no template is ineligible. Checkpoints are in the order of Table~\ref{tab:cf-main}.}",
+         r"\label{tab:cf-own-" + ds + r"}",
+         r"\begin{tabular}{l" + "r" * len(concepts) + r"}", r"\toprule",
+         "Checkpoint & " + " & ".join(concepts) + r" \\", r"\midrule"]
+    n_own = {c: 0 for c in concepts}
+    for m in models:
+        b = blocks[(m, ds)]
         if b["core_ineligible"] or not b["core"]:
-            for c, v in b["cal"].items():
-                L.append(f"{NAMES[m]} & {c} & {fmt(v.get('selectivity'), 3)} & -- & {CHECK if v.get('readable') else ''} & & -- & -- & -- & -- & -- & -- & ineligible \\\\")
+            L.append(f"{NAMES[m]} & " + " & ".join(r"\cellcolor{cfGrey}inel." for _ in concepts) + r" \\")
             continue
-        for c, v in b["core"].items():
-            cc = b["cal"].get(c, {}); ci = v.get("O_q_ci95_percentile") or [None, None]
-            is_owned = owned(v)
-            verdict = "owned" if is_owned else {"stronger_competitor": "competitor", "unresolved": "unresolved", "fixed_family_advantage": "no reference"}.get(v.get("verdict"), "--")
-            pre = r"\rowcolor{cfSlate2}" if is_owned else ""
-            L.append(f"{pre}{NAMES[m]} & {c} & {fmt(cc.get('selectivity'), 3)} & {fmt(cc.get('answer_auroc'), 3)} & "
-                     f"{CHECK if cc.get('readable') else ''} & {CHECK if cc.get('answer_capable') else ''} & "
-                     f"{fmt(v['W_qq'], 3, True)} & {fmt(v['random_p95'], 3)} & {fmt(v['abs_sham'], 3)} & {fmt(v['O_q'], 3, True)} & "
-                     f"[{fmt(ci[0], 2, True)}, {fmt(ci[1], 2, True)}] & {v.get('argmax_other')} & {verdict} \\\\")
-    L += [r"\end{longtable}", r"\normalsize"]
-    (OUT / f"table_cf_{ds}.tex").write_text("\n".join(L) + "\n")
+        cells = []
+        for c in concepts:
+            v = b["core"].get(c)
+            if v is None or v.get("O_q") is None:
+                cells.append("--"); continue
+            txt = fmt(v["O_q"], 2, True)
+            if owned(v):
+                txt = r"\textbf{" + txt + "}"; n_own[c] += 1
+            elif v.get("steering_reference"):
+                txt += r"$^{\dagger}$"
+            cells.append(shade_own(v["O_q"]) + txt)
+        L.append(f"{NAMES[m]} & " + " & ".join(cells) + r" \\")
+    L += [r"\midrule", r"\textbf{Owned} & " + " & ".join(str(n_own[c]) for c in concepts) + r" \\",
+          r"\bottomrule", r"\end{tabular}", r"\end{table}"]
+    (OUT / f"table_cf_own_{ds}.tex").write_text("\n".join(L) + "\n")
 
 
 # --------------------------------------------------------------------------------------------- appendix sheets
 def table_models(blocks):
     L = [r"\begin{table}[h]", r"\centering", r"\scriptsize", r"\setlength{\tabcolsep}{3pt}",
-         r"\caption{\textbf{Checkpoint sheet.} Family, parameters, vision tower, consumed visual tokens per image at the primary locus, "
-         r"input image size, eligible question templates after the image-free mapping gate (I/W: ``is''/``show'' wording; Y: yes/no; "
-         r"A/B: letter mappings), completed dataset blocks, and GPU-hours of scoring (A100-80GB).}",
+         r"\caption{\textbf{Checkpoints.} Family, parameters, vision tower, consumed visual tokens per image at the primary locus, "
+         r"input image size, and eligible question templates after the image-free mapping gate (I/W: ``is''/``show'' wording; Y: yes/no; "
+         r"A/B: letter mappings).}",
          r"\label{tab:cf-models}",
-         r"\resizebox{\textwidth}{!}{%", r"\begin{tabular}{llrllllr}", r"\toprule",
-         r"Checkpoint & Family & Params & Vision tower & Tokens & Image & Templates & Blocks (GPU-h) \\", r"\midrule"]
+         r"\begin{tabular}{llrllll}", r"\toprule",
+         r"Checkpoint & Family & Params & Vision tower & Tokens & Image & Templates \\", r"\midrule"]
     for m in ORDER:
         present = [(d, blocks[(m, d)]) for d, _ in DATASETS if (m, d) in blocks]
         if not present:
@@ -388,13 +398,8 @@ def table_models(blocks):
         elig = present[0][1]["elig"]
         temps = "".join(t for t in TEMPLATES if elig.get(t, {}).get("eligible", True)) if elig else "all"
         temps = "all" if temps == "".join(TEMPLATES) else temps
-        parts = []
-        for d, b in present:
-            gh = b["run"].get("gpu_hours"); done = b["run"].get("status") == "COMPLETE"
-            dsn = {'nih': 'NIH', 'chexpert': 'CXP', 'coco': 'COCO'}[d]; star = '' if done else '*'
-            parts.append(f"{dsn}{star} ({gh:.0f})" if gh is not None else dsn)
-        L.append(f"{name} & {fam} & {params}B & {tower} & {tokens} & {img} & {temps} & " + ", ".join(parts) + r" \\")
-    L += [r"\bottomrule", r"\end{tabular}}", r"\end{table}"]
+        L.append(f"{name} & {fam} & {params}B & {tower} & {tokens} & {img} & {temps} \\\\")
+    L += [r"\bottomrule", r"\end{tabular}", r"\end{table}"]
     (OUT / "table_cf_models.tex").write_text("\n".join(L) + "\n")
 
 
@@ -438,12 +443,14 @@ def table_gates(blocks):
 if __name__ == "__main__":
     (OUT / "cf_colors.tex").write_text(COLORS)
     blocks = load()
-    stats = table_main(blocks)
+    stats, order = table_main(blocks)
     table_families(blocks, stats)
     table_controls(blocks)
     table_seed(blocks)
     for ds, label in DATASETS:
-        table_per_dataset(blocks, ds, label)
+        table_ownership(blocks, ds, label, order)
+    for ds, _ in DATASETS:
+        (OUT / f"table_cf_{ds}.tex").unlink(missing_ok=True)
     table_models(blocks)
     table_gates(blocks)
     print(f"{len(blocks)} blocks -> tables written to {OUT}")

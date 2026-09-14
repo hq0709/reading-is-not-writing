@@ -12,14 +12,8 @@ Table~\ref{tab:decoding} evaluates controlled decodability at the exact final vi
 
 Qwen Effusion first satisfies the reader test. Its probe reaches AUROC 0.7742 and controlled selectivity 0.1166 (95\% CI $[0.0897,0.1428]$). Original-cohort intervention outcomes maximize the concept-consistent effect over six fixed nonzero doses. Qwen makes a strong write-direction case in the original 200-image cohort: the maximum concept-consistent change is 0.2343 at $\alpha=+0.25$, above the random-direction 95th percentile of 0.0963 and the maximum absolute sham effect of 0.0852.
 
-The response at the locked dose $\alpha=+0.25$ reproduces on the patient-disjoint 400-patient cohort (Figure~\ref{fig:specificity}). Effusion changes mean $P(\mathrm{yes})$ by 0.1945, again above the random-direction 95th percentile of 0.0878 and absolute sham effect of 0.0157. None of these patients appears in the original intervention cohort, and the dose was not reselected, supporting a large and reproducible non-generic effect within ChestX-ray14.
+The response at the locked dose $\alpha=+0.25$ reproduces on the patient-disjoint 400-patient cohort. Effusion changes mean $P(\mathrm{yes})$ by 0.1945, again above the random-direction 95th percentile of 0.0878 and absolute sham effect of 0.0157. None of these patients appears in the original intervention cohort, and the dose was not reselected, supporting a large and reproducible non-generic effect within ChestX-ray14.
 
-\begin{figure}[!t]
-    \centering
-    \includegraphics[width=\textwidth]{figures/figA13_seed_specificity.pdf}
-    \caption{\textbf{Qwen Effusion reproduces as a non-generic write direction, but semantic competition changes its attribution.} \textbf{(a)} Changes in mean $P(\mathrm{yes})$ at the locked dose $\alpha=+0.25$ on 400 patients absent from the original cohort. The random group contains 20 directions; its dashed segment marks p95. Diamonds show the five fixed alternative clinical normals. \textbf{(b)} The Effusion ownership contrast $O_{\mathrm{Effusion}}$ with its two-sided 95\% patient-bootstrap interval; the registered one-sided 95\% lower bound is $-0.0678$. Nodule realizes the point-estimate maximum.}
-    \label{fig:specificity}
-\end{figure}
 
 \subsection{Semantic competition changes attribution, not efficacy}
 \label{sec:specificity-results}
@@ -31,11 +25,13 @@ Qwen Effusion therefore remains a reproducible direction that changes the answer
 \subsection{Wording changes clinical competition within the answer interface}
 \label{sec:encoding-results}
 
-The second finding concerns the conditions of clinical competition. The Qwen ownership pattern persists in logit coordinates (Appendix~\ref{app:response-diagnostics}), so we test whether changing the answer interface changes a direction's relative advantage.
+The second finding concerns the conditions of clinical competition. The Qwen ownership pattern persists in logit coordinates, so we test whether changing the answer interface changes a direction's relative advantage.
 
-In the registered crossover, Atelectasis, Pneumothorax, Mass, and Nodule pass independent capability calibration. On these four questions, mapping-even minus mapping-odd response energy is $-2.1786$ (95\% CI $[-2.4061,-1.9810]$): effects are larger in the component that reverses raw A-minus-B sign when the finding-to-letter mapping is exchanged. Yet all 20 random directions and the sham are also mapping-odd dominant (Appendix~\ref{app:encoding}). Aggregate mapping response therefore does not distinguish the clinical normals from generic perturbations.
+In the registered crossover, Atelectasis, Pneumothorax, Mass, and Nodule pass independent capability calibration. On these four questions, mapping-even minus mapping-odd response energy is $-2.1786$ (95\% CI $[-2.4061,-1.9810]$): effects are larger in the component that reverses raw A-minus-B sign when the finding-to-letter mapping is exchanged. Yet all 20 random directions and the sham are also mapping-odd dominant. Aggregate mapping response therefore does not distinguish the clinical normals from generic perturbations.
 
 The crossover identifies Mass as a prompt-conditioned candidate: its clinical margin changes from $-0.7181$ under the original yes/no prompt to $0.2825$ and $0.2900$ under A-present and B-present, respectively (Table~\ref{tab:encoding-mass}). A-present assigns A to presence and B to absence; B-present reverses those assignments. Both coded effects exceed the discovery study's 20 random directions and sham. Because wording and instructions also change, we test them separately on independent patients.
+
+\input{tables/table_encoding_mass}
 
 Table~\ref{tab:mass-confirmation} reports the registered confirmation on 200 new patients. Clinical margins subtract the largest of five alternative clinical effects in finding-present logit units. Minimum LCB is the smallest simultaneous lower bound among a cell's five contrasts, from the joint 20-comparison family. All seven prompt cells pass separate capability calibration.
 
@@ -43,9 +39,6 @@ Table~\ref{tab:mass-confirmation} reports the registered confirmation on 200 new
 
 The clinical advantage reproduces under both \textit{show} coded prompts, but the Mass effects remain below the maxima of 119 random directions, with reference ranks of 3/120. These 119 directions form a fixed reference family: each rank places Mass third among the 120 compared effects. This finite descriptive ranking is not a $p$-value, and failure to exceed this family's maximum does not establish nonspecificity across arbitrary direction distributions or reference-family sizes. Under \textit{is}, both clinical margins are negative. Neither the cross-wording nor original-wording specificity conjunction is met.
 
-Explicit \textit{show} yes/no also has a positive clinical margin, 0.2369; its paired differences from A-present and B-present span zero. Within each response instruction, changing \textit{show} to \textit{is} reduces the clinical margin (Table~\ref{tab:mass-contrasts}). These paired wording contrasts are descriptive. They support wording-conditioned clinical competition, rather than an advantage attributable to answer letters alone. Mass steering increases Brier error in every cell, while all AUROC-change intervals span zero (Tables~\ref{tab:mass-brier} and~\ref{tab:mass-prediction}).
-
-\paragraph{Boundary analyses.}
-The registered ownership matrix, within-patient input closure, label-conditioned shifts, LLaVA reader and answer measurements, and the natural paired-response cohort delimit the causal and diagnostic interpretation of these seed findings; they are reported in Appendix~\ref{app:seed-boundary} and are unchanged by the campaign.
+Explicit \textit{show} yes/no also has a positive clinical margin, 0.2369; its paired differences from A-present and B-present span zero. Within each response instruction, changing \textit{show} to \textit{is} reduces the clinical margin. These paired wording contrasts are descriptive. They support wording-conditioned clinical competition, rather than an advantage attributable to answer letters alone. Mass steering increases Brier error in every cell, while all AUROC-change intervals span zero.
 
 \FloatBarrier

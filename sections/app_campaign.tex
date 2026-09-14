@@ -19,67 +19,49 @@ All 57 completed blocks pass checks (A), (B), (C), and (G) with zero determinism
 \subsection{Coverage and cost}
 \label{app:cf-coverage}
 
-Nineteen checkpoints are complete on all three datasets with every module (the write matrix, calibration, the five additional templates, the dose sweep, the two refits, and the connector locus on NIH and COCO; the write matrix and calibration on CheXpert); Llama~3.2 Vision 11B is complete with its yes/no modules ineligible; Qwen2.5-VL-72B is complete on NIH; the 72B COCO/CheXpert blocks and the 90B are deferred, and InternVL3.5-38B is in progress at submission. The campaign consumed about 2,800 A100-hours; per-checkpoint costs are in Table~\ref{tab:cf-models}.
+Nineteen checkpoints are complete on all three datasets with every module (the write matrix, calibration, the five additional templates, the dose sweep, the two refits, and the connector locus on NIH and COCO; the write matrix and calibration on CheXpert); Llama~3.2 Vision 11B is complete with its yes/no modules ineligible; Qwen2.5-VL-72B is complete on NIH; the 72B COCO/CheXpert blocks and the 90B are deferred, and InternVL3.5-38B is in progress at submission. The campaign consumed about 2,800 A100-hours; a chest block of a 7B checkpoint takes about ten GPU-hours.
 
-\subsection{Seed replication details}
-\label{app:cf-seed}
-
-Qwen2.5-VL-7B on NIH: Effusion $W=0.190$, random p95 $=0.137$, $|\mathrm{sham}|=0.017$, rank 2 of 120, $O=-0.071$ $[-0.080,-0.062]$ with Nodule the maximiser; all six diagonals negative (Atelectasis $-0.226$, Pneumothorax $-0.102$, Cardiomegaly $-0.219$, Mass $-0.169$, Nodule $-0.072$). Mass wording: the mapping contrast IA$-$IB and the wording contrast IY$-$WY are reported for every block in the campaign tables; for the seed model Mass is owned under the \emph{show} A/B templates only, as in the original confirmation. Effusion does not transfer to CheXpert for the seed model ($W=0.08$, below the random p95).
-
-\subsection{Per-concept results}
+\subsection{Ownership of every concept}
 \label{app:cf-tables}
 
-\input{tables/table_cf_nih}
-\input{tables/table_cf_chexpert}
-\input{tables/table_cf_coco}
+Tables~\ref{tab:cf-own-nih}--\ref{tab:cf-own-coco} give the ownership contrast of every concept cell; the write matrices behind them are in Figures~\ref{fig:cf-w-nih}--\ref{fig:cf-w-coco}.
+
+\input{tables/table_cf_own_nih}
+\input{tables/table_cf_own_chexpert}
+\input{tables/table_cf_own_coco}
 
 \subsection{Controls}
 \label{app:cf-controls-sec}
 
+Table~\ref{tab:cf-controls} summarises the reference family and the per-block controls of Section~\ref{sec:controls} across the grid.
+
 \input{tables/table_cf_controls}
 
-\begin{figure}[h]
-    \centering
-    \includegraphics[width=\textwidth]{figures/fig6_controls.pdf}
-    \caption{\textbf{Controls per block.} (a) Connector-locus against primary-locus ownership. (b) Refit standard deviation of ownership over three fit seeds. (c) Label-shift gap. (d) Wording and mapping contrasts of ownership.}
-    \label{fig:controls}
-\end{figure}
 
-\subsection{Write matrices and controls for every block}
+\subsection{Write matrices of every checkpoint}
 \label{app:cf-figures}
 
+Figures~\ref{fig:cf-w-nih}--\ref{fig:cf-w-coco} show the full $6\times6$ write matrix of every checkpoint; the owned diagonals are outlined.
+
 \begin{figure}[h]
     \centering
-    \includegraphics[width=\textwidth]{figures/figA7_write_matrices_nih.pdf}
+    \includegraphics[width=\textwidth]{figures/figA1_write_matrices_nih.pdf}
     \caption{Write matrices $W_{q,d}$ of every checkpoint on NIH ChestX-ray14; owned diagonals are outlined.}
     \label{fig:cf-w-nih}
 \end{figure}
 
 \begin{figure}[h]
     \centering
-    \includegraphics[width=\textwidth]{figures/figA8_write_matrices_chexpert.pdf}
+    \includegraphics[width=\textwidth]{figures/figA2_write_matrices_chexpert.pdf}
     \caption{Write matrices of every checkpoint on CheXpert Plus.}
     \label{fig:cf-w-chexpert}
 \end{figure}
 
 \begin{figure}[h]
     \centering
-    \includegraphics[width=\textwidth]{figures/figA9_write_matrices_coco.pdf}
+    \includegraphics[width=\textwidth]{figures/figA3_write_matrices_coco.pdf}
     \caption{Write matrices of every checkpoint on COCO.}
     \label{fig:cf-w-coco}
 \end{figure}
 
-\begin{figure}[h]
-    \centering
-    \includegraphics[width=\textwidth]{figures/figA10_controls_all.pdf}
-    \caption{Connector-locus ownership, refit standard deviation, and label-shift gap for every block with the full module set.}
-    \label{fig:cf-controls-all}
-\end{figure}
-
-\begin{figure}[h]
-    \centering
-    \includegraphics[width=\textwidth]{figures/figA11_prompt_dependence.pdf}
-    \caption{Wording and mapping contrasts of ownership for every block with the template module.}
-    \label{fig:cf-prompt}
-\end{figure}
-
+\FloatBarrier

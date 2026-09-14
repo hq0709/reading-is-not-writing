@@ -1,0 +1,65 @@
+\section{Prompts, Scores, and Notation}
+\label{app:protocol}
+
+\subsection{A common question and answer endpoint}
+
+At the first answer position, let $\ell_{\mathrm{yes}}$ and
+$\ell_{\mathrm{no}}$ denote the maximum log probabilities among the valid
+single-token case and leading-space variants of each answer.  The registered
+score is $P(\mathrm{yes})=\sigma(\ell_{\mathrm{yes}}-\ell_{\mathrm{no}})$,
+where $\sigma$ is the logistic sigmoid. The original Edema cell uses ``pulmonary
+edema,'' and the closure experiment uses ``consolidation'' in the same
+template. Taking the best valid token variant for each answer makes the
+endpoint insensitive to which listed capitalization or leading-space form
+receives the highest score. This endpoint measures the relative support for
+yes versus no at the first answer position; it does not measure the accuracy
+of a generated clinical report.
+
+
+The shared interface makes the question--direction grid interpretable:
+changing a clinical direction does not change the question being scored.
+Differences across columns still reflect different clinical questions, so
+the ownership test compares directions within each column before drawing
+a conclusion about the named concept.
+
+\subsection{Reading the intervention notation}
+
+Table~\ref{tab:notation} collects the notation introduced in the article.
+The distinction between question $q$ and direction $d$ is central: a large
+$W_{q,d}$ shows that a direction moves an answer, while $O_q$ asks whether
+the direction bearing that answer's clinical name moves it more than its
+competitors. A positive ownership margin alone is not the full confirmation
+rule; the uncertainty and non-semantic control comparisons must also pass.
+Keeping these roles separate allows the following analyses to distinguish
+readability, intervention strength, and semantic attribution.
+
+\begin{table}[H]
+\centering
+\caption{Notation used in the manuscript.}
+\label{tab:notation}
+\resizebox{\ifdim\width>\linewidth\linewidth\else\width\fi}{!}{%
+\begin{tabular}{ll}
+\toprule
+Symbol & Definition \\
+\midrule
+$q,d,c$ & Clinical question, steering direction, and probe concept, respectively. \\
+$\hvec_{it}$ & Consumed visual representation for image $i$ and visual token $t$. \\
+$R,\boldsymbol{s}$ & Fixed Gaussian projection and train-fitted featurewise scale. \\
+$\hat\wvec_c$ & Unit probe-normal direction for concept $c$ after lifting to the consumed representation. \\
+$\alpha$ & Signed intervention dose; $|\alpha|$ is the perturbation norm relative to each token norm. \\
+$W_{q,d}$ & Paired mean change in question $q$'s $P(\mathrm{yes})$ under direction $d$. \\
+$O_q$ & Ownership margin $W_{q,q}-\max_{d\neq q}W_{q,d}$; positive values favor the named direction. \\
+$S$ & Real-label AUROC minus the mean AUROC of the 20 nuisance-type control tasks. \\
+$\gamma_i$ & Positive-minus-negative paired representation displacement along the Consolidation normal. \\
+\bottomrule
+\end{tabular}
+}
+\end{table}
+
+The notation separates three levels of evidence: $S$ describes label
+availability, $W_{q,d}$ describes an intervention effect, and $O_q$ compares
+the named direction with clinical alternatives. The remaining appendix
+follows this progression while keeping the evaluation cohorts explicit.
+
+\FloatBarrier
+
