@@ -4,12 +4,20 @@ Every prose paragraph of the listed sections is sent with the author's constrain
 keeps every number, citation key, reference label, and math span, adds no hedging phrase, and is not longer than the
 original. Accepted rewrites are applied in place; a before/after log is written to review-artifacts/.
 """
-import re, subprocess, sys, json, time, hashlib
+import re, subprocess, sys, json, time, hashlib, argparse, tempfile, os
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 CODEX = "/rodata/azradonc_dev/m253405/fake_home/.local/bin/codex154"
-SECTIONS = sys.argv[1:] or ["0_abstract", "1_introduction", "2_related_work", "3_framework", "4_setup", "5_results", "6_implications", "7_conclusion"]
+ap = argparse.ArgumentParser()
+ap.add_argument("sections", nargs="*")
+ap.add_argument("--only", action="append", default=[], help="polish only paragraphs containing this substring (repeatable)")
+ap.add_argument("--jobs", type=int, default=4)
+ap.add_argument("--timeout", type=int, default=1800)
+ap.add_argument("--tries", type=int, default=2)
+ARGS = ap.parse_args()
+SECTIONS = ARGS.sections or ["0_abstract", "1_introduction", "2_related_work", "3_framework", "4_setup", "5_results", "6_implications", "7_conclusion"]
 LOG = ROOT / "review-artifacts" / f"gpt6_polish_{time.strftime('%Y%m%d_%H%M')}.md"
 BANNED = ["we do not claim", "limitation", "cannot rule out", "may not", "might not", "we acknowledge", "caveat", "however, we", "it is possible that", "does not establish", "we cannot"]
 SKIP_START = ("\\section", "\\subsection", "\\begin{", "\\end{", "\\input", "\\label", "\\centering", "\\includegraphics", "\\caption", "\\FloatBarrier", "%", "\\item", "\\end")
@@ -49,19 +57,21 @@ def tokens(s):
 
 def polish(paragraph):
     prompt = CONSTRAINTS + paragraph.strip()
-    out = ROOT / "review-artifacts" / ".gpt6_last.txt"
-    cmd = [CODEX, "exec", "-m", "gpt-6-astra", "-c", 'model_reasoning_effort="xhigh"', "--sandbox", "read-only", "--skip-git-repo-check",
-           "--output-last-message", str(out), prompt]
-    try:
-        subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True, timeout=900)
-    except subprocess.TimeoutExpired:
-        return None
-    if not out.exists():
-        return None
-    new = out.read_text().strip()
-    out.unlink(missing_ok=True)
-    new = re.sub(r"^```(?:latex)?\s*|\s*```$", "", new).strip()
-    return new or None
+    for attempt in range(ARGS.tries):
+        fd, out = tempfile.mkstemp(prefix=".gpt6_", suffix=".txt", dir=ROOT / "review-artifacts"); os.close(fd); out = Path(out); out.unlink()
+        cmd = [CODEX, "exec", "-m", "gpt-6-astra", "-c", 'model_reasoning_effort="xhigh"', "--sandbox", "read-only", "--skip-git-repo-check",
+               "--output-last-message", str(out), "-"]
+        try:
+            subprocess.run(cmd, cwd=ROOT, input=prompt, capture_output=True, text=True, timeout=ARGS.timeout)
+        except subprocess.TimeoutExpired:
+            out.unlink(missing_ok=True); continue
+        if not out.exists():
+            continue
+        new = out.read_text().strip(); out.unlink(missing_ok=True)
+        new = re.sub(r"^```(?:latex)?\s*|\s*```$", "", new).strip()
+        if new:
+            return new
+    return None
 
 
 def main():
@@ -70,12 +80,15 @@ def main():
     stats = {"sent": 0, "accepted": 0, "rejected": 0}
     for sec in SECTIONS:
         p = ROOT / "sections" / f"{sec}.tex"; text = p.read_text()
-        blocks = prose_blocks(text); new_blocks = []
-        for b, is_prose in blocks:
-            if not is_prose:
+        blocks = prose_blocks(text)
+        todo = [i for i, (b, is_prose) in enumerate(blocks) if is_prose and (not ARGS.only or any(o in b for o in ARGS.only))]
+        with ThreadPoolExecutor(max_workers=ARGS.jobs) as ex:
+            results = dict(zip(todo, ex.map(lambda i: polish(blocks[i][0]), todo)))
+        new_blocks = []
+        for i, (b, _) in enumerate(blocks):
+            if i not in results:
                 new_blocks.append(b); continue
-            stats["sent"] += 1
-            new = polish(b)
+            new = results[i]; stats["sent"] += 1
             reason = None
             if new is None:
                 reason = "no response"
@@ -87,14 +100,12 @@ def main():
                 reason = "hedge added"
             elif new.count("{") != new.count("}") or new.count("$") % 2:
                 reason = "unbalanced LaTeX"
-            log.append(f"\n## {sec} paragraph {stats['sent']} — {'ACCEPTED' if reason is None else 'REJECTED: ' + reason}\n\n**before**\n\n{b.strip()}\n\n**after**\n\n{new or ''}\n")
-            if reason is None:
-                new_blocks.append(new); stats["accepted"] += 1
-            else:
-                new_blocks.append(b); stats["rejected"] += 1
-            LOG.write_text("".join(log))
-            print(f"[{sec}] paragraph {stats['sent']}: {'accepted' if reason is None else 'rejected (' + reason + ')'}", flush=True)
+            log.append(f"\n## {sec} paragraph {i} — {'ACCEPTED' if reason is None else 'REJECTED: ' + reason}\n\n**before**\n\n{b.strip()}\n\n**after**\n\n{new or ''}\n")
+            new_blocks.append(new if reason is None else b)
+            stats["accepted" if reason is None else "rejected"] += 1
+            print(f"[{sec}] paragraph {i}: {'accepted' if reason is None else 'rejected (' + reason + ')'}", flush=True)
         p.write_text("\n\n".join(new_blocks))
+        LOG.write_text("".join(log))
     log.append(f"\n\n{json.dumps(stats)}\n"); LOG.write_text("".join(log))
     print(json.dumps(stats))
 
