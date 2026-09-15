@@ -173,7 +173,7 @@ def table_main(blocks):
          r"\textsc{Ans} = mean clean-answer AUROC, with the number of answer-capable concepts (lower bound $>0.5$); "
          r"\textsc{Own} = mean ownership $O_q$, with the number of owned concepts (steering reference met and all simultaneous "
          r"lower bounds $>0$). The three right columns give the owned share of clinical cells (NIH + CheXpert), of COCO cells, "
-         r"and their ratio. Cells are shaded by value: sage for \textsc{Read}/\textsc{Ans} (darker = higher), slate for positive and "
+         r"and their ratio. The \textsc{Read} count in the last row is over every probe-graded cell and the \textsc{Ans}/\textsc{Own} counts over the cells with a scored write matrix. Cells are shaded by value: sage for \textsc{Read}/\textsc{Ans} (darker = higher), slate for positive and "
          r"terracotta for negative mean ownership (darker = larger magnitude); grey = ineligible yes/no template; "
          r"``--'' = block not run. Checkpoints are sorted by clinical owned share, descending.}",
          r"\label{tab:cf-main}",
@@ -199,7 +199,7 @@ def table_main(blocks):
             else:
                 cells.append(f"{shade_own(st['O'])}{fmt(st['O'], 2, True)}$^{{{st['n_own']}}}$")
             agg[d]["S"].append(st["S"]); agg[d]["read"] += st["n_read"]; agg[d]["n"] += st["n"]
-            if st["answer_defined"]:
+            if st["answer_defined"] and st["n_own"] is not None:
                 agg[d]["A"].append(st["A"]); agg[d]["ans"] += st["n_ans"]; agg[d]["n_ans"] += st["n"]
             if st["n_own"] is not None:
                 agg[d]["O"].append(st["O"]); agg[d]["own"] += st["n_own"]; agg[d]["n_own"] += st["n"]
