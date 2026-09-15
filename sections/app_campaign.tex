@@ -64,7 +64,7 @@ Table~\ref{tab:cf-controls} summarises the reference family and the per-block co
 
 \paragraph{Scale, saturation, refits, and numerics.} The grades hold on the logit scale: ownership recomputed from the margin $\ell_{\mathrm{yes}}-\ell_{\mathrm{no}}$ agrees with the probability-scale verdict in 335 of 342 cells, and every owned cell stays owned (Table~\ref{tab:cf-scale}). Saturation runs counter to a ceiling explanation: COCO blocks have far more rows at $P(\mathrm{yes})>0.99$ or $<0.01$ than chest blocks (median block share $0.82$ against $0.18$ and $0.32$). Restricting every cell to its unsaturated rows preserves $O_q>0$ in all 27 owned chest cells and in 32 of the 191 others. The same pattern holds in the clean-No, clean-Yes, label-present, and label-absent strata. Refitting the probes on resampled training patients changes $O_q$ by a median of $0.03$. The bf16 batch effects declared at the gates (candidate-logit differences of $0.07$--$1.84$) leave the verdicts unchanged: the margin sign agrees in 55 of 61 blocks, and the six disagreeing blocks contain no owned cell. Re-scoring the clean baseline inside a second module gives bitwise agreement in 100\% of rows for 22 of 33 blocks and in 75\% for the rest, with $|\Delta P(\mathrm{yes})|>0.1$ in at most 1.9\% of rows. Writes at the connector locus are an order of magnitude smaller than at the primary locus (median $|W_{q,q}|$ $0.009$ against $0.046$ on NIH and $0.008$ against $0.270$ on COCO).
 
-Table~\ref{tab:cf-geometry} gives the direction- and label-geometry statistics, Table~\ref{tab:cf-scale} the scale, saturation, refit, connector, and batch statistics behind Section~\ref{sec:robust-geometry}, Table~\ref{tab:cf-pairs} the paired shared-tower differences behind Section~\ref{sec:reader}, and Tables~\ref{tab:cf-altdir}--\ref{tab:cf-extcomp} the alternative directions, the answer-direction oracle, and the extended competitor family.
+Table~\ref{tab:cf-geometry} gives the direction- and label-geometry statistics, Table~\ref{tab:cf-scale} the scale, saturation, refit, connector, and batch statistics behind Section~\ref{sec:robust-geometry}, Table~\ref{tab:cf-pairs} the paired shared-tower differences behind Section~\ref{sec:reader}, and Tables~\ref{tab:cf-altdir}--\ref{tab:cf-tokenw} the alternative directions, the answer-direction oracle, the extended competitor family, and the token-weighted writes.
 
 \input{tables/table_cf_geometry}
 \input{tables/table_cf_scale}
@@ -72,6 +72,7 @@ Table~\ref{tab:cf-geometry} gives the direction- and label-geometry statistics, 
 \input{tables/table_cf_altdir}
 \input{tables/table_cf_ansdir}
 \input{tables/table_cf_extcomp}
+\input{tables/table_cf_tokenw}
 
 \subsection{Write structure across the grid}
 \label{app:cf-figures}
