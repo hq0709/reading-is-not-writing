@@ -602,6 +602,10 @@ def fig5_same_write(blocks):
         Ms[ds] = (concepts, np.array([[o.get(c, np.nan) if o else np.nan for c in concepts] for o in O]),
                   [owned_set(blocks[(mk, ds)]["s"]) if (mk, ds) in blocks else set() for mk, _ in FAM])
     vlim = round_up(np.nanmax([np.nanmax(np.abs(M)) for _, M, _ in Ms.values()])); norm = sym_norm(vlim)
+    ceiling = set()
+    pj = RUNS / "robustness" / "pairs.json"
+    if pj.exists():
+        ceiling = {(c["model"], c["dataset"], c["concept"]) for c in json.loads(pj.read_text())["task2_ceiling"]["cells"] if c.get("ceiling")}
     ye = np.array([0, 1, 2, 3, 3 + FAM_GAP, 4 + FAM_GAP, 5 + FAM_GAP]); real = [0, 1, 2, 4, 5]   # row 3 is the family spacer
     FW = fs.WIDTH; P = 1.36; gap = 0.20; x0 = 0.98; Ph = P * ye[-1] / 6
     FH = 0.10 + 0.26 + Ph + 0.34 + 0.34 + 0.26
@@ -620,9 +624,12 @@ def fig5_same_write(blocks):
                 heat_value(ax, xe, ye, ri, j, M[i, j], norm, bold=o)
                 if o:
                     heat_cell_marks(ax, xe, ye, ri, j, dot=True)
+                if (FAM[i][0], ds, c) in ceiling:
+                    ax.add_patch(Rectangle((xe[j], ye[ri]), xe[j + 1] - xe[j], ye[ri + 1] - ye[ri], fill=False, hatch="////",
+                                           edgecolor="#8a8a8a", linewidth=0, zorder=4))
         ax.set_title(f"({'abc'[k]})  {DS_LAB[ds]}", fontsize=8.5, pad=4)
     cax = f.add_axes(rect(FW, FH, 1.55, 0.40, 2.4, 0.08), label="cbar")
-    heat_colorbar(f, cax, norm, r"ownership $O_q$ of the shared write vector, by reader      ($\bullet$ owned)",
+    heat_colorbar(f, cax, norm, r"ownership $O_q$ of the shared write vector, by reader      ($\bullet$ owned;  hatched: clean answer at a ceiling)",
                   ticks=[-vlim, -vlim / 2, 0, vlim / 2, vlim])
     check_overlaps(f, "fig5_same_write")
     fs.save(f, FIG / "fig5_same_write")

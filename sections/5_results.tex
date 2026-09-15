@@ -49,7 +49,7 @@ Gemma~3 ships one SigLIP tower for its 4B, 12B, and 27B checkpoints, MedGemma on
 \begin{figure}[t]
     \centering
     \includegraphics[width=\textwidth]{figures/fig5_same_write.pdf}
-    \caption{\textbf{Same write, different reader.} Ownership $O_q$ per concept on NIH, CheXpert, and COCO for Gemma~3 4B/12B/27B and MedGemma 4B/27B, whose probes and write vectors are identical across sizes within each family; owned cells are marked.}
+    \caption{\textbf{Same write, different reader.} Ownership $O_q$ per concept on NIH, CheXpert, and COCO for Gemma~3 4B/12B/27B and MedGemma 4B/27B, whose probes and write vectors are identical across sizes within each family; owned cells are marked with a dot, and hatched cells are at a ceiling (the clean answer is beyond $0.99$ or $0.01$ on more than 90\% of rows, so the probability-scale margin is bounded; Gemma~3 4B's chest rows are all such cells, with logit-scale margins from $-1.1$ to $-19.8$).}
     \label{fig:readers}
 \end{figure}
 

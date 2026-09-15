@@ -78,7 +78,7 @@ def pairs():
          r"interval (2{,}000 shared draws, strongest competitor recomputed in every draw): concepts whose interval excludes zero, "
          r"the median and maximum $|\Delta O_q|$, and their ratio to the mean refit standard deviation of the two blocks.}",
          r"\label{tab:cf-pairs}",
-         r"\begin{tabular}{llcrrrr}", r"\toprule",
+         r"\resizebox{\textwidth}{!}{\begin{tabular}{llcrrrr}", r"\toprule",
          r"Pair & Dataset & relation & $\Delta O_q$ CI $\not\ni 0$ & median $|\Delta O_q|$ & max $|\Delta O_q|$ & median / max ratio to refit SD \\", r"\midrule"]
     names = {"gemma3-4": "Gemma 3 4B", "gemma3-12": "Gemma 3 12B", "gemma3-27": "Gemma 3 27B", "medgemma-4": "MedGemma 4B", "medgemma-27": "MedGemma 27B"}
     for t in d["task1_paired_deltas"]:
@@ -86,7 +86,7 @@ def pairs():
         ratio = f"{t['median_abs_delta_O_over_refit_sd']:.1f} / {t['max_abs_delta_O_over_refit_sd']:.1f}" if t.get("median_abs_delta_O_over_refit_sd") else "--"
         L.append(f"{names.get(t['small'], t['small'])} $\\to$ {names.get(t['large'], t['large'])} & {NAMES[t['dataset']]} & {rel} & "
                  f"{t['n_concepts_delta_O_ci_excludes_zero']}/6 & {t['median_abs_delta_O']:.2f} & {t['max_abs_delta_O']:.2f} & {ratio} \\\\")
-    L += [r"\bottomrule", r"\end{tabular}", r"\end{table}"]
+    L += [r"\bottomrule", r"\end{tabular}}", r"\end{table}"]
     (OUT / "table_cf_pairs.tex").write_text("\n".join(L) + "\n")
     print("table_cf_pairs.tex")
 
