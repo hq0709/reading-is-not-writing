@@ -1,0 +1,20 @@
+\begin{table}[h]
+\centering
+\scriptsize
+\setlength{\tabcolsep}{3pt}
+\caption{\textbf{The full grade under refitted probes.} For every block with the refit module, the six probes are refitted on two resamples of the training patients (fit seeds 1 and 2) and the complete grade is recomputed with the campaign rules: the steering reference against the block's CORE random 95th percentile and sham on the same rows, and the $6\times5$ max-$T$ verdict over the shared unit-bootstrap draws (2{,}000 draws). Per dataset: cells whose seed-0 grade is owned, stronger competitor, unresolved, or fixed-family advantage without the reference, and how many keep that grade under both refits, under at least one, or under none; the last column regrades seed 0 with the same draws and counts agreement with the paper's grade.}
+\label{tab:cf-refit}
+\resizebox{\textwidth}{!}{\begin{tabular}{lrrrrrrrrrrrrrrr}
+\toprule
+Dataset & blocks & cells & \multicolumn{4}{c}{owned} & \multicolumn{3}{c}{stronger competitor} & \multicolumn{3}{c}{unresolved} & \multicolumn{2}{c}{adv.\ no ref.} & seed 0 \\
+\cmidrule(lr){4-7}\cmidrule(lr){8-10}\cmidrule(lr){11-13}\cmidrule(lr){14-15}
+ & & & $n$ & both & $\geq1$ & none & $n$ & both & $\geq1$ & $n$ & both & $\geq1$ & $n$ & both & agrees \\
+\midrule
+NIH ChestX-ray14 & 20 & 120 & 10 & 3 & 7 & 3 & 81 & 56 & 77 & 17 & 5 & 11 & 12 & 0 & 120/120 \\
+CheXpert Plus & 2 & 12 & 1 & 0 & 1 & 0 & 9 & 7 & 8 & 2 & 0 & 1 & 0 & 0 & 12/12 \\
+COCO & 19 & 114 & 100 & 87 & 97 & 3 & 6 & 2 & 6 & 3 & 1 & 2 & 5 & 2 & 114/114 \\
+\textit{chest} & 22 & 132 & 11 & 3 & 8 & 3 & 90 & 63 & 85 & 19 & 5 & 12 & 12 & 0 & 132/132 \\
+\textit{all} & 41 & 246 & 111 & 90 & 105 & 6 & 96 & 65 & 91 & 22 & 6 & 14 & 17 & 2 & 246/246 \\
+\bottomrule
+\end{tabular}}
+\end{table}

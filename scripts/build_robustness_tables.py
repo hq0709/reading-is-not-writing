@@ -18,6 +18,16 @@ def f2(x, nd=2):
     return "--" if x is None else f"{x:.{nd}f}"
 
 
+def fp(p):
+    """p-value for math mode: two decimals, or a power of ten below 0.001 (e.g. 8\\times10^{-11})."""
+    if p is None or p != p:
+        return "--"
+    if p >= 0.001:
+        return f"{p:.2f}"
+    m, e = f"{p:.0e}".split("e")
+    return f"{m}\\times10^{{{int(e)}}}"
+
+
 def geometry():
     d = json.loads((ROB / "geometry.json").read_text())
     dg, lg, lo, assoc = d["direction_geometry"], d["label_geometry"], d["leave_one_out"], d["association"]
@@ -308,6 +318,12 @@ def validation():
         L.append(f"{names.get(mk, mk)} & {NAMES[ds]} & {f2(s['median_auroc_answer_dir'])} & {f2(s['median_auroc_probe'])} & "
                  f"{f2(s.get('median_auroc_answer_dir_vs_clean_answer'))} & {f2(s.get('median_auroc_probe_vs_clean_answer'))} & "
                  f"{f2(s['median_pearson_scores'])} & {f2(s['median_cos_raw_model'])} & {f2(s['median_cos_sigma_projected'])} \\\\")
+    al = d["answer_direction"]["aggregate"].get("alignment_vs_ownership", {}).get("all")
+    if al:
+        L += [r"\midrule", r"\multicolumn{9}{p{0.98\textwidth}}{\textit{Alignment against ownership over the " + str(al["n_cells"]) + r" answer-direction cells: Spearman correlation between $\cos_\Sigma(a_q,\hat w_q)$ and the label direction's $O_q$ $\rho="
+              + f2(al["spearman_cos_sigma_vs_O_q"]["rho"]) + r"$ ($p=" + fp(al["spearman_cos_sigma_vs_O_q"]["p"]) + r"$); with the label direction's owned indicator $\rho="
+              + f2(al["spearman_cos_sigma_vs_owned"]["rho"]) + r"$ ($p=" + fp(al["spearman_cos_sigma_vs_owned"]["p"]) + r"$); median $\cos_\Sigma$ "
+              + f2(al["median_cos_sigma_owned"]) + r" in owned against " + f2(al["median_cos_sigma_not_owned"]) + r" in not-owned cells.}} \\"]
     L += [r"\midrule", r"\multicolumn{9}{l}{\textit{Column selectivity and known-label ownership, per dataset}} \\",
           r"Dataset & blocks & cells & median $S_d$ & $S_d\geq0.5$ & known rows (median) & sign of $O_q$ kept & owned kept & \\", r"\midrule"]
     col, kl = d["column_selectivity"]["per_dataset"], d["known_label"]["per_dataset"]
@@ -322,6 +338,66 @@ def validation():
     print("table_cf_validation.tex", len(blocks), "ansdir block(s)")
 
 
+def refit():
+    """Full ownership grade under the refit seeds (runs/robustness/refit.json): survival of the seed-0 grade per dataset."""
+    d = json.loads((ROB / "refit.json").read_text()); m = d["meta"]
+    L = [r"\begin{table}[h]", r"\centering", r"\scriptsize", r"\setlength{\tabcolsep}{3pt}",
+         r"\caption{\textbf{The full grade under refitted probes.} For every block with the refit module, the six probes are refitted on "
+         r"two resamples of the training patients (fit seeds 1 and 2) and the complete grade is recomputed with the campaign rules: the "
+         r"steering reference against the block's CORE random 95th percentile and sham on the same rows, and the $6\times5$ max-$T$ "
+         r"verdict over the shared unit-bootstrap draws (" + f"{m['draws']:,}".replace(",", "{,}") + r" draws). Per dataset: cells whose seed-0 "
+         r"grade is owned, stronger competitor, unresolved, or fixed-family advantage without the reference, and how many keep that grade "
+         r"under both refits, under at least one, or under none; the last column regrades seed 0 with the same draws and counts agreement "
+         r"with the paper's grade.}",
+         r"\label{tab:cf-refit}",
+         r"\resizebox{\textwidth}{!}{\begin{tabular}{lrr" + "rrrr" + "rrr" + "rrr" + "rr" + r"r}", r"\toprule",
+         r"Dataset & blocks & cells & \multicolumn{4}{c}{owned} & \multicolumn{3}{c}{stronger competitor} & \multicolumn{3}{c}{unresolved} & \multicolumn{2}{c}{adv.\ no ref.} & seed 0 \\",
+         r"\cmidrule(lr){4-7}\cmidrule(lr){8-10}\cmidrule(lr){11-13}\cmidrule(lr){14-15}",
+         r" & & & $n$ & both & $\geq1$ & none & $n$ & both & $\geq1$ & $n$ & both & $\geq1$ & $n$ & both & agrees \\", r"\midrule"]
+    for ds in ("nih", "chexpert", "coco", "chest", "all"):
+        g = d["transitions"].get(ds)
+        if not g or g["n_blocks"] == 0:
+            continue
+        s = g["survival"]; name = {"chest": r"\textit{chest}", "all": r"\textit{all}"}.get(ds, NAMES.get(ds, ds))
+        L.append(f"{name} & {g['n_blocks']} & {g['n_cells']} & {s['owned']['n']} & {s['owned']['both']} & {s['owned']['any']} & {s['owned']['none']} & "
+                 f"{s['stronger_competitor']['n']} & {s['stronger_competitor']['both']} & {s['stronger_competitor']['any']} & "
+                 f"{s['unresolved']['n']} & {s['unresolved']['both']} & {s['unresolved']['any']} & "
+                 f"{s['advantage_no_reference']['n']} & {s['advantage_no_reference']['both']} & {g['seed0_regrade_agrees']}/{g['n_cells']} \\\\")
+    L += [r"\bottomrule", r"\end{tabular}}", r"\end{table}"]
+    (OUT / "table_cf_refit.tex").write_text("\n".join(L) + "\n")
+    print("table_cf_refit.tex", m["n_blocks_by_dataset"])
+
+
+def rescue():
+    """Per answer-direction cell: ownership by the label direction and by a_q, O_q, O^a_q, column selectivity of the label
+    direction, and the whitened cosine (validation.json + the blocks' summaries)."""
+    d = json.loads((ROB / "validation.json").read_text())
+    names = {"q25-7": "Qwen2.5-VL-7B", "lingshu-32": "Lingshu 32B", "gemma3-12": "Gemma 3 12B"}
+    order = list(names)
+    S = {(c["block"], c["d"]): c["S_d"] for c in d["column_selectivity"]["cells"]}
+    summaries = {f"{sp.parent.parent.name}/{sp.parent.name}": j for sp, j in included_summaries()}
+    yn = lambda b: "yes" if b else "no"
+    L = [r"\begin{table}[p]", r"\centering", r"\scriptsize", r"\setlength{\tabcolsep}{4pt}",
+         r"\caption{\textbf{Rescue and loss per cell.} For every block with the answer-direction module and every concept: whether the "
+         r"label direction $\hat w_q$ is owned (the paper's grade) and whether the answer direction $a_q$ is owned under the same rules "
+         r"(steering reference and fixed-family advantage over the other five $a_d$), the two ownership contrasts $O_q$ and $O^a_q$, the column "
+         r"selectivity $S_d$ of the label direction ($W_{d,d}/\sum_q|W_{q,d}|$), and the whitened cosine $\cos_\Sigma(a_q,\hat w_q)$.}",
+         r"\label{tab:cf-rescue}",
+         r"\begin{tabular}{lllccrrrr}", r"\toprule",
+         r"Checkpoint & Dataset & Concept & $\hat w_q$ owned & $a_q$ owned & $O_q$ & $O^a_q$ & $S_d$ & $\cos_\Sigma$ \\", r"\midrule"]
+    blocks = d["answer_direction"]["blocks"]; n = 0
+    for key in sorted(blocks, key=lambda k: (order.index(k.split("/")[0]) if k.split("/")[0] in order else 9, ["nih", "chexpert", "coco"].index(k.split("/")[1]))):
+        mk, ds = key.split("/"); b = blocks[key]; apq = summaries[key]["ansdir"]["per_question"]
+        for q, c in b["per_question"].items():
+            a_owned = bool(apq[q].get("steering_reference") and apq[q].get("verdict") == "fixed_family_advantage")
+            L.append(f"{names.get(mk, mk)} & {NAMES[ds]} & {q} & {yn(c['core_owned'])} & {yn(a_owned)} & {c['core_O_q']:+.2f} & {c['ansdir_O_q']:+.2f} & "
+                     f"{S.get((key, q), float('nan')):+.2f} & {c['cos_sigma_projected']:.2f} \\\\"); n += 1
+        L.append(r"\addlinespace[2pt]")
+    L += [r"\bottomrule", r"\end{tabular}", r"\end{table}"]
+    (OUT / "table_cf_rescue.tex").write_text("\n".join(L) + "\n")
+    print("table_cf_rescue.tex", n, "cells")
+
+
 if __name__ == "__main__":
     geometry()
     scale()
@@ -332,3 +408,5 @@ if __name__ == "__main__":
     tokenw()
     precision()
     validation()
+    refit()
+    rescue()

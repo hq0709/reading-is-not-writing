@@ -119,6 +119,16 @@ def fx(v, nd, signed=False) -> str:
     return f"{v:+.{nd}f}" if signed else f"{v:.{nd}f}"
 
 
+def fp(p):
+    """p-value for math mode: two decimals, or a power of ten below 0.001 (e.g. 8\\times10^{-11})."""
+    if p is None or p != p:
+        return "--"
+    if p >= 0.001:
+        return f"{p:.2f}"
+    m, e = f"{p:.0e}".split("e")
+    return f"{m}\\times10^{{{int(e)}}}"
+
+
 def robustness_macros(M: dict, rows: list[dict], wb: dict, warn: list) -> None:
     """Macros for every robustness-derived number in the prose (Sections 5.4-5.6 and Appendix C.6)."""
     G, S, P, V = (json.loads((ROB / f"{n}.json").read_text()) for n in ("geometry", "scale", "pairs", "validation"))
@@ -259,6 +269,32 @@ def robustness_macros(M: dict, rows: list[dict], wb: dict, warn: list) -> None:
     M["cfLabelGapNihBlocks"] = sum(abs(g) <= 1 for g in gaps["nih"])
     if len(gaps["coco"]) != M["cfCocoBlocks"] or len(gaps["nih"]) != M["cfNihBlocks"]:
         warn.append(f"label gap defined for {len(gaps['coco'])} COCO / {len(gaps['nih'])} NIH blocks, not every included block")
+    # ---- coverage (Table cf-coverage): modules completed per block, from the manifest
+    PLANNED = ("CORE", "CALIBRATION", "PROMPT", "DOSE", "REFIT", "LOCUS", "LOCUS_CALIBRATION"); CHEX_EXT = ("PROMPT", "DOSE", "REFIT", "LOCUS", "LOCUS_CALIBRATION")
+    done = {}
+    for r in rows:
+        done.setdefault((r["model_key"], r["dataset"]), set(m for m in r["completed_modules"].split("|") if m))
+    M["cfCoverageBlocksAllSeven"] = sum(all(m in s for m in PLANNED) for s in done.values())
+    M["cfCoverageChexFull"] = sum(ds == "chexpert" and all(m in s for m in CHEX_EXT) for (mk, ds), s in done.items())
+    # ---- refit full-grade transitions (Table cf-refit), runs/robustness/refit.json
+    Rf = json.loads((ROB / "refit.json").read_text())
+    for ds, D in DS_MACRO.items():
+        g = Rf["transitions"].get(ds)
+        if not g:
+            continue
+        s = g["survival"]
+        M[f"cfRefitBlocks{D}"] = g["n_blocks"]; M[f"cfRefitGradeOwned{D}"] = s["owned"]["n"]
+        M[f"cfRefitGradeStable{D}"] = s["owned"]["both"]; M[f"cfRefitGradeStableAny{D}"] = s["owned"]["any"]; M[f"cfRefitGradeLost{D}"] = s["owned"]["none"]
+        M[f"cfRefitGradeComp{D}"] = s["stronger_competitor"]["n"]; M[f"cfRefitGradeCompStable{D}"] = s["stronger_competitor"]["both"]
+        M[f"cfRefitGradeUnres{D}"] = s["unresolved"]["n"]; M[f"cfRefitGradeUnresStable{D}"] = s["unresolved"]["both"]
+        if ds in ("nih", "coco") and s["owned"]["n"] != M[f"cf{D}Owned"]:
+            warn.append(f"refit: {s['owned']['n']} owned cells among the REFIT blocks on {ds} vs {M[f'cf{D}Owned']} in the manifest")
+        if g["seed0_regrade_agrees"] != g["n_cells"]:
+            warn.append(f"refit: seed-0 regrade with {Rf['meta']['draws']} draws agrees with the paper's grade in {g['seed0_regrade_agrees']} of {g['n_cells']} {ds} cells")
+    # ---- alignment versus ownership (Table cf-validation row), validation.json
+    al = V["answer_direction"]["aggregate"]["alignment_vs_ownership"]["all"]
+    M["cfValAlignN"] = al["n_cells"]; M["cfValAlignSpearman"] = fx(al["spearman_cos_sigma_vs_O_q"]["rho"], 2); M["cfValAlignP"] = fp(al["spearman_cos_sigma_vs_O_q"]["p"])
+    M["cfValAlignOwnedSpearman"] = fx(al["spearman_cos_sigma_vs_owned"]["rho"], 2); M["cfValAlignOwnedP"] = fp(al["spearman_cos_sigma_vs_owned"]["p"])
     # ---- ANSDIR (Table cf-ansdir)
     ans = {k: b["s"]["ansdir"]["per_question"] for k, b in wb.items() if b["s"].get("ansdir")}
     def owned_n(pq):
@@ -271,11 +307,19 @@ def robustness_macros(M: dict, rows: list[dict], wb: dict, warn: list) -> None:
     for mk, D in (("q25-7", "Qwen"), ("lingshu-32", "Ling")):
         c = [medcos(ans[(mk, ds)]) for ds in ci.CHEST]; M[f"cfAnsCos{D}Min"] = fx(min(c), 2); M[f"cfAnsCos{D}Max"] = fx(max(c), 2)
     c = [medcos(pq) for (mk, ds), pq in ans.items() if ds == "coco"]; M["cfAnsCosCocoMin"] = fx(min(c), 2); M["cfAnsCosCocoMax"] = fx(max(c), 2)
-    beats = {k: sum(v.get("own_minus_max_logistic_competitor_ci95_percentile", [0, 0])[0] > 0 for v in pq.values()) for k, pq in ans.items()}
-    M["cfAnsBlocks"] = len(ans); M["cfAnsBeatsAllBlocks"] = sum(b == 6 for b in beats.values())
-    if M["cfAnsBeatsAllBlocks"] != M["cfAnsBlocks"]:
-        warn.append("ansdir: 'In every block, its write beats the strongest logistic competitor on all six questions' no longer holds: "
-                    + ", ".join(f"{k[0]}/{k[1]} {b}/6" for k, b in beats.items() if b != 6))
+    M["cfAnsGemOwnedNih"] = owned_n(ans[("gemma3-12", "nih")]); M["cfAnsGemOwnedChex"] = owned_n(ans[("gemma3-12", "chexpert")])
+    # aggregate over every ANSDIR block: cells, a_q owned, label direction owned (paper grade, validation.json), and
+    # cells whose a_q write beats the strongest logistic competitor (simultaneous lower bound above zero)
+    vb = V["answer_direction"]["blocks"]
+    def beats_n(pq):
+        return sum(v.get("own_minus_max_logistic_competitor_ci95_percentile", [0, 0])[0] > 0 for v in pq.values())
+    for tag, sel in (("Chest", ci.CHEST), ("Coco", ("coco",))):
+        keys = [k for k in ans if k[1] in sel]
+        M[f"cfAns{tag}N"] = 6 * len(keys); M[f"cfAns{tag}Blocks"] = len(keys)
+        M[f"cfAns{tag}OwnedA"] = sum(owned_n(ans[k]) for k in keys)
+        M[f"cfAns{tag}OwnedLabel"] = sum(sum(c["core_owned"] for c in vb[f"{k[0]}/{k[1]}"]["per_question"].values()) for k in keys)
+        M[f"cfAns{tag}Beats"] = sum(beats_n(ans[k]) for k in keys)
+    M["cfAnsBlocks"] = len(ans)
 
 
 def main() -> Path:

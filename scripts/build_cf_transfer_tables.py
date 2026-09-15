@@ -18,6 +18,7 @@ Outputs (tables/):
   table_cf_own_{nih,chexpert,coco}.tex   Appendix: compact ownership tables, checkpoint x concept, O_q per cell
   table_cf_models.tex      Appendix: checkpoint sheet (family, params, tower, tokens, image size, templates)
   table_cf_gates.tex       Appendix: the seven preflight gates and their observed ranges
+  table_cf_coverage.tex    Appendix: modules completed per block (from runs/manifest.csv), primary template, ineligible modules
   table_cf_leaderboard.tex thin wrapper that inputs table_cf_main.tex (kept for the existing \\input)
 """
 from __future__ import annotations
@@ -453,6 +454,59 @@ def table_gates(blocks):
     (OUT / "table_cf_gates.tex").write_text("\n".join(L) + "\n")
 
 
+# --------------------------------------------------------------------------------------------- coverage (manifest)
+MODULE_ABBR = [("CORE", "C"), ("CALIBRATION", "Cal"), ("PROMPT", "P"), ("DOSE", "D"), ("REFIT", "R"), ("LOCUS", "L"),
+               ("LOCUS_CALIBRATION", "Lc"), ("ALTDIR", "A"), ("ALTDIRD", "Ad"), ("ANSDIR", "An"), ("EXTCOMP", "E"), ("TOKENW", "T"), ("PRECISION", "Pr")]
+PLANNED = ("CORE", "CALIBRATION", "PROMPT", "DOSE", "REFIT", "LOCUS", "LOCUS_CALIBRATION")
+CHEX_EXTENSION = ("PROMPT", "DOSE", "REFIT", "LOCUS", "LOCUS_CALIBRATION")
+
+
+def coverage_blocks(rows):
+    """(model_key, dataset) -> dict(completed, ineligible, primary) from the manifest's block-level columns."""
+    out = {}
+    for r in rows:
+        k = (r["model_key"], r["dataset"])
+        if k not in out:
+            out[k] = {"completed": [m for m in r["completed_modules"].split("|") if m], "ineligible": [m for m in r["ineligible_modules"].split("|") if m],
+                      "primary": r["primary_template"], "status": r["run_status"]}
+    return out
+
+
+def table_coverage():
+    """Modules completed per block, from runs/manifest.csv (the same file the headline numbers come from)."""
+    rows = ci.read_manifest(); blocks = coverage_blocks(rows); abbr = dict(MODULE_ABBR)
+    def cell(b):
+        if b is None:
+            return "--"
+        done = [abbr.get(m, m) for m, _ in MODULE_ABBR if m in b["completed"]]
+        inel = [abbr.get(m, m) for m, _ in MODULE_ABBR if m in b["ineligible"]]
+        txt = " ".join(done)
+        if inel:
+            txt = (txt + "; " if txt else "") + "inel.\\ " + " ".join(inel)
+        if b["primary"] and b["primary"] != "IY":
+            txt += f" [{b['primary']}]"
+        return txt
+    n_seven = sum(all(m in b["completed"] for m in PLANNED) for b in blocks.values())
+    n_chex = sum(ds == "chexpert" and all(m in b["completed"] for m in CHEX_EXTENSION) for (mk, ds), b in blocks.items())
+    legend = ", ".join(f"{a} = {m.replace('_', chr(92) + '_')}" for m, a in MODULE_ABBR if any(m in b["completed"] or m in b["ineligible"] for b in blocks.values()))
+    L = [r"\begin{table}[h]", r"\centering", r"\scriptsize", r"\setlength{\tabcolsep}{4pt}",
+         r"\caption{\textbf{Coverage.} Modules completed per block at packaging (from the campaign manifest), with the modules whose "
+         r"template is ineligible (inel.) and the primary template when it is not the \emph{is}/yes-no template; ``--'' = block not run; "
+         r"modules still in progress are not listed. \cfCoverageBlocksAllSeven{} blocks carry all seven modules of the planned campaign, "
+         r"and the five modules added to CheXpert after the first wave are complete on \cfCoverageChexFull{} of the CheXpert blocks.}",
+         r"\label{tab:cf-coverage}",
+         r"\begin{tabular}{llll}", r"\toprule", r"Checkpoint & NIH ChestX-ray14 & CheXpert Plus & COCO \\", r"\midrule"]
+    for m in ORDER:
+        if not any((m, d) in blocks for d, _ in DATASETS):
+            continue
+        L.append(f"{NAMES[m]} & " + " & ".join(cell(blocks.get((m, d))) for d, _ in DATASETS) + r" \\")
+    L += [r"\midrule", r"\multicolumn{4}{p{0.95\textwidth}}{\textit{Legend:} " + legend + r".} \\",
+          r"\bottomrule", r"\end{tabular}", r"\end{table}"]
+    (OUT / "table_cf_coverage.tex").write_text("\n".join(L) + "\n")
+    print(f"table_cf_coverage.tex: {len(blocks)} blocks, {n_seven} with all seven planned modules, {n_chex} CheXpert with the extension modules")
+    return n_seven, n_chex
+
+
 if __name__ == "__main__":
     (OUT / "cf_colors.tex").write_text(COLORS)
     blocks = load_blocks()
@@ -468,4 +522,5 @@ if __name__ == "__main__":
         (OUT / f"table_cf_{ds}.tex").unlink(missing_ok=True)
     table_models(blocks)
     table_gates(blocks)
+    table_coverage()
     print(f"{len(blocks)} blocks -> tables written to {OUT}")

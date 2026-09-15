@@ -1,0 +1,36 @@
+\begin{table}[h]
+\centering
+\scriptsize
+\setlength{\tabcolsep}{4pt}
+\caption{\textbf{Coverage.} Modules completed per block at packaging (from the campaign manifest), with the modules whose template is ineligible (inel.) and the primary template when it is not the \emph{is}/yes-no template; ``--'' = block not run; modules still in progress are not listed. \cfCoverageBlocksAllSeven{} blocks carry all seven modules of the planned campaign, and the five modules added to CheXpert after the first wave are complete on \cfCoverageChexFull{} of the CheXpert blocks.}
+\label{tab:cf-coverage}
+\begin{tabular}{llll}
+\toprule
+Checkpoint & NIH ChestX-ray14 & CheXpert Plus & COCO \\
+\midrule
+Qwen2.5-VL-3B & C Cal P D R L Lc A & C Cal A & C Cal P D R L Lc A \\
+Qwen2.5-VL-7B & C Cal P D R L Lc A An E T & C Cal Lc A An E T & C Cal P D R L Lc A An T \\
+Qwen2.5-VL-32B & C Cal P D R L Lc A & C Cal P D R L Lc A & C Cal P D R L Lc A \\
+Qwen2.5-VL-72B & C Cal P D R L Lc & -- & -- \\
+Qwen3-VL-4B & C Cal P D R L Lc A & C Cal A & C Cal P D R L Lc A \\
+Qwen3-VL-8B & C Cal P D R L Lc A E T & C Cal A & C Cal P D R L Lc A T \\
+Qwen3-VL-32B & C Cal P D R L Lc A & C Cal D R Lc A & C Cal P D R L Lc A \\
+InternVL3.5-8B & C Cal P D R L Lc A E & C Cal A & C Cal P D R L Lc A \\
+InternVL3.5-14B & C Cal P D R L Lc A & C Cal A & C Cal P D R L Lc A \\
+InternVL3.5-38B & C Cal P D R L Lc & C Cal & C Cal P D R L Lc \\
+Gemma 3 4B & C Cal P D R L Lc A & C Cal A & C Cal P D R L Lc A \\
+Gemma 3 12B & C Cal P D R L Lc A An E & C Cal A An E & C Cal P D R L Lc A An \\
+Gemma 3 27B & C Cal P D R L Lc & C Cal & C Cal P D R L Lc \\
+MedGemma 4B & C Cal P D R L Lc A & C Cal A E & C Cal P D R L Lc A \\
+MedGemma 27B & C Cal P D R L Lc & C Cal & C Cal P D R L Lc \\
+Lingshu 7B & C Cal P D R L Lc A & C Cal A & C Cal P D R L Lc A \\
+Lingshu 32B & C Cal P D R L Lc A An & C Cal A An & C Cal P D R L Lc A An \\
+LLaVA-1.5-7B & C Cal P D R L Lc A & C Cal A & C Cal P D R L Lc A \\
+LLaVA-1.5-13B & C Cal P D R L Lc A & C Cal A & C Cal P D R L Lc A \\
+LLaVA-Med 1.5 7B & C Cal P D R L Lc A & C Cal A & C Cal P D R L Lc A \\
+Llama 3.2 Vision 11B & Cal P D R L Lc [IB] & inel.\ C Cal [IB] & Cal P; inel.\ C D R L Lc [IB] \\
+\midrule
+\multicolumn{4}{p{0.95\textwidth}}{\textit{Legend:} C = CORE, Cal = CALIBRATION, P = PROMPT, D = DOSE, R = REFIT, L = LOCUS, Lc = LOCUS\_CALIBRATION, A = ALTDIR, An = ANSDIR, E = EXTCOMP, T = TOKENW.} \\
+\bottomrule
+\end{tabular}
+\end{table}
