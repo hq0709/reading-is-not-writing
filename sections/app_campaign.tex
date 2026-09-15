@@ -3,11 +3,21 @@
 
 This appendix lists the checkpoints and their consumed loci, the acceptance decisions, the coverage of the campaign, and the per-concept results of every completed block.
 
+\subsection{Labels, registration, and artifact}
+\label{app:cf-labels}
+
+\paragraph{Labels.} Concept labels are the report-derived labels shipped with each dataset (NIH ChestX-ray14 finding labels; the CheXpert labeler output distributed with CheXpert Plus; COCO instance annotations). A row is positive when the label is 1, negative when it is 0, and \emph{unknown} when the labeler returns uncertain or blank; unknown rows are excluded from probe fitting, selectivity, and answer AUROC, and are written and scored like every other row. Cohorts are fixed manifests drawn with recorded seeds, patient-disjoint between training and test and disjoint from every seed-study cohort; per-concept counts are in Table~\ref{tab:cf-prevalence}.
+
+\paragraph{Registration.} The protocol was frozen before any block of the grid was scored: the loci, the projection and probe settings, the dose, the reference family, the six templates, the module set, the seven gates, and the three decision rules are those of the registered protocol file and its code commit, and the seed study's crossover and confirmation analyses were registered before they were run (Appendix~\ref{app:seed}). Everything reported per block is produced by one analysis pass from the packaged outcomes; the leaderboard, the write-flow share, and the per-image examples are descriptive summaries of those outputs added after the grid was complete.
+
+\paragraph{Artifact.} The release contains the evaluation code and adapters, the registered protocol file, the cohort manifests with their seeds, the fitted directions, the per-image outcomes of every module (write, dose, refit, locus, and template rows), every block's scorecard and coverage file, and the rendered prompts; a new checkpoint is added with one adapter that names its consumed block and passes the gates.
+
 \subsection{Grid and consumed loci}
 \label{app:cf-grid}
 
 \input{tables/table_cf_models}
 \input{tables/table_cf_gates}
+\input{tables/table_cf_families}
 \input{tables/table_cf_prevalence}
 
 For Llama~3.2 Vision the projector also reads five intermediate local-layer outputs that bypass the final global block; for LLaVA the final CLIP block is computed but not consumed, so the consumed block is the penultimate one. Gate (C) verifies for every checkpoint that the write reaches the consumer and the answer logits and changes nothing outside the consumed tokens.
@@ -47,6 +57,13 @@ Table~\ref{tab:cf-geometry} gives the direction- and label-geometry statistics a
 
 \input{tables/table_cf_geometry}
 \input{tables/table_cf_scale}
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=\textwidth]{figures/fig6_ladders.pdf}
+    \caption{\textbf{Size ladders.} Ownership $O_q$ per concept across sizes for Qwen2.5-VL on NIH, Qwen3-VL on NIH, and Lingshu on CheXpert. The concept with the largest ownership at the largest size is drawn bold (Atelectasis, Nodule, Edema); ringed markers are owned cells.}
+    \label{fig:ladders}
+\end{figure}
 
 \subsection{Write structure across the grid}
 \label{app:cf-figures}

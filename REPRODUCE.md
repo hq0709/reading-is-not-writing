@@ -55,7 +55,7 @@ The source summary retains all full-precision estimates and all 20
 simultaneous clinical comparisons. Both registered specificity flags are
 false; all seven calibration cells are eligible. The accepted scientific
 review receipt is
-`/home/qingchan/.codex/state/claude-review-concept-flow/review-20260905T051404447778Z.json`.
+`<repo-root>/.codex/state/claude-review-concept-flow/review-20260905T051404447778Z.json`.
 
 ## Paired behavioral opportunity
 
@@ -71,7 +71,7 @@ The accepted joint report and review are in code commit `f774842`, under
 `docs/reviews/llava-paired-opportunity-results.md`; the Qwen report is
 `docs/QWEN_PAIRED_OPPORTUNITY_RESULTS.md`, with full-precision values in
 `docs/reviews/qwen7b-paired-opportunity-results.md`. The LLaVA result receipt is
-`/home/qingchan/.codex/state/claude-review-concept-flow/review-20260905T064601848008Z.json`.
+`<repo-root>/.codex/state/claude-review-concept-flow/review-20260905T064601848008Z.json`.
 The paper's `sections/D_paired_opportunity.tex` contains the complete
 model-specific and direct patient-paired summaries.
 
@@ -85,9 +85,9 @@ qualification. Accepted reports are in code commit `bafd1d0`, under
 `docs/LLAVA_VALIDATION_OPPORTUNITY_RESULTS.md` and
 `docs/reviews/llava-validation-opportunity-results.md`.
 The internal receipt is
-`/home/qingchan/data/concept-flow/state/llava-validation-opportunity-internal-20260905T093743Z/receipt.json`.
+`<repo-root>/data/concept-flow/state/llava-validation-opportunity-internal-20260905T093743Z/receipt.json`.
 Pinned result and synthesis receipts are
-`/home/qingchan/.codex/state/claude-review-concept-flow/review-20260905T094007326743Z.json`
+`<repo-root>/.codex/state/claude-review-concept-flow/review-20260905T094007326743Z.json`
 and `review-20260905T094932091464Z.json` in the same directory.
 `sections/E_validation_readout.tex` records the prospective allocation,
 screening criteria, complete reader and capability tables, and conditional
@@ -99,8 +99,8 @@ Text run `20260905T221642Z-f2b4bafc8a80-llava-text` fixes source
 `f2b4bafc8a802e3f046e82318fd8b5b9aa762c52` and contains 80 finite-suite
 outcomes. The accepted report is `docs/LLAVA_TEXT_SEMANTIC_CALIBRATION_RESULTS.md`
 in the code repository. Its internal and pinned result receipts are
-`/home/qingchan/data/concept-flow/state/llava-text-calibration-internal-20260905T2218Z/receipt.json`
-and `/home/qingchan/.codex/state/claude-review-concept-flow/review-20260905T221855379998Z.json`.
+`<repo-root>/data/concept-flow/state/llava-text-calibration-internal-20260905T2218Z/receipt.json`
+and `<repo-root>/.codex/state/claude-review-concept-flow/review-20260905T221855379998Z.json`.
 
 Image run `20260905T232313Z-2a95dfbed888-llava-yesno` fixes source
 `2a95dfbed888fce12b7481812065e5d68b712e8a`. It contains 2,800 image outcomes
@@ -109,21 +109,21 @@ The accepted report is `docs/LLAVA_YESNO_IMAGE_DIAGNOSTIC_RESULTS.md`;
 both reports are available at code commit
 `3cd386c8fd582eb50f1a59e73ae3b48a9eaee90d`.
 The authoritative full-precision summary is
-`/home/qingchan/data/concept-flow/state/llava-yesno-image-recovery-20260905T234235Z/llava-yesno-image-diagnostic-summary.json`.
+`<repo-root>/data/concept-flow/state/llava-yesno-image-recovery-20260905T234235Z/llava-yesno-image-diagnostic-summary.json`.
 Validator-only source `06277a1fb8a487a54b9220373957b1f1d988e2f5` reuses the
 unchanged native artifact; terminal validation source
 `1da1ca3c6da95218a99304f0edb65e3ab407e0de` verifies the registered allocation,
 scores, bootstrap and frozen-reader control. These steps create no model
 outcomes. The internal and pinned result receipts are
-`/home/qingchan/data/concept-flow/state/llava-yesno-image-internal-20260905T235215Z/receipt.json`
-and `/home/qingchan/.codex/state/claude-review-concept-flow/review-20260905T235348704249Z.json`.
+`<repo-root>/data/concept-flow/state/llava-yesno-image-internal-20260905T235215Z/receipt.json`
+and `<repo-root>/.codex/state/claude-review-concept-flow/review-20260905T235348704249Z.json`.
 
 `sections/F_image_readout.tex` gives the constructed prompts, both image
 prompts, all primary contrasts, frozen-reader comparison and twenty control
 AUROCs, and secondary aggregation, Brier, margin and token-mass diagnostics.
 The pilot clinical AUROC, interval and control mean in the cross-cohort
 table come from `questions[0]` in
-`/home/qingchan/data/concept-flow/runs/20260905T093108Z-42a43207c848-llava-validation/artifacts/qualification.json`.
+`<repo-root>/data/concept-flow/runs/20260905T093108Z-42a43207c848-llava-validation/artifacts/qualification.json`.
 The two sampling frames differ; no between-cohort difference interval was
 registered. Text calibration selects yes/no on the finite suite; independent
 image opportunity is unestablished, wording is unresolved, and reader

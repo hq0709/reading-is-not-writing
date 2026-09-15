@@ -13,7 +13,7 @@ For LLaVA-1.5-7B \citep{liu2024improved} and Qwen2.5-VL-7B \citep{bai2025qwen25v
 For image $i$, let $\hvec_{it}\in\R^D$ denote the $D$-dimensional representation of visual token $t$ at the consumed final block; mean pooling over tokens yields $\hvec_i$. A fixed seed-0 Gaussian matrix $R\in\R^{D\times512}$ projects every model to a common readout dimension; featurewise scale $\boldsymbol{s}$ is fitted on training rows only. We then fit logistic regression with $C=1$, maximum 2,000 iterations, and seed 0. Each of 20 control seeds maps the recurring input type (AP view indicator, sex indicator, and age decade, giving 39 strata) to a random label. Let $y$ be the real test labels and $r$ the fitted probe's continuous scores. For control seed $k\in\{0,\ldots,19\}$, $y_k^{\mathrm{ctrl}}$ denotes the random labels and $r_k^{\mathrm{ctrl}}$ the corresponding control probe scores. Selectivity compares their AUROCs:
 \begin{equation}
 S = \operatorname{AUROC}(y,r)-\frac{1}{20}\sum_{k=0}^{19}\operatorname{AUROC}(y_k^{\mathrm{ctrl}},r_k^{\mathrm{ctrl}}).
-\label{eq:selectivity}
+\label{eq:seed-selectivity}
 \end{equation}
 We report the real AUROC, control distribution, and $S$ with 2,000 patient-cluster bootstrap resamples. A positive interval for $S$ means that the target is more readable than same-capacity nuisance-type label maps. It does not yet imply downstream use. Paired contrasts reuse identical ordered test rows and bootstrap draws.
 
@@ -21,12 +21,12 @@ We report the real AUROC, control distribution, and $S$ with 2,000 patient-clust
 Let $\boldsymbol\beta_c$ be the projected-space logistic coefficient for the positive class of concept $c$. We lift it to the consumed $D$-dimensional representation and normalize it exactly as
 \begin{equation}
 \hat\wvec_c = \frac{R\left(\boldsymbol\beta_c\oslash\max(\boldsymbol{s},10^{-8})\right)}{\left\lVert R\left(\boldsymbol\beta_c\oslash\max(\boldsymbol{s},10^{-8})\right)\right\rVert_2}.
-\label{eq:lift}
+\label{eq:seed-lift}
 \end{equation}
 The positive-class coefficient fixes the direction's clinical pole. At every visual token $t$, the registered intervention is
 \begin{equation}
 \hvec'_{it}=\hvec_{it}+\alpha\lVert\hvec_{it}\rVert_2\hat\wvec_c.
-\label{eq:intervention}
+\label{eq:seed-intervention}
 \end{equation}
 Here the sign of $\alpha$ selects the positive or negative clinical pole, while $|\alpha|$ is the perturbation norm as a fraction of each token's activation norm. At the first answer position, $P(\mathrm{yes})=\sigma(\ell_{\mathrm{yes}}-\ell_{\mathrm{no}})$, where each log probability is the maximum over case and leading-space variants that tokenize to one token; the endpoint is its paired mean change from the common unsteered baseline. Original cells use concept doses $\{-1,-0.5,-0.25,-0.1,0,0.1,0.25,0.5,1\}$ on 200 held-out test images. Controls are evaluated at the six nonzero doses excluding $\pm0.1$: 20 isotropic random unit directions, one sham formed by a fixed coordinate permutation of $\hat\wvec_c$ and renormalization, and fixed alternative clinical probe normals. Every control receives the same signed dose on the same rows. Dose monotonicity over $[-0.5,0.5]$ is descriptive.
 
@@ -39,7 +39,7 @@ The initial experiment prespecified the random and sham comparisons; its clinica
 Semantic ownership is a contrast on a direction--question response surface, not a property of a direction in isolation. Let $W_{q,d}$ denote the paired mean change in question $q$'s yes probability after intervening with direction $d$ at the locked dose. A large $W_{q,d}$ establishes that $d$ can write $q$'s answer; it does not establish that $d$ owns that answer. Within a fixed clinical family, the ownership contrast is
 \begin{equation}
 O_q=W_{q,q}-\max_{d\neq q}W_{q,d}.
-\label{eq:margin}
+\label{eq:seed-margin}
 \end{equation}
 The registered supplement estimates the Effusion row of this surface, so the reported ownership contrast $O_{\mathrm{Effusion}}$ is Effusion minus its maximum alternative. The maximum is recomputed inside each of 5,000 patient-bootstrap draws. Thus $O_{\mathrm{Effusion}}>0$ means Effusion beats every member of the fixed clinical family, while $O_{\mathrm{Effusion}}<0$ means at least one alternative is stronger. Adding competitors can only maintain or decrease $O_q$: a positive advantage is conditional on the candidate family, whereas a negative counterexample does not require an exhaustive family. This operational ownership criterion measures relative advantage, not a necessary condition for a concept to participate in computation. Direction specificity requires a positive Effusion effect above random p95 and absolute sham, together with a one-sided 95\% lower bound for $O_{\mathrm{Effusion}}$ above zero.
 
@@ -56,7 +56,7 @@ L_j=\widehat C_j-c_{.95}s_j.
 Joint resampling preserves paired conditions; no standard error is re-estimated within a draw. Appendix~\ref{app:simultaneous-bounds} specifies the families, degenerate components, and the separate percentile intervals for target-minus-maximum margins.
 
 \paragraph{Answer-encoding crossover.}
-We next register a paired sensitivity study on 200 patients from the causal-ownership matrix cohort; the other 200 form a patient-disjoint capability-calibration set. This is not the earlier Effusion specificity cohort. Six questions cross the original yes/no prompt with A-present and B-present prompts, which exchange the finding-to-letter mapping. Each uses both $\alpha=\pm0.25$, six clinical directions, 20 random directions, and a sham. A question enters the primary endpoint only if both clean coded mappings have AUROC one-sided 95\% lower bounds above 0.5 and at least ten patients per class on calibration. At $\alpha=+0.25$, we compare squared mean effects in components that retain or reverse raw A-minus-B sign under the mapping exchange, using an unbiased estimator and 2,000 joint patient-bootstrap draws. Appendix~\ref{app:seed-results} defines the components and full control rule. Descriptive clinical competition uses the contrast in Equation~\ref{eq:margin}, replacing probability change with finding-present logit-margin change within each prompt.
+We next register a paired sensitivity study on 200 patients from the causal-ownership matrix cohort; the other 200 form a patient-disjoint capability-calibration set. This is not the earlier Effusion specificity cohort. Six questions cross the original yes/no prompt with A-present and B-present prompts, which exchange the finding-to-letter mapping. Each uses both $\alpha=\pm0.25$, six clinical directions, 20 random directions, and a sham. A question enters the primary endpoint only if both clean coded mappings have AUROC one-sided 95\% lower bounds above 0.5 and at least ten patients per class on calibration. At $\alpha=+0.25$, we compare squared mean effects in components that retain or reverse raw A-minus-B sign under the mapping exchange, using an unbiased estimator and 2,000 joint patient-bootstrap draws. Appendix~\ref{app:seed-results} defines the components and full control rule. Descriptive clinical competition uses the contrast in Equation~\ref{eq:seed-margin}, replacing probability change with finding-present logit-margin change within each prompt.
 
 \paragraph{Independent Mass confirmation.}
 We prospectively test Mass on 200 patients absent from all preceding Qwen intervention cohorts, retaining the crossover's 200 calibration patients. Two question wordings (\textit{show}, \textit{is}) cross explicit yes/no, A-present, and B-present instructions; the original yes/no prompt is a seventh anchor. At $\alpha=+0.25$, each cell receives six clinical directions, 119 random directions, and a sham. The four coded cells share 20 clinical comparisons with simultaneous 95\% lower bounds. Confirmation requires positive bounds and Mass effects above every random effect and absolute sham, either across all four coded cells or both original-wording cells. Appendix~\ref{app:seed-results} specifies calibration and paired descriptive contrasts.
