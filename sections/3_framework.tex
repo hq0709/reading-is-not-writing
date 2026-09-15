@@ -1,7 +1,7 @@
 \section{Reading, Answering, and Writing at a Consumed Locus}
 \label{sec:framework}
 
-The evaluation asks three questions about a concept $c$ in a checkpoint $M$ on a dataset with binary labels: can $c$ be read from the visual representation the language model consumes, does $M$ answer the question about $c$, and does writing $c$'s own direction move $c$'s answer more than any alternative? Each question has a fixed estimator and a fixed decision rule; nothing is chosen after seeing the outcome.
+We ask three questions about a concept $c$ in a checkpoint $M$ on a dataset with binary labels: whether $c$ can be read from the visual representation the language model consumes, whether $M$ answers the question about $c$, and whether writing $c$'s own direction moves $c$'s answer more than any alternative. Each question has a fixed estimator and decision rule. Nothing is chosen after observing the outcome.
 
 \subsection{Consumed locus and matched read--write positions}
 \label{sec:locus}
@@ -52,4 +52,4 @@ Every block additionally reports the signed dose range of $O_q$ over $\alpha\in\
 \subsection{Acceptance gates}
 \label{sec:gates}
 
-Seven checks run on 16 held-out preflight rows at both loci before a block is scored (Table~\ref{tab:cf-gates}): bitwise determinism; identity at $\alpha=0$; reach (the write changes the consumer's input and the answer logits and nothing outside the consumed tokens); batched-versus-single agreement of the answer logits, declared as a deviation when it exceeds $0.25$ and neutralised by scoring every condition of a question in one fixed batch composition; image-free semantic mapping of every template (a template that fails is INELIGIBLE and closed as such); throughput; and fp32 recomputation of the answer logits. Every declared deviation is recorded in the block's scorecard.
+Seven checks run on 16 held-out preflight rows at both loci before block scoring (Table~\ref{tab:cf-gates}): bitwise determinism; identity at $\alpha=0$; reach; batched-versus-single agreement of the answer logits; image-free semantic mapping of every template; throughput; and fp32 recomputation of the answer logits. Reach means the write changes the consumer's input and the answer logits and nothing outside the consumed tokens. We declare batched-versus-single deviations above $0.25$ and neutralise them by scoring every condition of a question in one fixed batch composition. Templates that fail semantic mapping are INELIGIBLE and closed as such. The block's scorecard records every declared deviation.
