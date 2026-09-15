@@ -18,29 +18,8 @@ uses linear interpolation. All 5,000 draws are retained. The final
 subtraction $L_j=\widehat C_j-c_{.95}s_j$ still uses the actual $s_j$,
 including for thresholded components.
 
-The ownership matrix resamples 400 patients with replacement using seed
-20260904. Each draw applies the same patient indices to every question
-and intervention, preserving all paired baseline differences. Its clinical
-family comprises the 30 fixed contrasts $W_{q,q}-W_{q,d}$ for the six
-questions and their five alternatives. The simultaneous ownership lower
-bound for each question is the minimum of its five contrast bounds.
-Simultaneous upper bounds use the same critical value with the sign of
-every contrast reversed: a question with any upper bound below zero has
-a stronger competitor, and a question with neither a positive minimum
-lower bound nor a negative upper bound is unresolved.
-The shared-alias calculation uses a separate 12-statistic family:
-for each of six directions, its mean off-diagonal effect and its mean
-excess over the five corresponding matched-direction effects.
-The Mass confirmation applies the same construction to 200 independently
-selected patients, with seed 20260910 and a separate family of 20
-Mass-minus-alternative contrasts across four coded prompt conditions.
+For the ownership matrix, we resample 400 patients with replacement using seed 20260904. Each draw uses the same patient indices for every question and intervention, preserving all paired baseline differences. The clinical family comprises the 30 fixed contrasts $W_{q,q}-W_{q,d}$ for the six questions and their five alternatives. Each question's simultaneous ownership lower bound is the minimum of its five contrast bounds. Simultaneous upper bounds use the same critical value with the sign of every contrast reversed. A question has a stronger competitor if any upper bound is below zero. A question is unresolved if it has neither a positive minimum lower bound nor a negative upper bound. The shared-alias calculation uses a separate 12-statistic family: for each of six directions, its mean off-diagonal effect and its mean excess over the five corresponding matched-direction effects. The Mass confirmation applies the same construction to 200 independently selected patients, with seed 20260910 and a separate family of 20 Mass-minus-alternative contrasts across four coded prompt conditions.
 
-Direct target-minus-maximum intervals summarize a different bootstrap
-quantity. They recompute the largest competing mean in every draw and
-then subtract it from the target mean. The displayed two-sided percentile
-intervals use the 2.5th and 97.5th percentiles of those margins. The
-earlier Effusion specificity supplement uses their 5th percentile as its
-one-sided lower bound. These intervals are separate from the simultaneous
-bounds on the fixed linear contrasts in Equation~\ref{eq:max-t}.
+Direct target-minus-maximum intervals summarise a different bootstrap quantity. For each draw, we recompute the largest competing mean and subtract it from the target mean. The displayed two-sided percentile intervals use the 2.5th and 97.5th percentiles of these margins. The earlier Effusion specificity supplement uses their 5th percentile as its one-sided lower bound. These intervals are distinct from the simultaneous bounds on the fixed linear contrasts in Equation~\ref{eq:max-t}.
 
-The campaign applies the same construction to every block with 600 test rows and 2{,}000 shared bootstrap draws of rows (seed 2026090601), the 30 contrasts $W_{q,q}-W_{q,d}$ receiving simultaneous 95\% bounds from the centred studentised max-$T$ bootstrap and $O_q$ a direct percentile interval with the maximum recomputed in every draw; the logit-scale check of Table~\ref{tab:cf-scale} applies the same rules to margin-scale deltas.
+The campaign applies the same construction to every block, using 600 test rows and 2{,}000 shared bootstrap draws of rows (seed 2026090601). The 30 contrasts $W_{q,q}-W_{q,d}$ receive simultaneous 95\% bounds from the centred studentised max-$T$ bootstrap. $O_q$ receives a direct percentile interval with the maximum recomputed in every draw. The logit-scale check in Table~\ref{tab:cf-scale} applies the same rules to margin-scale deltas.
