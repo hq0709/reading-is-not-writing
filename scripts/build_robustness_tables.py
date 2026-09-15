@@ -200,6 +200,39 @@ def extcomp():
     print("table_cf_extcomp.tex")
 
 
+def tokenw():
+    """Token-weighted writes: per block and variant, owned cells and median own write, beside the uniform write."""
+    import statistics
+    L = [r"\begin{table}[h]", r"\centering", r"\scriptsize", r"\setlength{\tabcolsep}{4pt}",
+         r"\caption{\textbf{Token-weighted writes.} The six logistic directions written with a per-token weight instead of "
+         r"uniformly: \emph{softmax} weights each consumed token by the softmax of its probe score (mean weight one, same total "
+         r"dose), \emph{top quarter} writes only the 25\% of tokens with the highest probe score at four times the weight. "
+         r"Cells owned and median own write $W_{q,q}$ per variant, beside the uniform write of the main protocol.}",
+         r"\label{tab:cf-tokenw}",
+         r"\begin{tabular}{llrrrrrr}", r"\toprule",
+         r"Checkpoint & Dataset & \multicolumn{2}{c}{uniform} & \multicolumn{2}{c}{softmax} & \multicolumn{2}{c}{top quarter} \\",
+         r" & & owned & med.\ $W_{q,q}$ & owned & med.\ $W_{q,q}$ & owned & med.\ $W_{q,q}$ \\", r"\midrule"]
+    names = {"q25-7": "Qwen2.5-VL-7B", "lingshu-32": "Lingshu 32B", "gemma3-12": "Gemma 3 12B", "q3-8": "Qwen3-VL-8B"}
+    for sp in sorted(RUNS.glob("*/*/summary.json")):
+        j = json.loads(sp.read_text()); t = j.get("tokenw")
+        if not t:
+            continue
+        mk, ds = sp.parent.parent.name, sp.parent.name
+        core = j["core"]["per_question"]
+        cells = [f"{names.get(mk, mk)} & {NAMES[ds]}",
+                 f"{sum(bool(v.get('steering_reference') and v.get('verdict') == 'fixed_family_advantage') for v in core.values())}/6 & {statistics.median(v['W_qq'] for v in core.values()):.2f}"]
+        for var in ("tokenw", "topq"):
+            pq = t.get(var, {}).get("per_question", {})
+            if not pq:
+                cells.append("-- & --"); continue
+            owned = sum(bool(v.get("steering_reference") and v.get("verdict") == "fixed_family_advantage") for v in pq.values())
+            cells.append(f"{owned}/6 & {statistics.median(v['W_qq'] for v in pq.values()):.2f}")
+        L.append(" & ".join(cells) + r" \\")
+    L += [r"\bottomrule", r"\end{tabular}", r"\end{table}"]
+    (OUT / "table_cf_tokenw.tex").write_text("\n".join(L) + "\n")
+    print("table_cf_tokenw.tex")
+
+
 if __name__ == "__main__":
     geometry()
     scale()
@@ -207,3 +240,4 @@ if __name__ == "__main__":
     altdir()
     ansdir()
     extcomp()
+    tokenw()
