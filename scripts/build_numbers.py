@@ -338,6 +338,9 @@ def main() -> Path:
     M["cfNihBlocks"] = C["nih"]["write_blocks"]; M["cfChexBlocks"] = C["chexpert"]["write_blocks"]; M["cfCocoBlocks"] = C["coco"]["write_blocks"]
     mks = {k[0] for k in wb}
     M["cfCheckpointsComplete"] = sum(all((m, d) in wb for d in ci.DATASETS) for m in mks)
+    M["cfCheckpointsCompleteWord"] = ["Zero", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten", "Eleven", "Twelve",
+                                      "Thirteen", "Fourteen", "Fifteen", "Sixteen", "Seventeen", "Eighteen", "Nineteen", "Twenty",
+                                      "Twenty-one", "Twenty-two"][M["cfCheckpointsComplete"]]
     # chest
     M["cfChestReadable"] = ch["readable"]; M["cfChestReadableN"] = ch["probe_cells"]; M["cfChestReadablePct"] = pct(ch["readable"], ch["probe_cells"])
     M["cfChestAnswerable"] = ch["answerable"]; M["cfChestAnswerableN"] = ch["write_cells"]; M["cfChestAnswerablePct"] = pct(ch["answerable"], ch["write_cells"])

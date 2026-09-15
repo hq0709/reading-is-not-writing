@@ -2,7 +2,7 @@
 \centering
 \scriptsize
 \setlength{\tabcolsep}{4pt}
-\caption{\textbf{Numerics.} The CORE grid (six clinical directions, 119 random directions, and the sham at $\alpha=+0.25$) on the first 200 test rows rescored with fp32 weights and forward pass, and in bf16 at batch size one, against the CORE values (bf16, batched) on the same rows: the largest change over the 36 clinical cells $\max|\Delta W_{q,d}|$, the largest change in ownership $\max|\Delta O_q|$, and the concepts whose two point verdicts (own write above the strongest competitor; own write above the random 95th percentile) agree with CORE's. One block has completed the module so far (Qwen2.5-VL-7B on COCO).}
+\caption{\textbf{Numerics.} The CORE grid (six clinical directions, 119 random directions, and the sham at $\alpha=+0.25$) on the first 200 test rows rescored with fp32 weights and forward pass, and in bf16 at batch size one, against the CORE values (bf16, batched) on the same rows: the largest change over the 36 clinical cells $\max|\Delta W_{q,d}|$, the largest change in ownership $\max|\Delta O_q|$, and the concepts whose two point verdicts (own write above the strongest competitor; own write above the random 95th percentile) agree with CORE's. 2 blocks have completed the module.}
 \label{tab:cf-precision}
 \resizebox{\textwidth}{!}{\begin{tabular}{llrrrrrrrrr}
 \toprule
@@ -11,6 +11,7 @@ Checkpoint & Dataset & rows & \multicolumn{4}{c}{fp32 weights and forward} & \mu
  & & & $\max|\Delta W|$ & $\max|\Delta O|$ & agree comp. & agree p95 & $\max|\Delta W|$ & $\max|\Delta O|$ & agree comp. & agree p95 \\
 \midrule
 Qwen2.5-VL-7B & COCO & 200 & 0.0023 & 0.0025 & 6/6 & 6/6 & 0.0017 & 0.0013 & 6/6 & 6/6 \\
+Qwen2.5-VL-7B & NIH ChestX-ray14 & 200 & 0.0060 & 0.0035 & 6/6 & 6/6 & 0.0060 & 0.0042 & 6/6 & 6/6 \\
 \bottomrule
 \end{tabular}}
 \end{table}
