@@ -1,6 +1,8 @@
-"""Robustness tables for the paper from runs/robustness/*.json (geometry, scale, pairs) and, for the addendum modules
-(ALTDIR, ANSDIR, EXTCOMP, TOKENW), from the summaries of the blocks under the paper's one inclusion rule
-(cf_inclusion.block_included: CORE and CALIBRATION in run.json completed_modules)."""
+"""Robustness tables for the paper from runs/robustness/*.json (geometry, scale, pairs, validation, refit, round2) and, for
+the addendum modules (ALTDIR, ANSDIR, EXTCOMP, TOKENW), from the summaries of the blocks under the paper's one inclusion rule
+(cf_inclusion.block_included: CORE and CALIBRATION in run.json completed_modules). The round-2 tables (VALID, ALTDIRD,
+ANSDIRT, and the full-grade PRECISION columns) read runs/robustness/round2.json (scripts/mayo/robustness_round2.py in the
+code repository, which applies the same rule and admits a module only when it covers every row)."""
 import json
 import sys
 from pathlib import Path
@@ -12,6 +14,11 @@ import cf_inclusion as ci   # noqa: E402
 ROB = Path("/rodata/azradonc_dev/m253405/cf-transfer/runs/robustness")
 OUT = Path(__file__).resolve().parents[1] / "tables"
 NAMES = {"nih": "NIH ChestX-ray14", "chexpert": "CheXpert Plus", "coco": "COCO"}
+CKPT = {"q25-3": "Qwen2.5-VL-3B", "q25-7": "Qwen2.5-VL-7B", "q25-32": "Qwen2.5-VL-32B", "q25-72": "Qwen2.5-VL-72B",
+        "q3-4": "Qwen3-VL-4B", "q3-8": "Qwen3-VL-8B", "q3-32": "Qwen3-VL-32B", "iv35-8": "InternVL3.5-8B", "iv35-14": "InternVL3.5-14B",
+        "iv35-38": "InternVL3.5-38B", "gemma3-4": "Gemma 3 4B", "gemma3-12": "Gemma 3 12B", "gemma3-27": "Gemma 3 27B",
+        "medgemma-4": "MedGemma 4B", "medgemma-27": "MedGemma 27B", "lingshu-7": "Lingshu 7B", "lingshu-32": "Lingshu 32B",
+        "llava15-7": "LLaVA-1.5-7B", "llava15-13": "LLaVA-1.5-13B", "llavamed-7": "LLaVA-Med 1.5 7B", "llama32-11": "Llama 3.2 Vision 11B"}
 
 
 def f2(x, nd=2):
@@ -260,38 +267,46 @@ def tokenw():
 
 def precision():
     """PRECISION: the CORE grid on the first 200 test rows rescored with fp32 weights and forward, and in bf16 at batch
-    size one, against the CORE values on the same rows (summary.json["precision"] of every included block that has it)."""
-    names = {"q25-7": "Qwen2.5-VL-7B", "q3-8": "Qwen3-VL-8B", "lingshu-32": "Lingshu 32B", "gemma3-12": "Gemma 3 12B", "iv35-8": "InternVL3.5-8B", "medgemma-4": "MedGemma 4B"}
-    rows = []
+    size one, against the CORE values on the same rows. Point columns from summary.json["precision"] of every included
+    block that has it; full-grade columns from runs/robustness/round2.json (precision section)."""
+    R2 = {b["block"]: b for b in json.loads((ROB / "round2.json").read_text())["precision"]["blocks"]}
+    setting_name = {"fp32": "fp32 weights and forward", "batch1": "bf16, batch size one"}
+    rows, nblocks = [], 0
     for sp, j in included_summaries():
         p = j.get("precision")
         if not p:
             continue
         mk, ds = sp.parent.parent.name, sp.parent.name
-        cells = [f"{names.get(mk, mk)} & {NAMES[ds]} & {p['n_rows']}"]
+        nblocks += 1; first = True
         for st in p["settings"]:
             r = p.get(st, {})
+            lead = f"{CKPT.get(mk, mk)} & {NAMES[ds]} & {p['n_rows']}" if first else " & & "
+            first = False
             if r.get("status") != "COMPLETE":
-                cells.append("-- & -- & -- & --"); continue
-            cells.append(f"{r['max_abs_dW']:.4f} & {r['max_abs_dO']:.4f} & {r['n_agree_competitor']}/6 & {r['n_agree_random_p95']}/6")
-        rows.append((mk, ds, " & ".join(cells) + r" \\"))
-    which = ("One block has completed the module so far (" + ", ".join(f"{names.get(mk, mk)} on {NAMES[ds]}" for mk, ds, _ in rows) + ")."
-             if len(rows) == 1 else f"{len(rows)} blocks have completed the module.")
+                rows.append(f"{lead} & {setting_name.get(st, st)} & -- & -- & -- & -- & -- & -- & -- & -- \\\\"); continue
+            g = (R2.get(f"{mk}/{ds}") or {}).get("settings", {}).get(st)
+            full = (f"{g['n_verdict_changes']}/{g['n_cells']} & {g['n_steering_reference_changes']}/{g['n_cells']} & {g['max_abs_dW_grid']:.4f} & {g['max_abs_dcontrast']:.4f}"
+                    if g else "-- & -- & -- & --")
+            rows.append(f"{lead} & {setting_name.get(st, st)} & {r['max_abs_dW']:.4f} & {r['max_abs_dO']:.4f} & {r['n_agree_competitor']}/6 & {r['n_agree_random_p95']}/6 & {full} \\\\")
+    which = f"{nblocks} block{'s' if nblocks != 1 else ''} {'have' if nblocks != 1 else 'has'} completed the module."
     L = [r"\begin{table}[h]", r"\centering", r"\scriptsize", r"\setlength{\tabcolsep}{4pt}",
          r"\caption{\textbf{Numerics.} The CORE grid (six clinical directions, 119 random directions, and the sham at $\alpha=+0.25$) "
          r"on the first 200 test rows rescored with fp32 weights and forward pass, and in bf16 at batch size one, against the CORE "
-         r"values (bf16, batched) on the same rows: the largest change over the 36 clinical cells $\max|\Delta W_{q,d}|$, the largest "
+         r"values (bf16, batched) on the same rows. Point columns: the largest change over the 36 clinical cells $\max|\Delta W_{q,d}|$, the largest "
          r"change in ownership $\max|\Delta O_q|$, and the concepts whose two point verdicts (own write above the strongest competitor; "
-         r"own write above the random 95th percentile) agree with CORE's. " + which + "}",
+         r"own write above the random 95th percentile) agree with CORE's. Full-grade columns: the complete grade recomputed under each "
+         r"setting and for CORE on the same 200 rows (steering reference against the 119-direction random 95th percentile and the sham, "
+         r"$6\times5$ max-$T$ verdict over 2{,}000 unit-bootstrap draws): concepts whose verdict changes and whose steering reference changes, the largest "
+         r"change over all $6\times126$ written cells $\max|\Delta W|$, and the largest change in a contrast $\max|\Delta C_{q,d}|$. " + which + "}",
          r"\label{tab:cf-precision}",
-         r"\resizebox{\textwidth}{!}{\begin{tabular}{llrrrrrrrrr}", r"\toprule",
-         r"Checkpoint & Dataset & rows & \multicolumn{4}{c}{fp32 weights and forward} & \multicolumn{4}{c}{bf16, batch size one} \\",
-         r"\cmidrule(lr){4-7}\cmidrule(lr){8-11}",
-         r" & & & $\max|\Delta W|$ & $\max|\Delta O|$ & agree comp. & agree p95 & $\max|\Delta W|$ & $\max|\Delta O|$ & agree comp. & agree p95 \\", r"\midrule"]
-    L += [r for _, _, r in rows]
+         r"\resizebox{\textwidth}{!}{\begin{tabular}{llrlrrrrrrrr}", r"\toprule",
+         r"Checkpoint & Dataset & rows & setting & \multicolumn{4}{c}{point verdicts (36 clinical cells)} & \multicolumn{4}{c}{full grade ($6\times126$ written cells)} \\",
+         r"\cmidrule(lr){5-8}\cmidrule(lr){9-12}",
+         r" & & & & $\max|\Delta W|$ & $\max|\Delta O|$ & agree comp. & agree p95 & verdict changes & reference changes & $\max|\Delta W|$ & $\max|\Delta C|$ \\", r"\midrule"]
+    L += rows
     L += [r"\bottomrule", r"\end{tabular}}", r"\end{table}"]
     (OUT / "table_cf_precision.tex").write_text("\n".join(L) + "\n")
-    print("table_cf_precision.tex", len(rows), "block(s)")
+    print("table_cf_precision.tex", nblocks, "block(s)")
 
 
 def validation():
@@ -371,6 +386,114 @@ def refit():
     print("table_cf_refit.tex", m["n_blocks_by_dataset"])
 
 
+def sci(x, nd=1):
+    """Math-mode scientific notation: 1.7\\times10^{-4}."""
+    m, e = f"{x:.{nd}e}".split("e")
+    return f"{m}\\times10^{{{int(e)}}}"
+
+
+def _r2():
+    return json.loads((ROB / "round2.json").read_text())
+
+
+def _ckpt_key(block: str):
+    mk, ds = block.split("/")
+    order = list(CKPT)
+    return (order.index(mk) if mk in order else len(order), ["nih", "chexpert", "coco"].index(ds))
+
+
+def valid():
+    """VALID: the full grade on the radiologist-labelled CheXpert valid rows against the labeler-labelled test grade, per block
+    (runs/robustness/round2.json valid section)."""
+    V = _r2()["valid"]; a = V["aggregate"]
+    rows_txt = "/".join(str(n) for n in a["valid_rows"])
+    L = [r"\begin{table}[h]", r"\centering", r"\scriptsize", r"\setlength{\tabcolsep}{4pt}",
+         r"\caption{\textbf{The grade on radiologist labels.} For every CheXpert block with the valid module, the complete grade is "
+         r"recomputed on " + rows_txt + r" frontal films of the CheXpert validation set (one per patient, radiologist consensus labels, no "
+         r"patient shared with any campaign role) with the campaign rules: the steering reference against the random 95th percentile and "
+         r"the sham on those rows, and the $6\times5$ max-$T$ verdict over 2{,}000 unit-bootstrap draws. The test grade is the same "
+         r"computation on the 600 labeler-labelled test rows. Columns: owned concepts on the test and valid rows, concepts whose verdict "
+         r"and whose ownership agree, and the median $|O_q(\text{valid})-O_q(\text{test})|$ (90th percentile over all cells " + f2(a["p90_abs_dO_q"], 3)
+         + r"). On the " + str(a["supported_cells"]) + r" cells with at least 10 positives and 10 negatives on both cohorts, readability agrees in "
+         + f"{a['readable_agree_supported']} of {a['readable_compared_supported']}" + r" and answer capability in "
+         + f"{a['answer_capable_agree_supported']} of {a['answer_capable_compared_supported']}" + r".}",
+         r"\label{tab:cf-valid}",
+         r"\begin{tabular}{lrrrrr}", r"\toprule",
+         r"Checkpoint & owned (test) & owned (valid) & verdict agrees & ownership agrees & median $|\Delta O_q|$ \\", r"\midrule"]
+    for b in sorted(V["blocks"], key=lambda b: _ckpt_key(b["block"])):
+        L.append(f"{CKPT.get(b['model'], b['model'])} & {b['owned_test']} & {b['owned_valid']} & {b['verdict_agree']}/{b['n_cells']} & "
+                 f"{b['owned_agree']}/{b['n_cells']} & {f2(b['median_abs_dO_q'], 3)} \\\\")
+    L += [r"\midrule",
+          f"\\textit{{all}} ({a['blocks']} blocks) & {a['owned_test']} & {a['owned_valid']} & {a['verdict_agree']}/{a['cells']} & {a['owned_agree']}/{a['cells']} & {f2(a['median_abs_dO_q'], 3)} \\\\",
+          r"\bottomrule", r"\end{tabular}", r"\end{table}"]
+    (OUT / "table_cf_valid.tex").write_text("\n".join(L) + "\n")
+    print("table_cf_valid.tex", a["blocks"], "block(s)")
+
+
+def altdird():
+    """ALTDIRD: ownership of the displacement-lifted difference-of-means and pattern directions per dataset, beside the logistic
+    normal on the same blocks (runs/robustness/round2.json altdird section)."""
+    A = _r2()["altdird"]; P = A["per_dataset"]
+    dss = [ds for ds in ("nih", "chexpert", "coco") if P[ds]["blocks"]]
+    gs = P["all"]["gram_spectrum"]
+    L = [r"\begin{table}[h]", r"\centering", r"\scriptsize", r"\setlength{\tabcolsep}{4pt}",
+         r"\caption{\textbf{Displacement-lifted directions.} The difference-of-means and pattern vectors $\boldsymbol u$ of the projected, "
+         r"train-scaled space lifted as displacements, $\hat\wvec\propto R(R^{\top}R)^{-1}\mathrm{diag}(\boldsymbol s)\,\boldsymbol u$ (the "
+         r"minimum-norm preimage, so $R^{\top}\hat\wvec\propto\mathrm{diag}(\boldsymbol s)\,\boldsymbol u$ exactly), and written with the CORE "
+         r"protocol. Per dataset: cells owned (the paper's rule within each family) over cells, and the median model-space cosine to the "
+         r"logistic normal; the logistic row counts the paper's grade on the same blocks. The spectrum of $R^{\top}R/D$ is full rank in every "
+         r"block (" + f"{P['all']['blocks']}" + r" blocks; eigenvalues $" + sci(gs["min_eigenvalue"]) + r"$--$" + sci(gs["max_eigenvalue"])
+         + r"$, condition number " + f"{gs['condition_min']:.1f}--{gs['condition_max']:.1f}" + r").}",
+         r"\label{tab:cf-altdird}",
+         r"\begin{tabular}{l" + "rr" * len(dss) + "}", r"\toprule",
+         "Direction & " + " & ".join(f"\\multicolumn{{2}}{{c}}{{{NAMES[ds]} ({P[ds]['blocks']} blocks)}}" for ds in dss) + r" \\",
+         "".join(f"\\cmidrule(lr){{{2 + 2 * i}-{3 + 2 * i}}}" for i in range(len(dss))),
+         " & " + " & ".join(r"owned & med.\ $\cos$" for _ in dss) + r" \\", r"\midrule"]
+    labels = {"logistic": "logistic normal", "dom_disp": r"difference of means, displacement lift", "pattern_disp": r"pattern, displacement lift"}
+    for fam in ("logistic", "dom_disp", "pattern_disp"):
+        cells = []
+        for ds in dss:
+            d = P[ds]
+            cos = "--" if fam == "logistic" else f2(d[fam]["median_cos_to_logistic"])
+            cells.append(f"{d[fam]['owned']}/{d['cells']} & {cos}")
+        L.append(f"{labels[fam]} & " + " & ".join(cells) + r" \\")
+    L += [r"\bottomrule", r"\end{tabular}", r"\end{table}"]
+    (OUT / "table_cf_altdird.tex").write_text("\n".join(L) + "\n")
+    print("table_cf_altdird.tex", {ds: P[ds]["blocks"] for ds in dss})
+
+
+def ansdirt():
+    """ANSDIRT: the answer direction fitted on the primary template IY written under the five held-out templates, per block and
+    template: owned concepts and IY-owned concepts that stay owned (runs/robustness/round2.json ansdirt section)."""
+    T = _r2()["ansdirt"]; tpl = T["templates"]
+    L = [r"\begin{table}[h]", r"\centering", r"\scriptsize", r"\setlength{\tabcolsep}{4pt}",
+         r"\caption{\textbf{The answer direction across templates.} The answer direction $a_q$ fitted on the primary template IY is "
+         r"written unchanged under the rewording WY and the answer-mapped templates IA, IB, WA, WB, each against its own clean baseline "
+         r"and the $a_d$ of the other five concepts, graded with the paper's rule (steering reference against the template's sham, and "
+         r"the random 95th percentile where the template scores the random family; $6\times5$ max-$T$ verdict). Per block with every "
+         r"held-out template scored on all 600 test rows: concepts owned under IY, and per template the concepts owned and, in "
+         r"parentheses, the IY-owned concepts that stay owned; the last column counts kept (concept, template) pairs.}",
+         r"\label{tab:cf-ansdirt}",
+         r"\begin{tabular}{llr" + "r" * len(tpl) + r"r}", r"\toprule",
+         r"Checkpoint & Dataset & IY owned & " + " & ".join(tpl) + r" & kept pairs \\", r"\midrule"]
+    for b in sorted(T["blocks"], key=lambda b: _ckpt_key(b["block"])):
+        L.append(f"{CKPT.get(b['model'], b['model'])} & {NAMES[b['dataset']]} & {b['n_iy_owned']}/6 & "
+                 + " & ".join(f"{b['templates'][t]['n_owned']} ({b['templates'][t]['kept_of_iy']})" if t in b["templates"] else "--" for t in tpl)
+                 + f" & {b['kept_pairs']}/{b['pairs']} \\\\")
+    L.append(r"\midrule")
+    for g, name in (("chest", r"\textit{chest}"), ("coco", r"\textit{COCO}")):
+        d = T["aggregate"][g]
+        if not d["blocks"]:
+            continue
+        L.append(f"{name} & {d['blocks']} block{'s' if d['blocks'] != 1 else ''} & {d['iy_owned']}/{d['cells']} & "
+                 + " & ".join(f"{d['per_template'][t]['owned']} ({d['per_template'][t]['kept_of_iy']})" for t in tpl)
+                 + f" & {d['kept_pairs']}/{d['pairs']} \\\\")
+    L += [r"\bottomrule", r"\end{tabular}", r"\end{table}"]
+    (OUT / "table_cf_ansdirt.tex").write_text("\n".join(L) + "\n")
+    print("table_cf_ansdirt.tex", len(T["blocks"]), "block(s)")
+
+
+
 def rescue():
     """Per answer-direction cell: ownership by the label direction and by a_q, O_q, O^a_q, column selectivity of the label
     direction, and the whitened cosine (validation.json + the blocks' summaries)."""
@@ -413,3 +536,6 @@ if __name__ == "__main__":
     validation()
     refit()
     rescue()
+    valid()
+    altdird()
+    ansdirt()

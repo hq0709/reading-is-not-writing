@@ -19,6 +19,8 @@ Sources and rules
                          or any alternative family.
   median W_qq            median over write-matrix cells per dataset, three decimals.
   selectivity            mean probe selectivity of Effusion and Cardiomegaly over probe-graded chest blocks.
+  round 2                runs/robustness/round2.json (VALID, ALTDIRD, ANSDIRT, full-grade PRECISION); each section's block set must
+                         equal the included blocks carrying that module (ANSDIRT: blocks scored on every test row).
   robustness             runs/robustness/{geometry,scale,pairs,validation}.json (scripts/mayo/robustness_*.py in the code
                          repository, which discover blocks with the same rule); every file's block set must equal the
                          manifest's included set or this script stops. PRECISION, ANSDIR and label-gap numbers come from
@@ -251,12 +253,14 @@ def robustness_macros(M: dict, rows: list[dict], wb: dict, warn: list) -> None:
     if len(kc) != M["cfKnownOwned"]:
         warn.append(f"validation: {len(kc)} summary-owned CheXpert cells in known_label blocks vs {M['cfKnownOwned']} in per_dataset")
     # ---- PRECISION (Table cf-precision), from the included blocks' summaries
+    # point columns (36 clinical cells, two point verdicts); the full-grade macros cfPrecisionMaxDW / cfPrecisionVerdictChanges
+    # come from runs/robustness/round2.json in round2_macros()
     prec = [(k, b["s"]["precision"]) for k, b in wb.items() if b["s"].get("precision")]
     done = [(k, st, p[st]) for k, p in prec for st in p["settings"] if p.get(st, {}).get("status") == "COMPLETE"]
-    M["cfPrecisionBlocks"] = len(prec); M["cfPrecisionMaxDW"] = fx(max(r["max_abs_dW"] for _, _, r in done), 3) if done else "--"
-    M["cfPrecisionVerdictChanges"] = sum(12 - r["n_agree_competitor"] - r["n_agree_random_p95"] for _, _, r in done)
-    if M["cfPrecisionVerdictChanges"]:
-        warn.append(f"precision: {M['cfPrecisionVerdictChanges']} point-verdict change(s) (prose says no verdict changes)")
+    M["cfPrecisionBlocks"] = len(prec); M["cfPrecisionPointMaxDW"] = fx(max(r["max_abs_dW"] for _, _, r in done), 3) if done else "--"
+    M["cfPrecisionPointVerdictChanges"] = sum(12 - r["n_agree_competitor"] - r["n_agree_random_p95"] for _, _, r in done)
+    if M["cfPrecisionPointVerdictChanges"]:
+        warn.append(f"precision: {M['cfPrecisionPointVerdictChanges']} point-verdict change(s) over the 36 clinical cells")
     # ---- label gap (t3 of the included blocks)
     gaps = {ds: [] for ds in ci.DATASETS}
     for (mk, ds), b in wb.items():
@@ -319,6 +323,83 @@ def robustness_macros(M: dict, rows: list[dict], wb: dict, warn: list) -> None:
         M[f"cfAns{tag}OwnedLabel"] = sum(sum(c["core_owned"] for c in vb[f"{k[0]}/{k[1]}"]["per_question"].values()) for k in keys)
         M[f"cfAns{tag}Beats"] = sum(beats_n(ans[k]) for k in keys)
     M["cfAnsBlocks"] = len(ans)
+
+
+def round2_macros(M: dict, rows: list[dict], wb: dict, warn: list) -> None:
+    """Macros for the round-2 modules (Tables cf-valid, cf-altdird, cf-ansdirt and the full-grade columns of cf-precision), from
+    runs/robustness/round2.json (scripts/mayo/robustness_round2.py). Each section's block set is checked against the included
+    blocks that carry the module; owned counts on the test side are checked against the manifest."""
+    R2 = json.loads((ROB / "round2.json").read_text())
+    owned_cell = {(r["model_key"], r["dataset"], r["concept"]): t(r["owned"]) for r in rows if t(r["cell"]) and t(r["block_included"])}
+    def key(block):
+        mk, ds = block.split("/"); return (mk, ds)
+    def done(k, mod):
+        return mod in set(wb[k]["run"].get("completed_modules") or [])
+    # ---- VALID (Table cf-valid)
+    V = R2["valid"]; a = V["aggregate"]
+    expect_blocks = {k for k in wb if k[1] == "chexpert" and wb[k]["s"].get("valid") and done(k, "VALID")}
+    got = {key(b["block"]) for b in V["blocks"]}
+    if got != expect_blocks:
+        raise RuntimeError(f"round2.json valid blocks differ from the included CheXpert blocks with VALID by {sorted(got ^ expect_blocks)}; rerun scripts/mayo/robustness_round2.py")
+    M["cfValidBlocks"] = a["blocks"]; M["cfValidCells"] = a["cells"]
+    if len(a["valid_rows"]) != 1:
+        warn.append(f"valid: blocks differ in valid rows {a['valid_rows']}")
+    M["cfValidRows"] = a["valid_rows"][0] if a["valid_rows"] else "--"
+    M["cfValidOwnedAgree"] = a["owned_agree"]; M["cfValidOwnedAgreePct"] = pct(a["owned_agree"], a["cells"])
+    M["cfValidVerdictAgree"] = a["verdict_agree"]; M["cfValidVerdictAgreePct"] = pct(a["verdict_agree"], a["cells"])
+    M["cfValidOwnedTest"] = a["owned_test"]; M["cfValidOwnedValid"] = a["owned_valid"]
+    M["cfValidMedianDO"] = fx(a["median_abs_dO_q"], 3); M["cfValidNinetyDO"] = fx(a["p90_abs_dO_q"], 3)
+    M["cfValidSupported"] = a["supported_cells"]
+    M["cfValidReadableAgree"] = a["readable_agree_supported"]; M["cfValidReadableN"] = a["readable_compared_supported"]
+    M["cfValidAnswerAgree"] = a["answer_capable_agree_supported"]; M["cfValidAnswerN"] = a["answer_capable_compared_supported"]
+    man = sum(owned_cell[(b["model"], b["dataset"], q)] for b in V["blocks"] for q in b["per_question"])
+    if a["test_regrade_vs_paper_mismatches"] or a["owned_test"] != man:
+        warn.append(f"valid: test regrade owns {a['owned_test']} cells vs {man} in the manifest on the same blocks "
+                    f"({a['test_regrade_vs_paper_mismatches']} verdict/ownership mismatches)")
+    # ---- ALTDIRD (Table cf-altdird)
+    A = R2["altdird"]; P = A["per_dataset"]
+    expect_blocks = {k for k in wb if wb[k]["s"].get("altdird") and done(k, "ALTDIRD")}
+    got = {key(b["block"]) for b in A["blocks"]}
+    if got != expect_blocks:
+        raise RuntimeError(f"round2.json altdird blocks differ from the included blocks with ALTDIRD by {sorted(got ^ expect_blocks)}; rerun scripts/mayo/robustness_round2.py")
+    M["cfAltdirdBlocks"] = P["all"]["blocks"]
+    for g, G in (("nih", "Nih"), ("chexpert", "Chex"), ("coco", "Coco"), ("chest", "Chest")):
+        d = P[g]
+        M[f"cfAltdird{G}Blocks"] = d["blocks"]; M[f"cfAltdird{G}N"] = d["cells"]
+        for fam, F in (("dom_disp", "Dom"), ("pattern_disp", "Pattern"), ("logistic", "Logistic")):
+            M[f"cfAltdird{G}{F}"] = d[fam]["owned"]; M[f"cfAltdird{G}{F}Pct"] = pct(d[fam]["owned"], d["cells"])
+        for fam, F in (("dom_disp", "Dom"), ("pattern_disp", "Pattern")):
+            M[f"cfAltdird{G}Cos{F}"] = fx(d[fam]["median_cos_to_logistic"], 2) if d["blocks"] else "--"
+    gs = P["all"]["gram_spectrum"]
+    M["cfAltdirdCondMin"] = fx(gs["condition_min"], 1); M["cfAltdirdCondMax"] = fx(gs["condition_max"], 1)
+    if not gs["all_full_rank"]:
+        warn.append("altdird: an R^T R / D spectrum is rank deficient (Table cf-altdird caption says full rank)")
+    man = {g: sum(owned_cell[(b["model"], b["dataset"], q)] for b in A["blocks"] if b["dataset"] in dss for q in b["per_question"])
+           for g, dss in (("chest", ci.CHEST), ("coco", ("coco",)))}
+    for g in man:
+        if man[g] != P[g]["logistic"]["owned"]:
+            warn.append(f"altdird: logistic owned on the {g} ALTDIRD blocks {P[g]['logistic']['owned']} vs {man[g]} in the manifest")
+    # ---- ANSDIRT (Table cf-ansdirt)
+    T = R2["ansdirt"]; ag = T["aggregate"]
+    M["cfAnsdirtBlocks"] = ag["all"]["blocks"]
+    for g, G in (("chest", "Chest"), ("coco", "Coco")):
+        M[f"cfAnsdirt{G}Blocks"] = ag[g]["blocks"]; M[f"cfAnsdirt{G}IYOwned"] = ag[g]["iy_owned"]
+        M[f"cfAnsdirt{G}Kept"] = ag[g]["kept_pairs"]; M[f"cfAnsdirt{G}KeptN"] = ag[g]["pairs"]; M[f"cfAnsdirt{G}KeptPct"] = pct(ag[g]["kept_pairs"], ag[g]["pairs"])
+    if T.get("partial_blocks"):
+        print("  NOTE: ANSDIRT blocks scored on fewer than all test rows are not counted: "
+              + ", ".join(f"{b['block']} ({b['status']}, {min(b['n_scored_rows_min'].values())}/{b['n_rows']} rows)" for b in T["partial_blocks"]))
+    for b in T["blocks"]:
+        if b.get("iy_owned_matches_summary_ansdir") is False:
+            warn.append(f"ansdirt: {b['block']} IY-owned set differs from summary.json ansdir")
+    # ---- PRECISION full grade (Table cf-precision, full-grade columns)
+    Pr = R2["precision"]; pa = Pr["aggregate"]
+    M["cfPrecisionGradeBlocks"] = pa["blocks"]; M["cfPrecisionGradeCells"] = pa["graded_cells"]
+    M["cfPrecisionVerdictChanges"] = pa["verdict_changes"]; M["cfPrecisionRefChanges"] = pa["steering_reference_changes"]
+    M["cfPrecisionGradeChanges"] = pa["grade_changes"]
+    M["cfPrecisionMaxDW"] = fx(pa["max_abs_dW_grid"], 3) if pa["max_abs_dW_grid"] is not None else "--"
+    M["cfPrecisionMaxDC"] = fx(pa["max_abs_dcontrast"], 3) if pa["max_abs_dcontrast"] is not None else "--"
+    if pa["blocks"] != M["cfPrecisionBlocks"]:
+        warn.append(f"precision: {pa['blocks']} blocks carry the full grade vs {M['cfPrecisionBlocks']} with the module")
 
 
 def main() -> Path:
@@ -393,6 +474,7 @@ def main() -> Path:
     M["cfAltdirCocoPctMin"], M["cfAltdirCocoPctMax"] = min(coco_p), max(coco_p)
     warn = []
     robustness_macros(M, rows, wb, warn)
+    round2_macros(M, rows, wb, warn)
     for w in warn:
         print("  WARNING:", w)
     # write

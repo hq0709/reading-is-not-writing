@@ -4,7 +4,7 @@
 
 Reads runs/manifest.csv (cf_inclusion.read_manifest), tables/table_cf_main.tex, figures/fig2_counts.json (written by
 plot_paper_figures.py fig2_overview), figures/figA1_own_share.json (figA1_write_structure), tables/cf_numbers.json
-(build_numbers.py), and, when main.pdf exists and pdftotext is available, the rendered abstract and Section 5.1.
+(build_numbers.py), runs/robustness/round2.json with tables/table_cf_valid.tex (round-2 macros), and, when main.pdf exists and pdftotext is available, the rendered abstract and Section 5.1.
 """
 from __future__ import annotations
 
@@ -71,6 +71,24 @@ def main():
     expect("cfChestOwned", M["cfChestOwned"], C["chest"]["owned"])
     expect("cfCocoOwned/N", (M["cfCocoOwned"], M["cfCocoOwnedN"]), (C["coco"]["owned"], C["coco"]["write_cells"]))
     expect("cfCells", M["cfCells"], C["all"]["write_cells"])
+    # round-2 macros and tables vs runs/robustness/round2.json
+    r2p = ci.RUNS / "robustness" / "round2.json"
+    if r2p.exists() and "cfValidCells" in M:
+        R2 = json.loads(r2p.read_text())
+        va, al, an, pr = R2["valid"]["aggregate"], R2["altdird"]["per_dataset"], R2["ansdirt"]["aggregate"], R2["precision"]["aggregate"]
+        print("round-2 macros vs runs/robustness/round2.json:")
+        expect("cfValidOwnedAgree/Cells", (M["cfValidOwnedAgree"], M["cfValidCells"]), (va["owned_agree"], va["cells"]))
+        expect("cfValidOwnedTest/Valid", (M["cfValidOwnedTest"], M["cfValidOwnedValid"]), (va["owned_test"], va["owned_valid"]))
+        expect("cfAltdirdChest Dom/Pattern/N", (M["cfAltdirdChestDom"], M["cfAltdirdChestPattern"], M["cfAltdirdChestN"]),
+               (al["chest"]["dom_disp"]["owned"], al["chest"]["pattern_disp"]["owned"], al["chest"]["cells"]))
+        expect("cfAltdirdCoco Dom/Pattern/N", (M["cfAltdirdCocoDom"], M["cfAltdirdCocoPattern"], M["cfAltdirdCocoN"]),
+               (al["coco"]["dom_disp"]["owned"], al["coco"]["pattern_disp"]["owned"], al["coco"]["cells"]))
+        expect("cfAnsdirtChestKept/N", (M["cfAnsdirtChestKept"], M["cfAnsdirtChestKeptN"]), (an["chest"]["kept_pairs"], an["chest"]["pairs"]))
+        expect("cfAnsdirtCocoKept/N", (M["cfAnsdirtCocoKept"], M["cfAnsdirtCocoKeptN"]), (an["coco"]["kept_pairs"], an["coco"]["pairs"]))
+        expect("cfPrecisionGradeChanges/Cells", (M["cfPrecisionGradeChanges"], M["cfPrecisionGradeCells"]), (pr["grade_changes"], pr["graded_cells"]))
+        vt = re.search(r"\\textit\{all\} \((\d+) blocks\) & (\d+) & (\d+) & (\d+)/(\d+) & (\d+)/(\d+)", (ROOT / "tables" / "table_cf_valid.tex").read_text())
+        expect("Table cf-valid totals row", tuple(map(int, vt.groups())) if vt else None,
+               (va["blocks"], va["owned_test"], va["owned_valid"], va["verdict_agree"], va["cells"], va["owned_agree"], va["cells"]))
     a1 = ROOT / "figures" / "figA1_own_share.json"
     if a1.exists():
         s = json.loads(a1.read_text())

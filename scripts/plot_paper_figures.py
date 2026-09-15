@@ -489,10 +489,10 @@ def colored_annotation(fig, ax, xy, pieces, dx=5, fontsize=7.5):
 
 def fig3_example(blocks):
     from PIL import Image
-    FW, FH = fs.WIDTH, 3.7
+    FW, FH = fs.WIDTH, 3.53          # 3.7 in until the round-2 prose; 0.12 in of top and 0.05 in of bottom padding removed
     f = plt.figure(figsize=(FW, FH))
     img_w, img_x = 1.02, 0.12; bar_x, bar_w = 1.96, 2.58; ax_h = 1.15
-    row_y = [2.20, 0.68]; title_y = [3.41, 1.88]
+    row_y = [2.15, 0.63]; title_y = [3.36, 1.83]
     for r, (mk, ds, rid, target, comp, path, desc, claim) in enumerate(EXAMPLES):
         concepts = list(blocks[(mk, ds)]["s"]["core"]["per_question"])
         base, writes = row_outcomes(mk, ds, rid, concepts)
@@ -523,7 +523,7 @@ def fig3_example(blocks):
     handles = [Rectangle((0, 0), 1, 1, color=EX_COL["clean"], label="clean (no write)"),
                Rectangle((0, 0), 1, 1, color=EX_COL["concept"], label="concept write (Effusion in a, dog in b)"),
                Rectangle((0, 0), 1, 1, color=EX_COL["competitor"], label="strongest competing write (Nodule in a, bottle in b)")]
-    f.legend(handles=handles, loc="lower center", bbox_to_anchor=(0.5, 0.012), ncol=3, fontsize=6.8, frameon=True, edgecolor="#8a8a8a",
+    f.legend(handles=handles, loc="lower center", bbox_to_anchor=(0.5, 0.0), ncol=3, fontsize=6.8, frameon=True, edgecolor="#8a8a8a",
              handlelength=1.4, handleheight=0.8, columnspacing=1.2, handletextpad=0.5, borderpad=0.45)
     check_overlaps(f, "fig3_example")
     fs.save(f, FIG / "fig3_example")
@@ -549,8 +549,8 @@ def draw_matrix(ax, concepts, W, own, norm, values=True, ylabels=True, xlabels=T
 def fig4_write_matrices(blocks):
     mats = [(mk, ds, *wmatrix(blocks[(mk, ds)]["s"]), owned_set(blocks[(mk, ds)]["s"])) for mk, ds in MATRIX_PICKS]
     vlim = round_up(np.nanmax([np.nanmax(np.abs(W)) for *_, W, _ in mats])); norm = sym_norm(vlim)
-    FW, FH = fs.WIDTH, 4.2; P = 1.15; gap = 0.26; x0 = 0.64
-    rows_y = [FH - 0.31 - P, 0.97]
+    FW, FH = fs.WIDTH, 4.01; P = 1.15; gap = 0.26; x0 = 0.64      # 4.2 in until the round-2 prose; top and row-gap padding trimmed
+    rows_y = [FH - 0.18 - P, 0.97]
     f = plt.figure(figsize=(FW, FH))
     for k, (mk, ds, concepts, W, own) in enumerate(mats):
         r, c = divmod(k, 3)
@@ -603,11 +603,11 @@ def fig5_same_write(blocks):
         ceiling = {(c["model"], c["dataset"], c["concept"]) for c in json.loads(pj.read_text())["task2_ceiling"]["cells"] if c.get("ceiling")}
     ye = np.array([0, 1, 2, 3, 3 + FAM_GAP, 4 + FAM_GAP, 5 + FAM_GAP]); real = [0, 1, 2, 4, 5]   # row 3 is the family spacer
     FW = fs.WIDTH; P = 1.36; gap = 0.20; x0 = 0.98; Ph = P * ye[-1] / 6
-    FH = 0.10 + 0.26 + Ph + 0.34 + 0.34 + 0.26
+    FH = 0.18 + Ph + 0.34 + 0.34 + 0.26      # top padding 0.36 in until the round-2 prose
     f = plt.figure(figsize=(FW, FH))
     for k, ds in enumerate(DATASETS):
         concepts, M, own = Ms[ds]
-        ax = f.add_axes(rect(FW, FH, x0 + k * (P + gap), FH - 0.36 - Ph, P, Ph), label=f"h{k}")
+        ax = f.add_axes(rect(FW, FH, x0 + k * (P + gap), FH - 0.18 - Ph, P, Ph), label=f"h{k}")
         M6 = np.full((6, M.shape[1]), np.nan); M6[real] = M
         xe, _ = heat(ax, M6, norm, yedges=ye, spacer_rows=(3,))
         ax.set_xticks((xe[:-1] + xe[1:]) / 2); ax.set_yticks([(ye[i] + ye[i + 1]) / 2 for i in real])

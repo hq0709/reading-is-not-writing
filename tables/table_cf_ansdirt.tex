@@ -1,0 +1,19 @@
+\begin{table}[h]
+\centering
+\scriptsize
+\setlength{\tabcolsep}{4pt}
+\caption{\textbf{The answer direction across templates.} The answer direction $a_q$ fitted on the primary template IY is written unchanged under the rewording WY and the answer-mapped templates IA, IB, WA, WB, each against its own clean baseline and the $a_d$ of the other five concepts, graded with the paper's rule (steering reference against the template's sham, and the random 95th percentile where the template scores the random family; $6\times5$ max-$T$ verdict). Per block with every held-out template scored on all 600 test rows: concepts owned under IY, and per template the concepts owned and, in parentheses, the IY-owned concepts that stay owned; the last column counts kept (concept, template) pairs.}
+\label{tab:cf-ansdirt}
+\begin{tabular}{llrrrrrrr}
+\toprule
+Checkpoint & Dataset & IY owned & WY & IA & IB & WA & WB & kept pairs \\
+\midrule
+Qwen2.5-VL-7B & CheXpert Plus & 6/6 & 4 (4) & 6 (6) & 5 (5) & 5 (5) & 5 (5) & 25/30 \\
+Qwen2.5-VL-7B & COCO & 6/6 & 6 (6) & 6 (6) & 6 (6) & 6 (6) & 6 (6) & 30/30 \\
+Gemma 3 12B & COCO & 6/6 & 5 (5) & 6 (6) & 6 (6) & 6 (6) & 6 (6) & 29/30 \\
+\midrule
+\textit{chest} & 1 block & 6/6 & 4 (4) & 6 (6) & 5 (5) & 5 (5) & 5 (5) & 25/30 \\
+\textit{COCO} & 2 blocks & 12/12 & 11 (11) & 12 (12) & 12 (12) & 12 (12) & 12 (12) & 59/60 \\
+\bottomrule
+\end{tabular}
+\end{table}

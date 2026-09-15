@@ -6,7 +6,7 @@ This appendix lists the checkpoints and their consumed loci, the acceptance deci
 \subsection{Labels, registration, and artifact}
 \label{app:cf-labels}
 
-\paragraph{Labels.} Concept labels are the report-derived labels shipped with each dataset (NIH ChestX-ray14 finding labels; the CheXpert labeler output distributed with CheXpert Plus; COCO instance annotations). A row is positive for label 1, negative for label 0, and \emph{unknown} when the labeler returns uncertain or blank. We exclude unknown rows from probe fitting, selectivity, and answer AUROC. We write and score them like every other row. Cohorts are fixed manifests drawn with recorded seeds. Training and test cohorts are patient-disjoint. All cohorts are disjoint from every seed-study cohort. Table~\ref{tab:cf-prevalence} gives per-concept counts.
+\paragraph{Labels.} Concept labels are the report-derived labels supplied with each dataset (NIH ChestX-ray14 finding labels; the CheXpert labeler output distributed with CheXpert Plus; COCO instance annotations). A row is positive for label 1, negative for label 0, and \emph{unknown} for uncertain or blank labeler outputs. We exclude unknown rows from probe fitting, selectivity, and answer AUROC. We write and score these rows like all others. Fixed manifests drawn with recorded seeds define the cohorts. Training and test cohorts are patient-disjoint. All cohorts are disjoint from every seed-study cohort. Table~\ref{tab:cf-prevalence} gives per-concept counts. A second CheXpert cohort contains \cfValidRows{} frontal films from the CheXpert validation set, one per patient, with the radiologists' consensus labels. It has zero patient overlap with every campaign cohort (Table~\ref{tab:cf-valid}).
 
 \paragraph{Registration.} The protocol was frozen before any grid block was scored. The loci, projection and probe settings, dose, reference family, six templates, module set, seven gates, and three decision rules are those of the registered protocol file and its code commit. The seed study's crossover and confirmation analyses were registered before they were run (Appendix~\ref{app:seed}). One analysis pass over the packaged outcomes produces everything reported per block. The leaderboard, write-flow share, and per-image examples are descriptive summaries of these outputs, added after the grid was complete.
 
@@ -76,11 +76,14 @@ Table~\ref{tab:cf-geometry} reports direction- and label-geometry statistics. Ta
 \input{tables/table_cf_refit}
 \input{tables/table_cf_pairs}
 \input{tables/table_cf_altdir}
+\input{tables/table_cf_altdird}
 \input{tables/table_cf_ansdir}
+\input{tables/table_cf_ansdirt}
 \input{tables/table_cf_extcomp}
 \input{tables/table_cf_tokenw}
 \input{tables/table_cf_precision}
 \input{tables/table_cf_validation}
+\input{tables/table_cf_valid}
 \input{tables/table_cf_rescue}
 
 \subsection{Write structure across the grid}
