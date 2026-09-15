@@ -1,0 +1,16 @@
+\begin{table}[h]
+\centering
+\scriptsize
+\setlength{\tabcolsep}{4pt}
+\caption{\textbf{Ownership under five direction constructions.} For every block with the alternative-direction module, cells owned (fixed-family advantage with the steering reference, the paper's rule applied within each family) and the median $O_q$, per dataset and family; the last column counts cells owned under at least one family. Difference-of-means and pattern directions are built from the same projected, train-scaled features as the logistic normal; the orthogonalised normal has the other five normals' span removed; the residualised normal is refitted on features residualised against the other five labels.}
+\label{tab:cf-altdir}
+\resizebox{\textwidth}{!}{\begin{tabular}{lrrrrrrrrrrrr}
+\toprule
+Dataset & blocks & \multicolumn{2}{c}{logistic} & \multicolumn{2}{c}{diff.\ of means} & \multicolumn{2}{c}{pattern} & \multicolumn{2}{c}{orthogonalised} & \multicolumn{2}{c}{residualised} & any \\
+ & & owned & med.\ $O$ & owned & med.\ $O$ & owned & med.\ $O$ & owned & med.\ $O$ & owned & med.\ $O$ & \\
+\midrule
+NIH ChestX-ray14 & 1 & 0/6 & -0.14 & 2/6 & -0.09 & 2/6 & -0.07 & 0/6 & -0.11 & 0/6 & -0.11 & 2/6 \\
+COCO & 1 & 6/6 & +0.68 & 4/6 & +0.09 & 2/6 & +0.01 & 6/6 & +0.64 & 6/6 & +0.69 & 6/6 \\
+\bottomrule
+\end{tabular}}
+\end{table}

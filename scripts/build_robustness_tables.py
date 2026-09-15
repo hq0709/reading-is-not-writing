@@ -91,7 +91,58 @@ def pairs():
     print("table_cf_pairs.tex")
 
 
+RUNS = Path("/rodata/azradonc_dev/m253405/cf-transfer/runs")
+FAMILIES = ("dom", "pattern", "orth", "resid")
+FAM_LABEL = {"logistic": "logistic normal", "dom": "difference of means", "pattern": "Haufe pattern", "orth": "orthogonalised normal", "resid": "residualised normal"}
+
+
+def altdir():
+    """Per dataset and direction family: owned cells (fixed-family advantage with the steering reference), cells
+    owned under any family, and the logistic reference, over every block whose summary carries ALTDIR."""
+    import statistics
+    rows = {ds: {f: {"owned": 0, "n": 0, "O": []} for f in ("logistic",) + FAMILIES} for ds in NAMES}
+    anyf = {ds: [0, 0] for ds in NAMES}; blocks = {ds: 0 for ds in NAMES}
+    for sp in sorted(RUNS.glob("*/*/summary.json")):
+        j = json.loads(sp.read_text()); a = j.get("altdir")
+        if not a or not all(f in a for f in FAMILIES):
+            continue
+        ds = sp.parent.name; blocks[ds] += 1
+        core = j["core"]["per_question"]
+        for q, v in core.items():
+            ownedlog = bool(v.get("steering_reference") and v.get("verdict") == "fixed_family_advantage")
+            rows[ds]["logistic"]["owned"] += ownedlog; rows[ds]["logistic"]["n"] += 1; rows[ds]["logistic"]["O"].append(v["O_q"])
+            anyo = ownedlog
+            for f in FAMILIES:
+                c = a[f]["per_question"][q]
+                o = bool(c.get("steering_reference") and c.get("verdict") == "fixed_family_advantage")
+                rows[ds][f]["owned"] += o; rows[ds][f]["n"] += 1; rows[ds][f]["O"].append(c["O_q"]); anyo = anyo or o
+            anyf[ds][0] += anyo; anyf[ds][1] += 1
+    L = [r"\begin{table}[h]", r"\centering", r"\scriptsize", r"\setlength{\tabcolsep}{4pt}",
+         r"\caption{\textbf{Ownership under five direction constructions.} For every block with the alternative-direction module, "
+         r"cells owned (fixed-family advantage with the steering reference, the paper's rule applied within each family) and the "
+         r"median $O_q$, per dataset and family; the last column counts cells owned under at least one family. Difference-of-means "
+         r"and pattern directions are built from the same projected, train-scaled features as the logistic normal; the "
+         r"orthogonalised normal has the other five normals' span removed; the residualised normal is refitted on features "
+         r"residualised against the other five labels.}",
+         r"\label{tab:cf-altdir}",
+         r"\resizebox{\textwidth}{!}{\begin{tabular}{lr" + "rr" * 5 + r"r}", r"\toprule",
+         r"Dataset & blocks & \multicolumn{2}{c}{logistic} & \multicolumn{2}{c}{diff.\ of means} & \multicolumn{2}{c}{pattern} & \multicolumn{2}{c}{orthogonalised} & \multicolumn{2}{c}{residualised} & any \\",
+         r" & & owned & med.\ $O$ & owned & med.\ $O$ & owned & med.\ $O$ & owned & med.\ $O$ & owned & med.\ $O$ & \\", r"\midrule"]
+    for ds in ("nih", "chexpert", "coco"):
+        if blocks[ds] == 0:
+            continue
+        cells = [f"{NAMES[ds]} & {blocks[ds]}"]
+        for f in ("logistic",) + FAMILIES:
+            r = rows[ds][f]; cells.append(f"{r['owned']}/{r['n']} & {statistics.median(r['O']):+.2f}")
+        cells.append(f"{anyf[ds][0]}/{anyf[ds][1]}")
+        L.append(" & ".join(cells) + r" \\")
+    L += [r"\bottomrule", r"\end{tabular}}", r"\end{table}"]
+    (OUT / "table_cf_altdir.tex").write_text("\n".join(L) + "\n")
+    print("table_cf_altdir.tex", {ds: blocks[ds] for ds in blocks})
+
+
 if __name__ == "__main__":
     geometry()
     scale()
     pairs()
+    altdir()
