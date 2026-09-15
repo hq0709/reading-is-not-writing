@@ -2,7 +2,7 @@
 \centering
 \scriptsize
 \setlength{\tabcolsep}{4pt}
-\caption{\textbf{Token-weighted writes.} The six logistic directions written with a per-token weight instead of uniformly: \emph{softmax} weights each consumed token by the softmax of its probe score (mean weight one, same total dose), \emph{top quarter} writes only the 25\% of tokens with the highest probe score at four times the weight. Cells owned and median own write $W_{q,q}$ per variant, beside the uniform write of the main protocol.}
+\caption{\textbf{Token-weighted writes.} The six logistic directions written with a per-token weight instead of uniformly: \emph{softmax} weights each consumed token by the softmax of its probe score (mean weight one, so the same L1 dose), \emph{top quarter} writes only the 25\% of tokens with the highest probe score at four times the weight (twice the Frobenius norm of the uniform write). Cells owned and median own write $W_{q,q}$ per variant, beside the uniform write of the main protocol.}
 \label{tab:cf-tokenw}
 \begin{tabular}{llrrrrrr}
 \toprule

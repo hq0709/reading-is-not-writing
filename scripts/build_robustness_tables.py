@@ -205,8 +205,8 @@ def tokenw():
     import statistics
     L = [r"\begin{table}[h]", r"\centering", r"\scriptsize", r"\setlength{\tabcolsep}{4pt}",
          r"\caption{\textbf{Token-weighted writes.} The six logistic directions written with a per-token weight instead of "
-         r"uniformly: \emph{softmax} weights each consumed token by the softmax of its probe score (mean weight one, same total "
-         r"dose), \emph{top quarter} writes only the 25\% of tokens with the highest probe score at four times the weight. "
+         r"uniformly: \emph{softmax} weights each consumed token by the softmax of its probe score (mean weight one, so the same L1 "
+         r"dose), \emph{top quarter} writes only the 25\% of tokens with the highest probe score at four times the weight (twice the Frobenius norm of the uniform write). "
          r"Cells owned and median own write $W_{q,q}$ per variant, beside the uniform write of the main protocol.}",
          r"\label{tab:cf-tokenw}",
          r"\begin{tabular}{llrrrrrr}", r"\toprule",
