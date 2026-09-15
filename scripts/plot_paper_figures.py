@@ -385,7 +385,7 @@ def boot_frac(flags, n=2000, seed=0):
 
 
 def fig2_overview(blocks):
-    f, axes = plt.subplots(2, 2, figsize=(fs.WIDTH, 4.8), constrained_layout=True)
+    f, axes = plt.subplots(2, 2, figsize=(fs.WIDTH, 4.1), constrained_layout=True)
     for ax, lab in zip(axes.ravel(), "abcd"):
         ax.set_label(lab)
     # (a) graded fractions -------------------------------------------------------------------------------------
@@ -494,10 +494,10 @@ def colored_annotation(fig, ax, xy, pieces, dx=5, fontsize=7.5):
 
 def fig3_example(blocks):
     from PIL import Image
-    FW, FH = fs.WIDTH, 4.2
+    FW, FH = fs.WIDTH, 3.7
     f = plt.figure(figsize=(FW, FH))
-    img_w, img_x = 1.15, 0.12; bar_x, bar_w = 2.08, 2.47; ax_h = 1.30
-    row_y = [2.56, 0.86]; title_y = [3.92, 2.20]
+    img_w, img_x = 1.02, 0.12; bar_x, bar_w = 1.96, 2.58; ax_h = 1.15
+    row_y = [2.20, 0.68]; title_y = [3.41, 1.88]
     for r, (mk, ds, rid, target, comp, path, desc, claim) in enumerate(EXAMPLES):
         concepts = list(blocks[(mk, ds)]["s"]["core"]["per_question"])
         base, writes = row_outcomes(mk, ds, rid, concepts)
@@ -554,7 +554,7 @@ def draw_matrix(ax, concepts, W, own, norm, values=True, ylabels=True, xlabels=T
 def fig4_write_matrices(blocks):
     mats = [(mk, ds, *wmatrix(blocks[(mk, ds)]["s"]), owned_set(blocks[(mk, ds)]["s"])) for mk, ds in MATRIX_PICKS]
     vlim = round_up(np.nanmax([np.nanmax(np.abs(W)) for *_, W, _ in mats])); norm = sym_norm(vlim)
-    FW, FH = fs.WIDTH, 4.6; P = 1.35; gap = 0.26; x0 = 0.64
+    FW, FH = fs.WIDTH, 4.25; P = 1.22; gap = 0.26; x0 = 0.64
     rows_y = [FH - 0.31 - P, 0.97]
     f = plt.figure(figsize=(FW, FH))
     for k, (mk, ds, concepts, W, own) in enumerate(mats):
