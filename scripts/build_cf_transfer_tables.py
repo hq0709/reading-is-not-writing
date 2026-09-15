@@ -55,6 +55,7 @@ META = {
     "llama32-11":  ("Llama 3.2 Vision 11B", "Llama 3.2 Vision", 11, "ViT-H/14",          "1601",         "$560^2$",  False),
 }
 ORDER = list(META)
+REV = {'q25-3': '6628554', 'q25-7': 'cc59489', 'q25-32': '7cfb30d', 'q25-72': '89c8620', 'q3-4': 'ebb281e', 'q3-8': '0c351dd', 'q3-32': '0cfaf48', 'iv35-8': '741a7d0', 'iv35-14': '226b96d', 'iv35-38': '7c830fc', 'gemma3-4': '093f9f3', 'gemma3-12': '96b6f1e', 'gemma3-27': '005ad34', 'medgemma-4': '290cda5', 'medgemma-27': '2d3e00e', 'llama32-11': '9eb2daa', 'llava15-7': 'b234b80', 'llava15-13': '5dda288', 'lingshu-7': 'b98aecd', 'lingshu-32': '36b9827', 'llavamed-7': '91bb16c'}   # Hugging Face revision (7-char) of every checkpoint
 FAMILY_ORDER = ["Qwen2.5-VL", "Qwen3-VL", "InternVL3.5", "Gemma 3", "MedGemma", "Lingshu", "LLaVA-1.5", "LLaVA-Med", "Llama 3.2 Vision"]
 NAMES = {k: v[0] for k, v in META.items()}
 
@@ -384,11 +385,11 @@ def table_ownership(blocks, ds, label, order):
 def table_models(blocks):
     L = [r"\begin{table}[h]", r"\centering", r"\scriptsize", r"\setlength{\tabcolsep}{3pt}",
          r"\caption{\textbf{Checkpoints.} Family, parameters, vision tower, consumed visual tokens per image at the primary locus, "
-         r"input image size, and eligible question templates after the image-free mapping gate (I/W: ``is''/``show'' wording; Y: yes/no; "
-         r"A/B: letter mappings).}",
+         r"input image size, eligible question templates after the image-free mapping gate (I/W: ``is''/``show'' wording; Y: yes/no; "
+         r"A/B: letter mappings), and the Hugging Face revision the campaign pinned.}",
          r"\label{tab:cf-models}",
-         r"\begin{tabular}{llrllll}", r"\toprule",
-         r"Checkpoint & Family & Params & Vision tower & Tokens & Image & Templates \\", r"\midrule"]
+         r"\begin{tabular}{llrlllll}", r"\toprule",
+         r"Checkpoint & Family & Params & Vision tower & Tokens & Image & Templates & Revision \\", r"\midrule"]
     for m in ORDER:
         present = [(d, blocks[(m, d)]) for d, _ in DATASETS if (m, d) in blocks]
         if not present:
@@ -397,7 +398,7 @@ def table_models(blocks):
         elig = present[0][1]["elig"]
         temps = "".join(t for t in TEMPLATES if elig.get(t, {}).get("eligible", True)) if elig else "all"
         temps = "all" if temps == "".join(TEMPLATES) else temps
-        L.append(f"{name} & {fam} & {params}B & {tower} & {tokens} & {img} & {temps} \\\\")
+        L.append(f"{name} & {fam} & {params}B & {tower} & {tokens} & {img} & {temps} & \\texttt{{{REV.get(m, '')}}} \\\\")
     L += [r"\bottomrule", r"\end{tabular}", r"\end{table}"]
     (OUT / "table_cf_models.tex").write_text("\n".join(L) + "\n")
 

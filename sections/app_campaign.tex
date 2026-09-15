@@ -8,6 +8,7 @@ This appendix lists the checkpoints and their consumed loci, the acceptance deci
 
 \input{tables/table_cf_models}
 \input{tables/table_cf_gates}
+\input{tables/table_cf_prevalence}
 
 For Llama~3.2 Vision the projector also reads five intermediate local-layer outputs that bypass the final global block; for LLaVA the final CLIP block is computed but not consumed, so the consumed block is the penultimate one. Gate (C) verifies for every checkpoint that the write reaches the consumer and the answer logits and changes nothing outside the consumed tokens.
 

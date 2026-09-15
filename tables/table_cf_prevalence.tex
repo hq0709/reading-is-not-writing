@@ -1,0 +1,33 @@
+\begin{table}[h]
+\centering
+\scriptsize
+\setlength{\tabcolsep}{4pt}
+\caption{\textbf{Label counts per concept.} Positive / negative / unknown rows in the training and test cohorts of the fixed manifests (unknown = CheXpert labeler uncertain or blank; unknown rows are excluded from probe fitting, selectivity, and answer AUROC, and scored like every other row under every write).}
+\label{tab:cf-prevalence}
+\begin{tabular}{llrrrrrr}
+\toprule
+Dataset & Concept & \multicolumn{3}{c}{train (pos / neg / unk)} & \multicolumn{3}{c}{test (pos / neg / unk)} \\
+\midrule
+NIH ChestX-ray14 & Effusion & 2423 & 15789 & 0 & 46 & 554 & 0 \\
+ & Atelectasis & 2311 & 15901 & 0 & 57 & 543 & 0 \\
+ & Pneumothorax & 1254 & 16958 & 0 & 17 & 583 & 0 \\
+ & Cardiomegaly & 881 & 17331 & 0 & 23 & 577 & 0 \\
+ & Mass & 1263 & 16949 & 0 & 32 & 568 & 0 \\
+ & Nodule & 1549 & 16663 & 0 & 47 & 553 & 0 \\
+\addlinespace
+CheXpert Plus & Effusion & 5897 & 4277 & 9826 & 158 & 130 & 312 \\
+ & Atelectasis & 2891 & 86 & 17023 & 84 & 2 & 514 \\
+ & Pneumothorax & 1086 & 6456 & 12458 & 32 & 213 & 355 \\
+ & Cardiomegaly & 2312 & 1903 & 15785 & 71 & 58 & 471 \\
+ & Consolidation & 966 & 3652 & 15382 & 25 & 113 & 462 \\
+ & Edema & 3814 & 2231 & 13955 & 133 & 59 & 408 \\
+\addlinespace
+COCO & person & 10877 & 9123 & 0 & 321 & 279 & 0 \\
+ & dog & 693 & 19307 & 0 & 15 & 585 & 0 \\
+ & car & 2051 & 17949 & 0 & 60 & 540 & 0 \\
+ & chair & 2183 & 17817 & 0 & 63 & 537 & 0 \\
+ & bottle & 1455 & 18545 & 0 & 47 & 553 & 0 \\
+ & bicycle & 567 & 19433 & 0 & 14 & 586 & 0 \\
+\bottomrule
+\end{tabular}
+\end{table}
