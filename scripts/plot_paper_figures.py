@@ -806,7 +806,7 @@ def table1_order(blocks):
 
 
 def figA1_write_structure(blocks):
-    FW, FH = fs.WIDTH, 5.75; P = 1.35; gap = 0.34; x0 = 0.62
+    FW, FH = fs.WIDTH, 5.75; P = 1.23; gap = 0.5; x0 = 0.55
     f = plt.figure(figsize=(FW, FH))
     # ---- top row: median write matrix per dataset
     meds = {}
@@ -821,7 +821,7 @@ def figA1_write_structure(blocks):
         concepts, M, n = meds[ds]
         ax = f.add_axes(rect(FW, FH, x0 + k * (P + gap), y_top, P, P), label=f"med{k}")
         xe, ye = heat(ax, M, norm); lab = [SHORT_CONCEPT.get(c, c) for c in concepts]
-        heat_ticks(ax, xe, ye, lab, lab if k == 0 else [""] * len(lab))
+        heat_ticks(ax, xe, ye, lab, lab)
         for i in range(len(concepts)):
             heat_cell_marks(ax, xe, ye, i, i, outline=True)
             for j in range(len(concepts)):

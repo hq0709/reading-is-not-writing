@@ -352,6 +352,36 @@ def table_seed(blocks):
 
 
 # --------------------------------------------------------------------------------------------- appendix ownership tables
+def table_contingency():
+    """Steering reference x verdict over the primary write-matrix cells of included blocks: chest (all cells and the
+    readable-and-answerable subset) and COCO."""
+    import csv, collections
+    rows = [r for r in csv.DictReader(open(ci.RUNS / "manifest.csv"))
+            if r["module"] == "CORE" and r["verdict"] and r["block_included"].lower() in ("true", "1")
+            and r["is_primary_template"].lower() in ("true", "1")]
+    t = lambda x: x.lower() in ("true", "1")
+    V = [("fixed_family_advantage", "advantage"), ("stronger_competitor", "stronger competitor"), ("unresolved", "unresolved")]
+    def counts(sel):
+        c = collections.Counter((t(r["steering_reference"]), r["verdict"]) for r in sel)
+        return c
+    groups = [("Chest, all cells", [r for r in rows if r["dataset"] in ("nih", "chexpert")]),
+              ("Chest, readable and answerable", [r for r in rows if r["dataset"] in ("nih", "chexpert") and t(r["readable"]) and t(r["answer_capable"])]),
+              ("COCO, all cells", [r for r in rows if r["dataset"] == "coco"])]
+    L = [r"\begin{table}[t]", r"\centering", r"\small",
+         r"\caption{\textbf{Steering reference against verdict.} Primary write-matrix cells of the included blocks, split by whether the "
+         r"concept write meets the steering reference and by the simultaneous-bound verdict of the clinical comparison; owned cells are the "
+         r"reference-meeting cells with the advantage verdict.}", r"\label{tab:cf-contingency}",
+         r"\begin{tabular}{llrrrr}", r"\toprule", r"Cells & Steering reference & advantage & stronger competitor & unresolved & total \\", r"\midrule"]
+    for name, sel in groups:
+        c = counts(sel)
+        for met, lab in ((True, "met"), (False, "not met")):
+            n = [c[(met, v)] for v, _ in V]
+            L.append(f"{name if met else ''} & {lab} & " + " & ".join(str(x) for x in n) + f" & {sum(n)} \\\\")
+    L += [r"\bottomrule", r"\end{tabular}", r"\end{table}"]
+    (OUT / "table_cf_contingency.tex").write_text("\n".join(L) + "\n")
+    print("table_cf_contingency.tex", len(rows), "cells")
+
+
 def table_ownership(blocks, ds, label, order):
     """Compact checkpoint x concept table of O_q for one dataset (same checkpoint order as Table 1)."""
     models = [m for m in order if (m, ds) in blocks]
@@ -367,7 +397,7 @@ def table_ownership(blocks, ds, label, order):
          r"\caption{\textbf{Ownership on " + label + r".} Each cell is the ownership contrast $O_q$ of the concept's own write against its strongest "
          r"clinical competitor at $\alpha=+0.25$. Cells are shaded slate for positive and terracotta for negative values (darker = larger magnitude, "
          r"thresholds $0.02$, $0.10$, $0.25$). Bold marks owned cells (steering reference met and all simultaneous lower bounds $>0$). "
-         r"A dagger marks cells whose write meets the steering reference but loses to a competitor. Grey ``inel.'' marks checkpoints whose "
+         r"A dagger marks cells whose write meets the steering reference but has a stronger competitor; a double dagger marks reference-meeting cells whose comparison is unresolved. Grey ``inel.'' marks checkpoints whose "
          r"yes/no template is ineligible and grey ``inc.'' a write matrix incomplete at packaging (neither enters any count). Checkpoints are in the order of Table~\ref{tab:cf-main}.}",
          r"\label{tab:cf-own-" + ds + r"}",
          r"\begin{tabular}{l" + "r" * len(concepts) + r"}", r"\toprule",
@@ -387,7 +417,7 @@ def table_ownership(blocks, ds, label, order):
             if owned(v):
                 txt = r"\textbf{" + txt + "}"; n_own[c] += 1
             elif v.get("steering_reference"):
-                txt += r"$^{\dagger}$"
+                txt += r"$^{\dagger}$" if v.get("verdict") == "stronger_competitor" else r"$^{\ddagger}$"
             cells.append(shade_own(v["O_q"]) + txt)
         L.append(f"{NAMES[m]} & " + " & ".join(cells) + r" \\")
     L += [r"\midrule", r"\textbf{Owned} & " + " & ".join(str(n_own[c]) for c in concepts) + r" \\",
@@ -518,6 +548,7 @@ if __name__ == "__main__":
     table_seed(blocks)
     for ds, label in DATASETS:
         table_ownership(blocks, ds, label, order)
+    table_contingency()
     for ds, _ in DATASETS:
         (OUT / f"table_cf_{ds}.tex").unlink(missing_ok=True)
     table_models(blocks)

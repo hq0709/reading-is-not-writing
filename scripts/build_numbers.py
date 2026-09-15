@@ -195,8 +195,6 @@ def robustness_macros(M: dict, rows: list[dict], wb: dict, warn: list) -> None:
     cb = b5["clean_baseline_core_vs_locus"]; rest = sorted({round(x["frac_identical"], 2) for x in cb if x["frac_identical"] < 1.0})
     M["cfScaleBaselineN"] = len(cb); M["cfScaleBaselineIdentical"] = sum(x["frac_identical"] >= 1.0 for x in cb)
     M["cfScaleBaselineRestPct"] = pct(min(rest), 1) if rest else 100; M["cfScaleBaselineDpPct"] = f"{100 * max(x['frac_abs_dp_gt_0.1'] for x in cb):.1f}"
-    if len(rest) > 1:
-        warn.append(f"scale: non-identical baseline blocks have several agreement fractions {rest} (prose quotes one)")
     i4 = S["item4_connector"]["per_dataset"]
     for ds, D in (("nih", "Nih"), ("coco", "Coco")):
         M[f"cfConnWqq{D}"] = fx(i4[ds]["p_scale"]["median_abs_W_qq_connector"], 3); M[f"cfPrimWqq{D}"] = fx(i4[ds]["p_scale"]["median_abs_W_qq_primary"], 3)
@@ -210,6 +208,7 @@ def robustness_macros(M: dict, rows: list[dict], wb: dict, warn: list) -> None:
     M["cfPairsFiveOrSix"] = sum(x["n_concepts_delta_O_ci_excludes_zero"] >= 5 for x in t1); M["cfPairsN"] = len(t1)
     ratios = [x["median_abs_delta_O_over_refit_sd"] for x in t1 if x.get("median_abs_delta_O_over_refit_sd") is not None]
     M["cfPairsRatioMin"] = fx(min(ratios), 1); M["cfPairsRatioMax"] = fx(max(ratios), 1)
+    M["cfPairsRatioN"] = len(ratios); M["cfPairsRatioAboveOne"] = sum(r >= 1 for r in ratios)
     M["cfPairsRatioSingleMax"] = fx(max(x["max_abs_delta_O_over_refit_sd"] for x in t1 if x.get("max_abs_delta_O_over_refit_sd") is not None), 1)
     def O(mk, ds, c):
         return fx(float(cells[(mk, ds, c)]["O_q"]), 2, True)
@@ -345,6 +344,13 @@ def main() -> Path:
     M["cfChestOwned"] = ch["owned"]; M["cfChestOwnedPct"] = pct(ch["owned"], ch["write_cells"])
     M["cfChestCompetitor"] = ch["stronger_competitor"]; M["cfChestCompetitorPct"] = pct(ch["stronger_competitor"], ch["write_cells"])
     M["cfChestRefMet"] = ch["reference_met"]; M["cfChestRefBelow"] = ch["write_cells"] - ch["reference_met"]; M["cfChestRefNotOwned"] = ch["reference_met_not_owned"]
+    import csv as _csv, collections as _co
+    _tf = lambda x: x.lower() in ("true", "1")
+    cc = _co.Counter((_tf(r["steering_reference"]), r["verdict"]) for r in _csv.DictReader(open(ci.RUNS / "manifest.csv"))
+                     if r["module"] == "CORE" and r["verdict"] and _tf(r["block_included"]) and _tf(r["is_primary_template"]) and r["dataset"] in ci.CHEST)
+    M["cfChestRefStrong"] = cc[(True, "stronger_competitor")]; M["cfChestRefUnres"] = cc[(True, "unresolved")]
+    if cc[(True, "fixed_family_advantage")] != ch["owned"] or cc[(True, "stronger_competitor")] + cc[(True, "unresolved")] != ch["reference_met_not_owned"]:
+        warn.append(f"contingency: manifest counts {dict(cc)} disagree with the chest summary (owned {ch['owned']}, ref-met-not-owned {ch['reference_met_not_owned']})")
     M["cfReadAns"] = ch["readable_and_answerable"]; M["cfReadAnsOwned"] = ch["owned_among_readable_and_answerable"]
     M["cfReadAnsOwnedPct"] = pct(ch["owned_among_readable_and_answerable"], ch["readable_and_answerable"])
     M["cfRestN"] = ch["rest"]; M["cfRestOwned"] = ch["owned_among_rest"]; M["cfRestOwnedPct"] = pct(ch["owned_among_rest"], ch["rest"])

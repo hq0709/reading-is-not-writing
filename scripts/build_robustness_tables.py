@@ -319,11 +319,14 @@ def validation():
                  f"{f2(s.get('median_auroc_answer_dir_vs_clean_answer'))} & {f2(s.get('median_auroc_probe_vs_clean_answer'))} & "
                  f"{f2(s['median_pearson_scores'])} & {f2(s['median_cos_raw_model'])} & {f2(s['median_cos_sigma_projected'])} \\\\")
     al = d["answer_direction"]["aggregate"].get("alignment_vs_ownership", {}).get("all")
+    alc = d["answer_direction"]["aggregate"].get("alignment_vs_ownership", {}).get("chest")
     if al:
         L += [r"\midrule", r"\multicolumn{9}{p{0.98\textwidth}}{\textit{Alignment against ownership over the " + str(al["n_cells"]) + r" answer-direction cells: Spearman correlation between $\cos_\Sigma(a_q,\hat w_q)$ and the label direction's $O_q$ $\rho="
               + f2(al["spearman_cos_sigma_vs_O_q"]["rho"]) + r"$ ($p=" + fp(al["spearman_cos_sigma_vs_O_q"]["p"]) + r"$); with the label direction's owned indicator $\rho="
               + f2(al["spearman_cos_sigma_vs_owned"]["rho"]) + r"$ ($p=" + fp(al["spearman_cos_sigma_vs_owned"]["p"]) + r"$); median $\cos_\Sigma$ "
-              + f2(al["median_cos_sigma_owned"]) + r" in owned against " + f2(al["median_cos_sigma_not_owned"]) + r" in not-owned cells.}} \\"]
+              + f2(al["median_cos_sigma_owned"]) + r" in owned against " + f2(al["median_cos_sigma_not_owned"]) + r" in not-owned cells"
+              + (r"; within the chest sets alone $\rho=" + f2(alc["spearman_cos_sigma_vs_O_q"]["rho"]) + r"$ ($p=" + fp(alc["spearman_cos_sigma_vs_O_q"]["p"]) + r"$, "
+                 + str(alc["n_cells"]) + " cells)" if alc else "") + r".}} \\"]
     L += [r"\midrule", r"\multicolumn{9}{l}{\textit{Column selectivity and known-label ownership, per dataset}} \\",
           r"Dataset & blocks & cells & median $S_d$ & $S_d\geq0.5$ & known rows (median) & sign of $O_q$ kept & owned kept & \\", r"\midrule"]
     col, kl = d["column_selectivity"]["per_dataset"], d["known_label"]["per_dataset"]

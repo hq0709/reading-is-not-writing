@@ -1,3 +1,6 @@
+You are a senior ICLR reviewer (area: interpretability, steering, medical vision-language models). Below is the full text of a submission (extracted from the PDF; Figure 1 is a placeholder by the authors' decision, do not comment on it). Write a complete ICLR-style review in markdown: (1) Summary (5-8 sentences); (2) Strengths, each tied to a section/table/figure; (3) Weaknesses, each tied to a section/table/figure/sentence, saying exactly what evidence or rewrite would resolve it (ask for evidence, not for narrowing the central claim); (4) Questions for the authors; (5) Scores: soundness, presentation, contribution (1-4), overall 1-10, confidence 1-5; (6) A prioritized fix list (P0/P1/P2) with the exact section/table/figure and the concrete change. Be direct and specific; quote sentences you object to. Output only the review.
+
+=== PAPER TEXT ===
       Under review as a conference paper at ICLR 2027
 
 
