@@ -1,0 +1,23 @@
+\begin{table}[h]
+\centering
+\scriptsize
+\setlength{\tabcolsep}{4pt}
+\caption{\textbf{Direction and label geometry against off-diagonal dominance.} Per dataset: blocks with a complete write matrix; mean off-diagonal cosine between the six write directions in model space (random pairs of unit vectors give $0.023$); mean off-diagonal $\phi$ between the six test labels; the fraction of cells whose strongest competitor is the most similar direction, and the most co-occurring label (chance $0.20$); Spearman correlation over off-diagonal cells between the competitor advantage $W_{q,d}-W_{q,q}$ and cosine; the fraction of cells with $O_q>0$, the same after removing the strongest competitor, and the fraction with at least two competitors above the own write. Bottom: COCO ownership when the competitor set is restricted to a co-occurring family (mean within-family $\phi$ in parentheses).}
+\label{tab:cf-geometry}
+\resizebox{\textwidth}{!}{\begin{tabular}{lrrrrrrrrr}
+\toprule
+Dataset & blocks & cos & $\phi$ & comp.\ = max cos & comp.\ = max $\phi$ & $\rho$(adv., cos) & $O_q>0$ & $O_q^{-d^*}>0$ & $\geq2$ above \\
+\midrule
+NIH ChestX-ray14 & 20 & 0.019 & 0.026 & 0.19 & 0.23 & 0.09 & 31/120 & 48/120 & 0.60 \\
+CheXpert Plus & 18 & 0.241 & 0.381 & 0.23 & 0.25 & 0.07 & 31/108 & 54/108 & 0.50 \\
+COCO & 19 & 0.040 & 0.022 & 0.18 & 0.19 & 0.01 & 108/114 & 110/114 & 0.04 \\
+\midrule
+\multicolumn{10}{l}{\textit{COCO restricted competitor families: cells with $O_q>0$ within the family / with all five competitors}} \\
+\quad person + bicycle ($\phi=0.14$) & \multicolumn{9}{l}{38/38 within the family; 34/38 with all five competitors} \\
+\quad person + dog ($\phi=-0.06$) & \multicolumn{9}{l}{38/38 within the family; 37/38 with all five competitors} \\
+\quad chair + bottle ($\phi=0.12$) & \multicolumn{9}{l}{37/38 within the family; 37/38 with all five competitors} \\
+\quad car + bicycle ($\phi=0.13$) & \multicolumn{9}{l}{37/38 within the family; 34/38 with all five competitors} \\
+\quad person + chair + bottle ($\phi=0.08$) & \multicolumn{9}{l}{56/57 within the family; 56/57 with all five competitors} \\
+\bottomrule
+\end{tabular}}
+\end{table}
