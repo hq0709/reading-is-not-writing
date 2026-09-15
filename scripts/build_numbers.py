@@ -19,6 +19,11 @@ Sources and rules
                          or any alternative family.
   median W_qq            median over write-matrix cells per dataset, three decimals.
   selectivity            mean probe selectivity of Effusion and Cardiomegaly over probe-graded chest blocks.
+  robustness             runs/robustness/{geometry,scale,pairs,validation}.json (scripts/mayo/robustness_*.py in the code
+                         repository, which discover blocks with the same rule); every file's block set must equal the
+                         manifest's included set or this script stops. PRECISION, ANSDIR and label-gap numbers come from
+                         the included blocks' summary.json. Formats follow the prose (2-3 decimals; signed where the prose
+                         prints a sign). Ranges get Min/Max macros. Warnings flag any wording the numbers no longer support.
 """
 from __future__ import annotations
 
@@ -35,6 +40,7 @@ sys.path.insert(0, str(HERE))
 import cf_inclusion as ci   # noqa: E402
 
 OUT = HERE.parent / "tables"
+ROB = ci.RUNS / "robustness"
 DS_MACRO = {"nih": "Nih", "chexpert": "Chex", "coco": "Coco"}
 FAMILIES = ("dom", "pattern", "orth", "resid")
 FAM_MACRO = {"logistic": "Logistic", "dom": "Dom", "pattern": "Pattern", "orth": "Orth", "resid": "Resid", "any": "Any"}
@@ -109,6 +115,169 @@ def altdir(rows: list[dict]) -> dict:
     return out
 
 
+def fx(v, nd, signed=False) -> str:
+    return f"{v:+.{nd}f}" if signed else f"{v:.{nd}f}"
+
+
+def robustness_macros(M: dict, rows: list[dict], wb: dict, warn: list) -> None:
+    """Macros for every robustness-derived number in the prose (Sections 5.4-5.6 and Appendix C.6)."""
+    G, S, P, V = (json.loads((ROB / f"{n}.json").read_text()) for n in ("geometry", "scale", "pairs", "validation"))
+    cells = {(r["model_key"], r["dataset"], r["concept"]): r for r in rows if t(r["cell"])}
+    inc = {f"{k[0]}/{k[1]}" for k in wb}
+    for name, blocks in (("geometry", set(G["meta"]["blocks"])),
+                         ("scale", {f"{b['model']}/{b['dataset']}" for b in S["blocks"] if b.get("status") == "OK"}),
+                         ("pairs", {f"{b['model']}/{b['dataset']}" for b in P["blocks"] if b.get("write_matrix")}),
+                         ("validation", set(V["meta"]["blocks"]))):
+        if blocks != inc:
+            raise RuntimeError(f"runs/robustness/{name}.json block set differs from the manifest's included blocks by {sorted(blocks ^ inc)}; "
+                               f"rerun scripts/mayo/robustness_{name}.py")
+    # ---- geometry (Table cf-geometry)
+    dg, lg, lo, asc = G["direction_geometry"], G["label_geometry"], G["leave_one_out"], G["association"]
+    M["cfGeoCosNih"] = fx(dg["nih"]["offdiag_cos_model_mean"], 3); M["cfGeoCosRandom"] = fx(dg["nih"]["random_pair_abs_cos_mean"], 3)
+    M["cfGeoCosChex"] = fx(dg["chexpert"]["offdiag_cos_model_mean"], 2)
+    cx = G["labels"]["chexpert"]["concepts"]; i, j = cx.index("Effusion"), cx.index("Consolidation")
+    M["cfGeoCosEffCons"] = fx(dg["chexpert"]["cos_model_mean_matrix"][i][j], 2); M["cfGeoPhiEffCons"] = fx(G["labels"]["chexpert"]["phi"][i][j], 2)
+    M["cfGeoPhiNih"] = fx(lg["nih"]["offdiag_phi_mean"], 3)
+    M["cfGeoOwnWinsNihPct"] = pct(lo["nih"]["O_q_positive"], lo["nih"]["n_cells"]); M["cfGeoOwnWinsChexPct"] = pct(lo["chexpert"]["O_q_positive"], lo["chexpert"]["n_cells"])
+    cos_ch = [pct(dg[ds]["coincide_cos_model"]["n_true"], dg[ds]["coincide_cos_model"]["n"]) for ds in ci.CHEST]
+    M["cfGeoChanceCosMin"], M["cfGeoChanceCosMax"] = min(cos_ch), max(cos_ch)
+    lab = [pct(lg[ds][k]["n_true"], lg[ds][k]["n"]) for ds in ci.CHEST for k in ("coincide_phi", "coincide_cooccurrence")]
+    M["cfGeoChanceLabelMin"], M["cfGeoChanceLabelMax"] = min(lab), max(lab)
+    M["cfGeoOffdiagCells"] = f"{asc['chest']['n_cells']:,}".replace(",", "{,}")
+    M["cfGeoRhoAdvCos"] = fx(asc["chest"]["rho_adv_vs_cos_model"]["rho"], 2); M["cfGeoRhoAdvCosP"] = fx(asc["chest"]["rho_adv_vs_cos_model"]["p"], 2)
+    M["cfGeoRhoAdvPhi"] = fx(asc["chest"]["rho_adv_vs_phi"]["rho"], 3)
+    M["cfGeoTwoAbove"] = lo["chest"]["n_above_ge2"]; M["cfGeoTwoAboveN"] = lo["chest"]["n_cells"]; M["cfGeoTwoAbovePct"] = pct(lo["chest"]["n_above_ge2"], lo["chest"]["n_cells"])
+    fam = [pct(v["O_family_positive"], v["n_cells"]) for v in G["coco_families"].values()]
+    M["cfGeoCocoFamMinPct"], M["cfGeoCocoFamMaxPct"] = min(fam), max(fam)
+    M["cfGeoFamPhiPersonBicycle"] = fx(G["coco_families"]["person+bicycle"]["phi_within_family_mean"], 2)
+    sc = G["seed_cell"]; comp = {c["d"]: c for c in sc["competitors"]}
+    M["cfSeedCosNodule"] = fx(comp["Nodule"]["cos_model"], 2); M["cfSeedWNodule"] = fx(comp["Nodule"]["W_qd"], 3); M["cfSeedWEff"] = fx(sc["W_qq"], 3)
+    M["cfSeedCosAtel"] = fx(comp["Atelectasis"]["cos_model"], 2); M["cfSeedWAtel"] = fx(comp["Atelectasis"]["W_qd"], 3)
+    if sc["argmax_other"] != "Nodule" or min(comp, key=lambda d: comp[d]["cos_model"]) != "Nodule" or max(comp, key=lambda d: comp[d]["cos_model"]) != "Atelectasis":
+        warn.append("seed cell: Nodule is no longer the strongest / least similar competitor or Atelectasis the most similar (prose names them)")
+    # ---- scale (Table cf-scale)
+    i1 = S["item1_margin_scale"]
+    M["cfScaleAgree"] = sum(i1[ds]["agreement_owned_p_vs_owned_m"]["a_yes_b_yes"] + i1[ds]["agreement_owned_p_vs_owned_m"]["a_no_b_no"] for ds in ci.DATASETS)
+    M["cfScaleAgreeN"] = sum(i1[ds]["agreement_owned_p_vs_owned_m"]["n"] for ds in ci.DATASETS)
+    M["cfScaleOwned"] = sum(i1[ds]["owned_p"] for ds in ci.DATASETS); M["cfScaleOwnedKeepFull"] = sum(i1[ds]["owned_p_and_Om_ci_pos_and_beats_random_m"] for ds in ci.DATASETS)
+    if sum(i1[ds]["owned_p_and_Om_pos"] for ds in ci.DATASETS) != M["cfScaleOwned"]:
+        warn.append("scale: not every owned cell keeps O^m_q > 0 (prose says 'every owned cell keeps')")
+    sat = S["item2_ceiling"]["saturation"]["per_dataset_median_block_sat"]
+    for ds, D in DS_MACRO.items():
+        M[f"cfScaleSat{D}"] = fx(sat[ds], 2)
+    uns = [S["item2_ceiling"]["strata"][ds]["unsaturated"] for ds in ci.CHEST]
+    M["cfScaleUnsatOwned"] = sum(u["owned_p_evaluable"] for u in uns); M["cfScaleUnsatOwnedKept"] = sum(u["owned_p_O_pos"] for u in uns)
+    M["cfScaleUnsatOtherPos"] = sum(u["not_owned_O_pos"] for u in uns); M["cfScaleUnsatOther"] = sum(u["not_owned_evaluable"] for u in uns)
+    if M["cfScaleUnsatOwnedKept"] != M["cfScaleUnsatOwned"]:
+        warn.append(f"scale: unsaturated rows keep O_q>0 in {M['cfScaleUnsatOwnedKept']} of {M['cfScaleUnsatOwned']} owned chest cells (prose says 'all')")
+    d = [abs(c["refit"][f"O_seed{k}"] - c["p_scale"]["O"]) for c in S["cells"] if c.get("refit", {}).get("n_seeds") for k in (1, 2) if c["refit"].get(f"O_seed{k}") is not None]
+    M["cfScaleRefitMedian"] = fx(statistics.median(d), 2)
+    i3 = S["item3_refit"]["per_dataset"]
+    for ds, D in (("nih", "Nih"), ("coco", "Coco")):
+        M[f"cfRefitStable{D}"] = i3[ds]["owned_p_O_pos_both_refits"]; M[f"cfRefitOwned{D}"] = i3[ds]["owned_p"]
+        if i3[ds]["owned_p"] != M[f"cf{D}Owned"]:
+            warn.append(f"scale: refit owned count on {ds} ({i3[ds]['owned_p']}) differs from the manifest ({M[f'cf{D}Owned']})")
+    b5 = S["item5_batch"]; dist = b5["distribution"]["vis.last"]
+    M["cfScaleBatchMin"] = fx(dist["max_abs_candidate_logit_diff"]["min"], 2); M["cfScaleBatchMax"] = fx(dist["max_abs_candidate_logit_diff"]["max"], 2)
+    M["cfScaleBatchAgree"] = dist["margin_sign_agreement_true"]; M["cfScaleBatchN"] = dist["n_blocks"]; M["cfScaleBatchDisagree"] = dist["margin_sign_agreement_false"]
+    if b5["owned_cells_in_sign_disagreement_blocks"]:
+        warn.append(f"scale: {b5['owned_cells_in_sign_disagreement_blocks']} owned cell(s) in sign-disagreeing blocks (prose says none)")
+    cb = b5["clean_baseline_core_vs_locus"]; rest = sorted({round(x["frac_identical"], 2) for x in cb if x["frac_identical"] < 1.0})
+    M["cfScaleBaselineN"] = len(cb); M["cfScaleBaselineIdentical"] = sum(x["frac_identical"] >= 1.0 for x in cb)
+    M["cfScaleBaselineRestPct"] = pct(min(rest), 1) if rest else 100; M["cfScaleBaselineDpPct"] = f"{100 * max(x['frac_abs_dp_gt_0.1'] for x in cb):.1f}"
+    if len(rest) > 1:
+        warn.append(f"scale: non-identical baseline blocks have several agreement fractions {rest} (prose quotes one)")
+    i4 = S["item4_connector"]["per_dataset"]
+    for ds, D in (("nih", "Nih"), ("coco", "Coco")):
+        M[f"cfConnWqq{D}"] = fx(i4[ds]["p_scale"]["median_abs_W_qq_connector"], 3); M[f"cfPrimWqq{D}"] = fx(i4[ds]["p_scale"]["median_abs_W_qq_primary"], 3)
+    # ---- pairs (Table cf-pairs) and the per-concept O values quoted in Section 5.4 (from the manifest)
+    t1 = P["task1_paired_deltas"]
+    def pair(small, large, ds):
+        return next(x for x in t1 if x["small"] == small and x["large"] == large and x["dataset"] == ds)
+    for name, (small, large) in (("FourTwelve", ("gemma3-4", "gemma3-12")), ("TwelveTwentySeven", ("gemma3-12", "gemma3-27"))):
+        e = pair(small, large, "nih")["per_concept"]["Effusion"]["delta_O"]
+        M[f"cfPairDeltaEff{name}"] = fx(e["estimate"], 2, True); M[f"cfPairDeltaEff{name}Lo"] = fx(e["ci95"][0], 2, True); M[f"cfPairDeltaEff{name}Hi"] = fx(e["ci95"][1], 2, True)
+    M["cfPairsFiveOrSix"] = sum(x["n_concepts_delta_O_ci_excludes_zero"] >= 5 for x in t1); M["cfPairsN"] = len(t1)
+    ratios = [x["median_abs_delta_O_over_refit_sd"] for x in t1 if x.get("median_abs_delta_O_over_refit_sd") is not None]
+    M["cfPairsRatioMin"] = fx(min(ratios), 1); M["cfPairsRatioMax"] = fx(max(ratios), 1)
+    M["cfPairsRatioSingleMax"] = fx(max(x["max_abs_delta_O_over_refit_sd"] for x in t1 if x.get("max_abs_delta_O_over_refit_sd") is not None), 1)
+    def O(mk, ds, c):
+        return fx(float(cells[(mk, ds, c)]["O_q"]), 2, True)
+    M["cfOGemmaTwelveEff"] = O("gemma3-12", "nih", "Effusion")
+    if O("gemma3-12", "chexpert", "Effusion") != M["cfOGemmaTwelveEff"]:
+        warn.append(f"Gemma 3 12B Effusion O differs between NIH {M['cfOGemmaTwelveEff']} and CheXpert {O('gemma3-12', 'chexpert', 'Effusion')} (prose: 'on both chest sets')")
+    M["cfOGemmaTwelveMass"] = O("gemma3-12", "nih", "Mass"); M["cfOGemmaTwelvePneu"] = O("gemma3-12", "chexpert", "Pneumothorax")
+    M["cfOGemmaTwentySevenEff"] = O("gemma3-27", "nih", "Effusion"); M["cfOGemmaTwentySevenMass"] = O("gemma3-27", "nih", "Mass"); M["cfOGemmaTwentySevenPneu"] = O("gemma3-27", "chexpert", "Pneumothorax")
+    M["cfOMedFourPneu"] = O("medgemma-4", "chexpert", "Pneumothorax"); M["cfOMedTwentySevenPneu"] = O("medgemma-27", "chexpert", "Pneumothorax")
+    M["cfOMedFourEdema"] = O("medgemma-4", "chexpert", "Edema"); M["cfOMedTwentySevenEdema"] = O("medgemma-27", "chexpert", "Edema")
+    ex = P["task2_ceiling"]["examples"]; om = [v for k in ("gemma3-4/nih", "gemma3-4/chexpert") for v in ex[k]["per_concept"].values()]
+    M["cfPairsGemmaFourOmNear"] = fx(max(v["O_m"] for v in om), 1); M["cfPairsGemmaFourOmFar"] = fx(min(v["O_m"] for v in om), 1)
+    if any(v["O_m_ci95"][1] >= 0 for v in om):
+        warn.append("pairs: a Gemma 3 4B chest O^m interval reaches zero (prose says all intervals below zero)")
+    for mk, name in (("llava15-7", "cfLlavaSevenCoco"), ("llava15-13", "cfLlavaThirteenCoco")):
+        M[name] = sum(t(r["owned"]) for r in rows if t(r["cell"]) and r["model_key"] == mk and r["dataset"] == "coco")
+    # ---- validation (Table cf-validation)
+    ag = V["answer_direction"]["aggregate"]
+    for ds, D in (("nih", "Nih"), ("chexpert", "Chex")):
+        M[f"cfValAurocAns{D}"] = fx(ag[f"{ds}_median_auroc_answer_dir"], 2); M[f"cfValAurocProbe{D}"] = fx(ag[f"{ds}_median_auroc_probe"], 2)
+    M["cfValAurocAnsClean"] = fx(ag["median_auroc_answer_dir_vs_clean_answer"], 2); M["cfValAurocProbeClean"] = fx(ag["median_auroc_probe_vs_clean_answer"], 2)
+    cs = [ag[f"{ds}_median_cos_sigma_projected"] for ds in ci.CHEST]
+    M["cfValCosSigmaChestMin"] = fx(min(cs), 2); M["cfValCosSigmaChestMax"] = fx(max(cs), 2); M["cfValCosSigmaCoco"] = fx(ag["coco_median_cos_sigma_projected"], 2)
+    csel = V["column_selectivity"]["per_dataset"]; kn = V["known_label"]["per_dataset"]
+    for ds, tag in (("nih", "Nih"), ("chexpert", "Chex"), ("coco", "Coco")):
+        M[f"cfValColSel{tag}"] = fx(csel[ds]["median_S_d"], 2); M[f"cfValColSelGeHalf{tag}"] = str(csel[ds]["n_S_ge_0.5"]); M[f"cfValColSelN{tag}"] = str(csel[ds]["n_cells"])
+    M["cfValColSelGeHalfChest"] = str(csel["nih"]["n_S_ge_0.5"] + csel["chexpert"]["n_S_ge_0.5"]); M["cfValColSelNChest"] = str(csel["nih"]["n_cells"] + csel["chexpert"]["n_cells"])
+    M["cfValKnownSignAgree"] = str(kn["chexpert"]["n_sign_agrees"]); M["cfValKnownN"] = str(kn["chexpert"]["n_cells"])
+    M["cfValKnownOwnedSummary"] = str(kn["chexpert"]["n_owned_summary"]); M["cfValKnownOwnedKnown"] = str(kn["chexpert"]["n_owned_known"])
+    col = V["column_selectivity"]
+    for ds, D in DS_MACRO.items():
+        M[f"cfColSel{D}"] = fx(col["per_dataset"][ds]["median_S_d"], 2)
+    M["cfColSelChestGe"] = col["chest"]["n_S_ge_0.5"]; M["cfColSelChestN"] = col["chest"]["n_cells"]
+    M["cfColSelCocoGe"] = col["per_dataset"]["coco"]["n_S_ge_0.5"]; M["cfColSelCocoN"] = col["per_dataset"]["coco"]["n_cells"]
+    kl = V["known_label"]["per_dataset"]["chexpert"]
+    M["cfKnownSignAgree"] = kl["n_sign_agrees"]; M["cfKnownN"] = kl["n_cells"]; M["cfKnownOwned"] = kl["n_owned_summary"]
+    # owned cells (paper verdict) that stay owned under the percentile verdict on the known-label rows
+    kc = [c for b in V["known_label"]["blocks"] if b["dataset"] == "chexpert" for c in b["per_question"].values() if c["summary_owned"]]
+    M["cfKnownOwnedKept"] = sum(bool(c["owned_known"]) for c in kc)
+    if len(kc) != M["cfKnownOwned"]:
+        warn.append(f"validation: {len(kc)} summary-owned CheXpert cells in known_label blocks vs {M['cfKnownOwned']} in per_dataset")
+    # ---- PRECISION (Table cf-precision), from the included blocks' summaries
+    prec = [(k, b["s"]["precision"]) for k, b in wb.items() if b["s"].get("precision")]
+    done = [(k, st, p[st]) for k, p in prec for st in p["settings"] if p.get(st, {}).get("status") == "COMPLETE"]
+    M["cfPrecisionBlocks"] = len(prec); M["cfPrecisionMaxDW"] = fx(max(r["max_abs_dW"] for _, _, r in done), 3) if done else "--"
+    M["cfPrecisionVerdictChanges"] = sum(12 - r["n_agree_competitor"] - r["n_agree_random_p95"] for _, _, r in done)
+    if M["cfPrecisionVerdictChanges"]:
+        warn.append(f"precision: {M['cfPrecisionVerdictChanges']} point-verdict change(s) (prose says no verdict changes)")
+    # ---- label gap (t3 of the included blocks)
+    gaps = {ds: [] for ds in ci.DATASETS}
+    for (mk, ds), b in wb.items():
+        v = (b["s"].get("t3") or {}).get("all|median_label_gap")
+        if isinstance(v, dict) and v.get("estimate") is not None:
+            gaps[ds].append(v["estimate"])
+    coco = [g for g in gaps["coco"] if g <= -3]
+    M["cfLabelGapCocoBlocks"] = len(coco); M["cfLabelGapCocoHi"] = f"{max(coco):.0f}"; M["cfLabelGapCocoLo"] = f"{min(coco):.0f}"
+    M["cfLabelGapNihBlocks"] = sum(abs(g) <= 1 for g in gaps["nih"])
+    if len(gaps["coco"]) != M["cfCocoBlocks"] or len(gaps["nih"]) != M["cfNihBlocks"]:
+        warn.append(f"label gap defined for {len(gaps['coco'])} COCO / {len(gaps['nih'])} NIH blocks, not every included block")
+    # ---- ANSDIR (Table cf-ansdir)
+    ans = {k: b["s"]["ansdir"]["per_question"] for k, b in wb.items() if b["s"].get("ansdir")}
+    def owned_n(pq):
+        return sum(ci.owned(v) for v in pq.values())
+    def medcos(pq):
+        return statistics.median(v["cos_to_logistic_model"] for v in pq.values())
+    M["cfAnsQwenOwnedNih"] = owned_n(ans[("q25-7", "nih")]); M["cfAnsQwenOwnedChex"] = owned_n(ans[("q25-7", "chexpert")])
+    M["cfAnsLingOwnedNih"] = owned_n(ans[("lingshu-32", "nih")]); M["cfAnsLingOwnedChex"] = owned_n(ans[("lingshu-32", "chexpert")])
+    e = ans[("q25-7", "nih")]["Effusion"]; M["cfAnsQwenEffO"] = fx(e["O_q"], 2, True); M["cfAnsQwenEffW"] = fx(e["W_qq"], 2)
+    for mk, D in (("q25-7", "Qwen"), ("lingshu-32", "Ling")):
+        c = [medcos(ans[(mk, ds)]) for ds in ci.CHEST]; M[f"cfAnsCos{D}Min"] = fx(min(c), 2); M[f"cfAnsCos{D}Max"] = fx(max(c), 2)
+    c = [medcos(pq) for (mk, ds), pq in ans.items() if ds == "coco"]; M["cfAnsCosCocoMin"] = fx(min(c), 2); M["cfAnsCosCocoMax"] = fx(max(c), 2)
+    beats = {k: sum(v.get("own_minus_max_logistic_competitor_ci95_percentile", [0, 0])[0] > 0 for v in pq.values()) for k, pq in ans.items()}
+    M["cfAnsBlocks"] = len(ans); M["cfAnsBeatsAllBlocks"] = sum(b == 6 for b in beats.values())
+    if M["cfAnsBeatsAllBlocks"] != M["cfAnsBlocks"]:
+        warn.append("ansdir: 'In every block, its write beats the strongest logistic competitor on all six questions' no longer holds: "
+                    + ", ".join(f"{k[0]}/{k[1]} {b}/6" for k, b in beats.items() if b != 6))
+
+
 def main() -> Path:
     rows = ci.read_manifest()
     all_blocks = ci.load_runs()
@@ -169,6 +338,10 @@ def main() -> Path:
     coco_p = [pct(A["coco"][fam], A["coco"]["n"]) for fam in ("logistic",) + FAMILIES]
     M["cfAltdirChestPctMin"], M["cfAltdirChestPctMax"] = min(chest_p), max(chest_p)
     M["cfAltdirCocoPctMin"], M["cfAltdirCocoPctMax"] = min(coco_p), max(coco_p)
+    warn = []
+    robustness_macros(M, rows, wb, warn)
+    for w in warn:
+        print("  WARNING:", w)
     # write
     L = ["% Generated by scripts/build_numbers.py from runs/manifest.csv; do not edit.",
          "% Rule: a block enters the write-matrix counts iff run.json completed_modules contains CORE and CALIBRATION;",

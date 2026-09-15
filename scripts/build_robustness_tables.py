@@ -248,6 +248,80 @@ def tokenw():
     print("table_cf_tokenw.tex")
 
 
+def precision():
+    """PRECISION: the CORE grid on the first 200 test rows rescored with fp32 weights and forward, and in bf16 at batch
+    size one, against the CORE values on the same rows (summary.json["precision"] of every included block that has it)."""
+    names = {"q25-7": "Qwen2.5-VL-7B", "q3-8": "Qwen3-VL-8B", "lingshu-32": "Lingshu 32B", "gemma3-12": "Gemma 3 12B", "iv35-8": "InternVL3.5-8B", "medgemma-4": "MedGemma 4B"}
+    rows = []
+    for sp, j in included_summaries():
+        p = j.get("precision")
+        if not p:
+            continue
+        mk, ds = sp.parent.parent.name, sp.parent.name
+        cells = [f"{names.get(mk, mk)} & {NAMES[ds]} & {p['n_rows']}"]
+        for st in p["settings"]:
+            r = p.get(st, {})
+            if r.get("status") != "COMPLETE":
+                cells.append("-- & -- & -- & --"); continue
+            cells.append(f"{r['max_abs_dW']:.4f} & {r['max_abs_dO']:.4f} & {r['n_agree_competitor']}/6 & {r['n_agree_random_p95']}/6")
+        rows.append((mk, ds, " & ".join(cells) + r" \\"))
+    which = ("One block has completed the module so far (" + ", ".join(f"{names.get(mk, mk)} on {NAMES[ds]}" for mk, ds, _ in rows) + ")."
+             if len(rows) == 1 else f"{len(rows)} blocks have completed the module.")
+    L = [r"\begin{table}[h]", r"\centering", r"\scriptsize", r"\setlength{\tabcolsep}{4pt}",
+         r"\caption{\textbf{Numerics.} The CORE grid (six clinical directions, 119 random directions, and the sham at $\alpha=+0.25$) "
+         r"on the first 200 test rows rescored with fp32 weights and forward pass, and in bf16 at batch size one, against the CORE "
+         r"values (bf16, batched) on the same rows: the largest change over the 36 clinical cells $\max|\Delta W_{q,d}|$, the largest "
+         r"change in ownership $\max|\Delta O_q|$, and the concepts whose two point verdicts (own write above the strongest competitor; "
+         r"own write above the random 95th percentile) agree with CORE's. " + which + "}",
+         r"\label{tab:cf-precision}",
+         r"\resizebox{\textwidth}{!}{\begin{tabular}{llrrrrrrrrr}", r"\toprule",
+         r"Checkpoint & Dataset & rows & \multicolumn{4}{c}{fp32 weights and forward} & \multicolumn{4}{c}{bf16, batch size one} \\",
+         r"\cmidrule(lr){4-7}\cmidrule(lr){8-11}",
+         r" & & & $\max|\Delta W|$ & $\max|\Delta O|$ & agree comp. & agree p95 & $\max|\Delta W|$ & $\max|\Delta O|$ & agree comp. & agree p95 \\", r"\midrule"]
+    L += [r for _, _, r in rows]
+    L += [r"\bottomrule", r"\end{tabular}}", r"\end{table}"]
+    (OUT / "table_cf_precision.tex").write_text("\n".join(L) + "\n")
+    print("table_cf_precision.tex", len(rows), "block(s)")
+
+
+def validation():
+    """Answer-direction validation, column selectivity, and known-label ownership from runs/robustness/validation.json."""
+    d = json.loads((ROB / "validation.json").read_text())
+    names = {"q25-7": "Qwen2.5-VL-7B", "lingshu-32": "Lingshu 32B", "gemma3-12": "Gemma 3 12B"}
+    order = list(names)
+    L = [r"\begin{table}[h]", r"\centering", r"\scriptsize", r"\setlength{\tabcolsep}{4pt}",
+         r"\caption{\textbf{What the answer direction reads, and how selective the columns of $W$ are.} Top: for every block with the "
+         r"answer-direction module, the median over the six questions of the AUROC of the answer direction $a_q$ and of the probe normal "
+         r"$\hat w_q$ against the test label (known-label rows), of the AUROC of both scores against the model's own clean answer, of the "
+         r"Pearson correlation between the two scores over the 600 test rows, and of their cosine, raw (model space) and whitened by the "
+         r"covariance of the training features ($\cos_\Sigma=a^{\top}\Sigma w/\sqrt{a^{\top}\Sigma a\,w^{\top}\Sigma w}$). Bottom, per "
+         r"dataset over every block with a write matrix: column selectivity $S_d=W_{d,d}/\sum_q|W_{q,d}|$ (median; directions with "
+         r"$S_d\geq0.5$), and ownership recomputed on the rows whose label for $q$ is known: cells whose $O_q$ keeps its sign and owned "
+         r"cells (paper verdict) that stay owned under the percentile verdict on those rows. NIH and COCO have every test label known, so "
+         r"their known-row numbers reproduce the all-row numbers.}",
+         r"\label{tab:cf-validation}",
+         r"\resizebox{\textwidth}{!}{\begin{tabular}{llrrrrrrr}", r"\toprule",
+         r"Checkpoint & Dataset & AUROC $a_q$ & AUROC $\hat w_q$ & $a_q$ vs clean & $\hat w_q$ vs clean & Pearson & cos raw & $\cos_\Sigma$ \\", r"\midrule"]
+    blocks = d["answer_direction"]["blocks"]
+    for key in sorted(blocks, key=lambda k: (order.index(k.split("/")[0]) if k.split("/")[0] in order else 9, ["nih", "chexpert", "coco"].index(k.split("/")[1]))):
+        b = blocks[key]; s = b["summary"]; mk, ds = key.split("/")
+        L.append(f"{names.get(mk, mk)} & {NAMES[ds]} & {f2(s['median_auroc_answer_dir'])} & {f2(s['median_auroc_probe'])} & "
+                 f"{f2(s.get('median_auroc_answer_dir_vs_clean_answer'))} & {f2(s.get('median_auroc_probe_vs_clean_answer'))} & "
+                 f"{f2(s['median_pearson_scores'])} & {f2(s['median_cos_raw_model'])} & {f2(s['median_cos_sigma_projected'])} \\\\")
+    L += [r"\midrule", r"\multicolumn{9}{l}{\textit{Column selectivity and known-label ownership, per dataset}} \\",
+          r"Dataset & blocks & cells & median $S_d$ & $S_d\geq0.5$ & known rows (median) & sign of $O_q$ kept & owned kept & \\", r"\midrule"]
+    col, kl = d["column_selectivity"]["per_dataset"], d["known_label"]["per_dataset"]
+    for ds in ("nih", "chexpert", "coco"):
+        c, k = col[ds], kl[ds]
+        owned_cells = [q for b in d["known_label"]["blocks"] if b["dataset"] == ds for q in b["per_question"].values() if q["summary_owned"]]
+        kept = sum(bool(q["owned_known"]) for q in owned_cells)      # paper-owned cells still owned by the known-row percentile verdict
+        L.append(f"{NAMES[ds]} & {c['n_blocks']} & {c['n_cells']} & {f2(c['median_S_d'])} & {c['n_S_ge_0.5']}/{c['n_cells']} & {k['median_n_rows_known']:.0f} & "
+                 f"{k['n_sign_agrees']}/{k['n_cells']} & {kept}/{len(owned_cells)} & \\\\")
+    L += [r"\bottomrule", r"\end{tabular}}", r"\end{table}"]
+    (OUT / "table_cf_validation.tex").write_text("\n".join(L) + "\n")
+    print("table_cf_validation.tex", len(blocks), "ansdir block(s)")
+
+
 if __name__ == "__main__":
     geometry()
     scale()
@@ -256,3 +330,5 @@ if __name__ == "__main__":
     ansdir()
     extcomp()
     tokenw()
+    precision()
+    validation()
