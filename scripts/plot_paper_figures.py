@@ -554,7 +554,7 @@ def draw_matrix(ax, concepts, W, own, norm, values=True, ylabels=True, xlabels=T
 def fig4_write_matrices(blocks):
     mats = [(mk, ds, *wmatrix(blocks[(mk, ds)]["s"]), owned_set(blocks[(mk, ds)]["s"])) for mk, ds in MATRIX_PICKS]
     vlim = round_up(np.nanmax([np.nanmax(np.abs(W)) for *_, W, _ in mats])); norm = sym_norm(vlim)
-    FW, FH = fs.WIDTH, 4.25; P = 1.22; gap = 0.26; x0 = 0.64
+    FW, FH = fs.WIDTH, 4.2; P = 1.15; gap = 0.26; x0 = 0.64
     rows_y = [FH - 0.31 - P, 0.97]
     f = plt.figure(figsize=(FW, FH))
     for k, (mk, ds, concepts, W, own) in enumerate(mats):
