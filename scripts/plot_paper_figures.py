@@ -73,7 +73,7 @@ OUTLINE = 0.8             # diagonal outline (points), drawn inside the white ga
 DOT_MS = 3.2              # owned-cell dot diameter (points)
 DOT_OFF = 2.8             # dot inset from the top-right corner (points)
 ANNOT_MIN = 0.05          # annotate |value| >= this
-ANNOT_SIZE = 6.5
+ANNOT_SIZE = 6.3          # 6.5 pt leaves 0.4 pt between adjacent cell values at this cell size; 6.3 leaves 2.5 pt
 TICK_SIZE = 8
 HEAT_BAD = "#e9e7e3"
 
