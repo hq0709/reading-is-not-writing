@@ -141,8 +141,69 @@ def altdir():
     print("table_cf_altdir.tex", {ds: blocks[ds] for ds in blocks})
 
 
+def ansdir():
+    """Answer-direction oracle: per block, cells where the answer direction a_q is owned, where a_q beats the strongest
+    logistic competitor, median W^a_qq, median cos(a_q, w_q), median CV R^2; plus the logistic owned count."""
+    import statistics
+    L = [r"\begin{table}[h]", r"\centering", r"\scriptsize", r"\setlength{\tabcolsep}{4pt}",
+         r"\caption{\textbf{The direction the reader responds to.} For each block, the answer direction $a_q$ is a ridge "
+         r"regression of the model's own clean answer margin on the same projected, train-scaled features the probes use "
+         r"(3{,}000 training rows), lifted like the probe normal and written at the same dose against the same reference "
+         r"family. Columns: concepts whose $a_q$ is owned (steering reference and fixed-family advantage over the other five "
+         r"$a_d$); concepts whose $a_q$ write beats the strongest logistic competitor of the label direction; median own write "
+         r"$W^a_{q,q}$; median cosine between $a_q$ and the label direction $\hat w_q$; median cross-validated $R^2$ of the "
+         r"regression; and, for reference, the concepts owned by the label direction.}",
+         r"\label{tab:cf-ansdir}",
+         r"\resizebox{\textwidth}{!}{\begin{tabular}{llrrrrrr}", r"\toprule",
+         r"Checkpoint & Dataset & $a_q$ owned & $a_q>$ max logistic comp. & med.\ $W^a_{q,q}$ & med.\ $\cos(a_q,\hat w_q)$ & med.\ $R^2$ & $\hat w_q$ owned \\", r"\midrule"]
+    names = {"q25-7": "Qwen2.5-VL-7B", "lingshu-32": "Lingshu 32B", "gemma3-12": "Gemma 3 12B"}
+    for sp in sorted(RUNS.glob("*/*/summary.json"), key=lambda p: (list(names).index(p.parent.parent.name) if p.parent.parent.name in names else 9, ["nih", "chexpert", "coco"].index(p.parent.name))):
+        j = json.loads(sp.read_text()); a = j.get("ansdir")
+        if not a:
+            continue
+        mk, ds = sp.parent.parent.name, sp.parent.name
+        pq = a["per_question"]; core = j["core"]["per_question"]
+        owned = sum(bool(v.get("steering_reference") and v.get("verdict") == "fixed_family_advantage") for v in pq.values())
+        beats = sum(v.get("own_minus_max_logistic_competitor_ci95_percentile", [0, 0])[0] > 0 for v in pq.values())
+        wqq = statistics.median(v["W_qq"] for v in pq.values()); cos = statistics.median(v.get("cos_to_logistic_model", float("nan")) for v in pq.values())
+        r2 = statistics.median(v.get("cv_r2", v.get("r2", float("nan"))) for v in pq.values())
+        lowned = sum(bool(v.get("steering_reference") and v.get("verdict") == "fixed_family_advantage") for v in core.values())
+        L.append(f"{names.get(mk, mk)} & {NAMES[ds]} & {owned}/6 & {beats}/6 & {wqq:.2f} & {cos:.2f} & {r2:.2f} & {lowned}/6 \\\\")
+    L += [r"\bottomrule", r"\end{tabular}}", r"\end{table}"]
+    (OUT / "table_cf_ansdir.tex").write_text("\n".join(L) + "\n")
+    print("table_cf_ansdir.tex")
+
+
+def extcomp():
+    """Extended competitor family: per block, owned under the six-direction family vs under the extended family."""
+    L = [r"\begin{table}[h]", r"\centering", r"\scriptsize", r"\setlength{\tabcolsep}{4pt}",
+         r"\caption{\textbf{Ownership under an extended competitor family.} Extra clinical directions fitted like the protocol "
+         r"normals for every additional dataset label with at least 100 known positives and negatives (NIH: Consolidation, "
+         r"Edema, Infiltration; CheXpert: Enlarged Cardiomediastinum, Fracture, Lung Lesion, Lung Opacity, Pneumonia, Support "
+         r"Devices) and written at the same dose; ownership is then the margin over the five protocol competitors and every "
+         r"extra direction.}",
+         r"\label{tab:cf-extcomp}",
+         r"\begin{tabular}{llrrr}", r"\toprule",
+         r"Checkpoint & Dataset & extra directions & owned (six directions) & owned (extended family) \\", r"\midrule"]
+    names = {"q25-7": "Qwen2.5-VL-7B", "lingshu-32": "Lingshu 32B", "gemma3-12": "Gemma 3 12B", "q3-8": "Qwen3-VL-8B", "iv35-8": "InternVL3.5-8B", "medgemma-4": "MedGemma 4B"}
+    for sp in sorted(RUNS.glob("*/*/summary.json")):
+        j = json.loads(sp.read_text()); a = j.get("extcomp")
+        if not a:
+            continue
+        mk, ds = sp.parent.parent.name, sp.parent.name
+        pq = a["per_question"]; core = j["core"]["per_question"]
+        owned_ext = sum(bool(v["W_qq"] > 0 and v["W_qq"] > v.get("random_p95", 0) and v["W_qq"] > v.get("abs_sham", 0) and v.get("verdict") == "fixed_family_advantage") for v in pq.values())
+        lowned = sum(bool(v.get("steering_reference") and v.get("verdict") == "fixed_family_advantage") for v in core.values())
+        L.append(f"{names.get(mk, mk)} & {NAMES[ds]} & {len(a.get('extra_directions', []))} & {lowned}/6 & {owned_ext}/6 \\\\")
+    L += [r"\bottomrule", r"\end{tabular}", r"\end{table}"]
+    (OUT / "table_cf_extcomp.tex").write_text("\n".join(L) + "\n")
+    print("table_cf_extcomp.tex")
+
+
 if __name__ == "__main__":
     geometry()
     scale()
     pairs()
     altdir()
+    ansdir()
+    extcomp()
