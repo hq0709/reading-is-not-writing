@@ -280,7 +280,7 @@ def table_controls(blocks):
             ("Signed dose range of $O_q$", lambda b: [b["t3"].get("all|median_signed_dose_O_range", {}).get("estimate")]),
             ("Refit SD of $O_q$ (3 seeds)", lambda b: [b["t3"].get("all|median_refit_O_sd", {}).get("estimate")]),
             ("Connector-locus median $O_q$", lambda b: [b["t3"].get("all|connector_median_O", {}).get("estimate")]),
-            ("Label-shift gap", lambda b: [b["t3"].get("all|median_label_gap", {}).get("estimate")]),
+            ("Label gap (logits)", lambda b: [b["t3"].get("all|median_label_gap", {}).get("estimate")]),
             ("$|$Wording contrast$|$ (IY$-$WY)", lambda b: [abs(v["estimate"]) for k, v in b["t3"].items() if k.endswith("wording_IY_minus_WY_O") and isinstance(v, dict) and v.get("estimate") is not None]),
             ("$|$Mapping contrast$|$ (IA$-$IB)", lambda b: [abs(v["estimate"]) for k, v in b["t3"].items() if k.endswith("mapping_IA_minus_IB_O") and isinstance(v, dict) and v.get("estimate") is not None])]
     L = [r"\begin{table}[h]", r"\centering", r"\scriptsize", r"\setlength{\tabcolsep}{4pt}",

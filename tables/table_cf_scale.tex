@@ -1,0 +1,18 @@
+\begin{table}[h]
+\centering
+\scriptsize
+\setlength{\tabcolsep}{4pt}
+\caption{\textbf{Ownership under alternative scales, strata, refits, and loci.} Per dataset: owned cells on the probability scale (the paper's verdict) and on the logit-margin scale (same rules; percentile interval for $O^m_q$), with the cells owned on both; cells with $O_q>0$ among owned and among not-owned cells when every cell is restricted to its unsaturated rows ($0.01<P(\mathrm{yes})<0.99$ on the clean pass); median $|O_q(\text{seed }k)-O_q(\text{seed }0)|$ over the two refit seeds and the owned cells that keep $O_q>0$ under both (REFIT exists for NIH and COCO); median $|W_{q,q}|$ at the primary and connector loci and connector cells whose write beats the connector random family.}
+\label{tab:cf-scale}
+\resizebox{\textwidth}{!}{\begin{tabular}{lrrrrrrrrrr}
+\toprule
+Dataset & owned ($p$) & owned ($m$) & both & unsat.\ owned $O>0$ & unsat.\ other $O>0$ & refit med.\ $|\Delta O|$ & owned stable & $|W_{q,q}|$ prim.\ & $|W_{q,q}|$ conn.\ & conn.\ $>$ p95 \\
+\midrule
+NIH ChestX-ray14 & 10/120 & 9/120 & 8 & 10/10 & 20/104 & 0.028 & 6/10 & 0.046 & 0.009 & 13/120 \\
+CheXpert Plus & 17/108 & 19/108 & 17 & 17/17 & 12/87 & -- & -- & -- & -- & -- \\
+COCO & 100/114 & 100/114 & 99 & 92/93 & 8/14 & 0.026 & 94/100 & 0.270 & 0.008 & 85/114 \\
+\midrule
+\multicolumn{11}{l}{\textit{Batch effects at the gates (61 blocks): batched-vs-single candidate-logit difference 0.07--1.84 (median 0.36); margin sign agreement in 55 of 61 blocks; owned cells in disagreeing blocks: 0.}} \\
+\bottomrule
+\end{tabular}}
+\end{table}

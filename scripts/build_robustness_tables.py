@@ -39,5 +39,36 @@ def geometry():
     print("table_cf_geometry.tex")
 
 
+def scale():
+    d = json.loads((ROB / "scale.json").read_text())
+    m, st, rf, cn, bt = d["item1_margin_scale"], d["item2_ceiling"]["strata"], d["item3_refit"]["per_dataset"], d["item4_connector"]["per_dataset"], d["item5_batch"]
+    L = [r"\begin{table}[h]", r"\centering", r"\scriptsize", r"\setlength{\tabcolsep}{4pt}",
+         r"\caption{\textbf{Ownership under alternative scales, strata, refits, and loci.} Per dataset: owned cells on the "
+         r"probability scale (the paper's verdict) and on the logit-margin scale (same rules; percentile interval for $O^m_q$), with "
+         r"the cells owned on both; cells with $O_q>0$ among owned and among not-owned cells when every cell is restricted to its "
+         r"unsaturated rows ($0.01<P(\mathrm{yes})<0.99$ on the clean pass); median $|O_q(\text{seed }k)-O_q(\text{seed }0)|$ over the "
+         r"two refit seeds and the owned cells that keep $O_q>0$ under both (REFIT exists for NIH and COCO); median $|W_{q,q}|$ at the "
+         r"primary and connector loci and connector cells whose write beats the connector random family.}",
+         r"\label{tab:cf-scale}",
+         r"\resizebox{\textwidth}{!}{\begin{tabular}{lrrrrrrrrrr}", r"\toprule",
+         r"Dataset & owned ($p$) & owned ($m$) & both & unsat.\ owned $O>0$ & unsat.\ other $O>0$ & refit med.\ $|\Delta O|$ & owned stable & $|W_{q,q}|$ prim.\ & $|W_{q,q}|$ conn.\ & conn.\ $>$ p95 \\", r"\midrule"]
+    for ds in ("nih", "chexpert", "coco"):
+        mm = m[ds]; ag = mm["agreement_owned_p_vs_owned_m"]; u = st[ds]["unsaturated"]
+        r = rf.get(ds); c = cn.get(ds, {}).get("p_scale", {})
+        refit = f"{r['median_abs_dO_pooled']:.3f} & {r['owned_p_O_pos_both_refits']}/{r['owned_p']}" if r else "-- & --"
+        conn = f"{c['median_abs_W_qq_primary']:.3f} & {c['median_abs_W_qq_connector']:.3f} & {c['connector_W_qq_gt_random_p95']}/{cn[ds]['n_cells']}" if c else "-- & -- & --"
+        L.append(f"{NAMES[ds]} & {mm['owned_p']}/{mm['n_cells']} & {mm['owned_m_(CI>0&ref)']}/{mm['n_cells']} & {ag['a_yes_b_yes']} & "
+                 f"{u['owned_p_O_pos']}/{u['owned_p_evaluable']} & {u['not_owned_O_pos']}/{u['not_owned_evaluable']} & {refit} & {conn} \\\\")
+    dist = bt["distribution"]["vis.last"]
+    n_dis = len(bt["sign_disagreement"]) if isinstance(bt["sign_disagreement"], list) else len(bt["sign_disagreement"].get("blocks", []))
+    L += [r"\midrule", r"\multicolumn{11}{l}{\textit{Batch effects at the gates (61 blocks): batched-vs-single candidate-logit difference "
+          + f"{dist['max_abs_candidate_logit_diff']['min']:.2f}--{dist['max_abs_candidate_logit_diff']['max']:.2f} (median {dist['max_abs_candidate_logit_diff']['median']:.2f}); "
+          + f"margin sign agreement in {61 - n_dis} of 61 blocks; owned cells in disagreeing blocks: {bt['owned_cells_in_sign_disagreement_blocks']}.}}}} \\\\",
+          r"\bottomrule", r"\end{tabular}}", r"\end{table}"]
+    (OUT / "table_cf_scale.tex").write_text("\n".join(L) + "\n")
+    print("table_cf_scale.tex")
+
+
 if __name__ == "__main__":
     geometry()
+    scale()
