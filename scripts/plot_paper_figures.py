@@ -29,6 +29,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 import figstyle as fs                                   # noqa: E402
+import cf_inclusion as ci                               # noqa: E402
 import matplotlib.pyplot as plt                         # noqa: E402
 from matplotlib.colors import LinearSegmentedColormap, TwoSlopeNorm   # noqa: E402
 from matplotlib.lines import Line2D                     # noqa: E402
@@ -80,18 +81,10 @@ HEAT_BAD = "#e9e7e3"
 
 # ============================================================================================== data
 def load_blocks():
-    out = {}
-    for mk in ORDER:
-        for ds in DATASETS:
-            s = RUNS / mk / ds / "summary.json"
-            if not s.exists():
-                continue
-            j = json.loads(s.read_text())
-            if not (j.get("core") or {}).get("per_question"):
-                continue
-            r = RUNS / mk / ds / "run.json"
-            out[(mk, ds)] = {"s": j, "run": json.loads(r.read_text()) if r.exists() else {}}
-    return out
+    """The blocks with a scored write matrix under the paper's one inclusion rule (cf_inclusion.block_included:
+    CORE and CALIBRATION in run.json completed_modules), in catalogue order. Blocks whose CORE is ineligible or
+    incomplete are absent, so no figure can read their partial core statistics."""
+    return {k: {"s": b["s"], "run": b["run"]} for k, b in ci.write_blocks(ci.load_runs(RUNS, order=ORDER)).items()}
 
 
 def owned(v):
@@ -358,23 +351,20 @@ def fig1_framework(blocks):
 
 # ============================================================================================== fig2
 def grade_cells(blocks, ds):
-    """Per concept cell of a dataset: (readable, answerable, owned) flags; readable over every probe-graded cell."""
+    """Per concept cell of a dataset: (readable, answerable, owned) flags. Readable runs over every probe-graded cell
+    (cf_inclusion.probe_graded: CALIBRATION completed, whether or not the write matrix was scored); answerable and
+    owned run over the write-matrix cells of the included blocks only, the same cells as Table 1's Ans/Own counts."""
     read, ans, own = [], [], []
+    for (mk, d), b in ci.probe_blocks(ci.load_runs(RUNS, order=ORDER)).items():
+        if d == ds:
+            read += [bool(v.get("readable")) for v in ci.calibration(b).values()]
     for (mk, d), b in blocks.items():
         if d != ds:
             continue
         cal = b["s"].get("calibration", {}); core = b["s"]["core"]["per_question"]
         for c, v in core.items():
             cc = cal.get(c, {}) if isinstance(cal.get(c, {}), dict) else {}
-            read.append(bool(cc.get("readable"))); ans.append(bool(cc.get("answer_capable"))); own.append(owned(v))
-    # probe-only blocks (write matrix ineligible) still carry readability
-    for mk in ORDER:
-        s = RUNS / mk / ds / "summary.json"
-        if s.exists() and (mk, ds) not in blocks:
-            j = json.loads(s.read_text())
-            for c, v in (j.get("calibration") or {}).items():
-                if isinstance(v, dict):
-                    read.append(bool(v.get("readable")))
+            ans.append(bool(cc.get("answer_capable"))); own.append(owned(v))
     return np.array(read), np.array(ans), np.array(own)
 
 
@@ -389,10 +379,11 @@ def fig2_overview(blocks):
     for ax, lab in zip(axes.ravel(), "abcd"):
         ax.set_label(lab)
     # (a) graded fractions -------------------------------------------------------------------------------------
-    ax = axes[0, 0]; grades = ["readable", "answerable", "owned"]; w = 0.26; counts = []
+    ax = axes[0, 0]; grades = ["readable", "answerable", "owned"]; w = 0.26; counts = []; grade_counts = {}
     for k, ds in enumerate(DATASETS):
         read, ans, own = grade_cells(blocks, ds)
         for gi, flags in enumerate((read, ans, own)):
+            grade_counts.setdefault(ds, {})[grades[gi]] = [int(flags.sum()), int(len(flags))]
             m, lo, hi = boot_frac(flags)
             x = gi + (k - 1) * w
             ax.bar(x, m, w - 0.03, color=DS_COL[ds], edgecolor="none", zorder=3)
@@ -402,6 +393,10 @@ def fig2_overview(blocks):
     ax.set_xticks(range(3)); ax.set_xticklabels(grades); ax.set_ylim(0, 1.18); ax.set_yticks([0, 0.2, 0.4, 0.6, 0.8, 1.0])
     ax.set_ylabel("fraction of concept cells"); ax.grid(False, axis="x")
     panel(ax, "a", "graded outcomes per concept cell")
+    (FIG / "fig2_counts.json").write_text(json.dumps(grade_counts, indent=1) + "\n")
+    print("  fig2(a) counts (readable over probe-graded cells; answerable / owned over write-matrix cells):")
+    for ds, g in grade_counts.items():
+        print(f"    {ds:8s} " + "  ".join(f"{k} {a}/{n}" for k, (a, n) in g.items()))
 
     # (b) model landscape: markers only, clusters named in empty space ------------------------------------------
     ax = axes[0, 1]; lines = []
@@ -904,6 +899,7 @@ def figA1_write_structure(blocks):
         ax.text(1 + bar_w / 2, 1.025, "question $q$", ha="center", va="bottom", fontsize=7, color=fs.MUTED)
         ax.set_title(f"({'def'[k]})  {DS_LAB[ds].replace(' (control)', '')}\nwhere the write goes", fontsize=8, pad=3, linespacing=1.2)
     f.text(0.5, 0.16 / FH, "coloured: write lands on its own question;   grey: write lands on another question", ha="center", va="center", fontsize=7, color=fs.INK)
+    (FIG / "figA1_own_share.json").write_text(json.dumps(summary, indent=1) + "\n")
     print("  figA1 write flow (mean over checkpoints of max(W_qd, 0)):")
     for ds, v in summary.items():
         print(f"    {ds:8s} n={v['n']} total={v['total']:.3f} diagonal={v['diag']:.3f} own_share={100 * v['own_share']:.1f}%")

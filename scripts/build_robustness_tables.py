@@ -1,6 +1,13 @@
-"""Robustness tables for the paper from runs/robustness/*.json (geometry now; scale when present)."""
+"""Robustness tables for the paper from runs/robustness/*.json (geometry, scale, pairs) and, for the addendum modules
+(ALTDIR, ANSDIR, EXTCOMP, TOKENW), from the summaries of the blocks under the paper's one inclusion rule
+(cf_inclusion.block_included: CORE and CALIBRATION in run.json completed_modules)."""
 import json
+import sys
 from pathlib import Path
+
+HERE = Path(__file__).resolve().parent
+sys.path.insert(0, str(HERE))
+import cf_inclusion as ci   # noqa: E402
 
 ROB = Path("/rodata/azradonc_dev/m253405/cf-transfer/runs/robustness")
 OUT = Path(__file__).resolve().parents[1] / "tables"
@@ -93,6 +100,14 @@ def pairs():
 
 RUNS = Path("/rodata/azradonc_dev/m253405/cf-transfer/runs")
 FAMILIES = ("dom", "pattern", "orth", "resid")
+
+
+def included_summaries(key=None):
+    """(summary path, summary) of every block that enters the paper's counts (cf_inclusion.block_included)."""
+    paths = [sp for sp in RUNS.glob("*/*/summary.json")
+             if (sp.parent / "run.json").exists() and ci.block_included(json.loads((sp.parent / "run.json").read_text()))]
+    return [(sp, json.loads(sp.read_text())) for sp in sorted(paths, key=key)]
+
 FAM_LABEL = {"logistic": "logistic normal", "dom": "difference of means", "pattern": "Haufe pattern", "orth": "orthogonalised normal", "resid": "residualised normal"}
 
 
@@ -102,8 +117,8 @@ def altdir():
     import statistics
     rows = {ds: {f: {"owned": 0, "n": 0, "O": []} for f in ("logistic",) + FAMILIES} for ds in NAMES}
     anyf = {ds: [0, 0] for ds in NAMES}; blocks = {ds: 0 for ds in NAMES}
-    for sp in sorted(RUNS.glob("*/*/summary.json")):
-        j = json.loads(sp.read_text()); a = j.get("altdir")
+    for sp, j in included_summaries():
+        a = j.get("altdir")
         if not a or not all(f in a for f in FAMILIES):
             continue
         ds = sp.parent.name; blocks[ds] += 1
@@ -157,8 +172,8 @@ def ansdir():
          r"\resizebox{\textwidth}{!}{\begin{tabular}{llrrrrrr}", r"\toprule",
          r"Checkpoint & Dataset & $a_q$ owned & $a_q>$ max logistic comp. & med.\ $W^a_{q,q}$ & med.\ $\cos(a_q,\hat w_q)$ & med.\ $R^2$ & $\hat w_q$ owned \\", r"\midrule"]
     names = {"q25-7": "Qwen2.5-VL-7B", "lingshu-32": "Lingshu 32B", "gemma3-12": "Gemma 3 12B"}
-    for sp in sorted(RUNS.glob("*/*/summary.json"), key=lambda p: (list(names).index(p.parent.parent.name) if p.parent.parent.name in names else 9, ["nih", "chexpert", "coco"].index(p.parent.name))):
-        j = json.loads(sp.read_text()); a = j.get("ansdir")
+    for sp, j in included_summaries(key=lambda p: (list(names).index(p.parent.parent.name) if p.parent.parent.name in names else 9, ["nih", "chexpert", "coco"].index(p.parent.name))):
+        a = j.get("ansdir")
         if not a:
             continue
         mk, ds = sp.parent.parent.name, sp.parent.name
@@ -186,8 +201,8 @@ def extcomp():
          r"\begin{tabular}{llrrr}", r"\toprule",
          r"Checkpoint & Dataset & extra directions & owned (six directions) & owned (extended family) \\", r"\midrule"]
     names = {"q25-7": "Qwen2.5-VL-7B", "lingshu-32": "Lingshu 32B", "gemma3-12": "Gemma 3 12B", "q3-8": "Qwen3-VL-8B", "iv35-8": "InternVL3.5-8B", "medgemma-4": "MedGemma 4B"}
-    for sp in sorted(RUNS.glob("*/*/summary.json")):
-        j = json.loads(sp.read_text()); a = j.get("extcomp")
+    for sp, j in included_summaries():
+        a = j.get("extcomp")
         if not a:
             continue
         mk, ds = sp.parent.parent.name, sp.parent.name
@@ -213,8 +228,8 @@ def tokenw():
          r"Checkpoint & Dataset & \multicolumn{2}{c}{uniform} & \multicolumn{2}{c}{softmax} & \multicolumn{2}{c}{top quarter} \\",
          r" & & owned & med.\ $W_{q,q}$ & owned & med.\ $W_{q,q}$ & owned & med.\ $W_{q,q}$ \\", r"\midrule"]
     names = {"q25-7": "Qwen2.5-VL-7B", "lingshu-32": "Lingshu 32B", "gemma3-12": "Gemma 3 12B", "q3-8": "Qwen3-VL-8B"}
-    for sp in sorted(RUNS.glob("*/*/summary.json")):
-        j = json.loads(sp.read_text()); t = j.get("tokenw")
+    for sp, j in included_summaries():
+        t = j.get("tokenw")
         if not t:
             continue
         mk, ds = sp.parent.parent.name, sp.parent.name

@@ -4,6 +4,11 @@ Inputs (read-only): the campaign run root (leaderboard.csv, runs/<model>/<datase
 preflight.vis.last.json, template_eligibility.json}). Numbers are copied, never recomputed; the only derived
 quantities are means/medians over cells and the pass fractions that the captions define.
 
+Inclusion (one rule, shared with every other paper script through cf_inclusion.py and with runs/manifest.csv):
+a block enters the write-matrix counts (Ans, Own, ownership tables, controls) only if its run.json lists CORE and
+CALIBRATION in completed_modules; a block whose CALIBRATION completed but whose CORE is ineligible or incomplete is
+probe-graded only and contributes to the Read column alone.
+
 Outputs (tables/):
   cf_colors.tex            Morandi tints used by \\cellcolor (input by the tables)
   table_cf_main.tex        Table: checkpoint x dataset benchmark with heat-mapped cells (sorted by chest ownership)
@@ -22,8 +27,12 @@ import statistics
 import sys
 from pathlib import Path
 
-RUNS = Path(sys.argv[1]) if len(sys.argv) > 1 else Path("/rodata/azradonc_dev/m253405/cf-transfer/runs")
-OUT = Path(__file__).resolve().parents[1] / "tables"
+HERE = Path(__file__).resolve().parent
+sys.path.insert(0, str(HERE))
+import cf_inclusion as ci   # noqa: E402
+
+RUNS = Path(sys.argv[1]) if len(sys.argv) > 1 else ci.RUNS
+OUT = HERE.parent / "tables"
 DATASETS = [("nih", "NIH ChestX-ray14"), ("chexpert", "CheXpert Plus"), ("coco", "COCO")]
 CHEST = ("nih", "chexpert")
 TEMPLATES = ["IY", "WY", "IA", "IB", "WA", "WB"]
@@ -100,24 +109,20 @@ def fmt(x, nd=2, signed=False):
 
 
 # --------------------------------------------------------------------------------------------- data
-def load():
+def load_blocks():
+    """Every block with a run.json, in catalogue order, under the one inclusion rule (cf_inclusion): `included` blocks
+    carry the write matrix (core, t3), `probe` blocks carry the calibration grades; a block that is neither keeps a
+    row in Table 1 with no counts. `why` names the grey cell: inel. (CORE ineligible) or inc. (CORE incomplete)."""
     blocks = {}
-    for mk in ORDER:
-        for ds, _ in DATASETS:
-            d = RUNS / mk / ds
-            if not (d / "summary.json").exists():
-                continue
-            s = json.loads((d / "summary.json").read_text())
-            run = json.loads((d / "run.json").read_text()) if (d / "run.json").exists() else {}
-            elig = json.loads((d / "template_eligibility.json").read_text()) if (d / "template_eligibility.json").exists() else {}
-            pf = json.loads((d / "preflight.vis.last.json").read_text()) if (d / "preflight.vis.last.json").exists() else {}
-            cal = {c: v for c, v in (s.get("calibration") or {}).items() if isinstance(v, dict)}
-            core = (s.get("core") or {}).get("per_question") or {}
-            if not cal and not core:
-                continue
-            blocks[(mk, ds)] = {"cal": cal, "core": core, "t3": s.get("t3") or {}, "run": run, "elig": elig, "pf": pf,
-                                "core_ineligible": "CORE" in (run.get("ineligible_modules") or [])}
+    for (mk, ds), b in ci.load_runs(RUNS, order=ORDER).items():
+        blocks[(mk, ds)] = {"cal": ci.calibration(b) if b["probe"] else {}, "core": ci.core(b),
+                            "t3": (b["s"].get("t3") or {}) if b["included"] else {}, "run": b["run"], "elig": b["elig"], "pf": b["pf"],
+                            "included": b["included"], "probe": b["probe"],
+                            "why": "inel." if "CORE" in (b["run"].get("ineligible_modules") or []) else "inc."}
     return blocks
+
+
+load = load_blocks
 
 
 def owned(v):
@@ -138,17 +143,19 @@ def med_iqr(xs):
 
 
 def block_stats(b):
+    """Read (S, n_read, n_probe) for probe-graded blocks; Ans (A, n_ans) and Own (O, n_own) over the n write-matrix
+    cells of included blocks only; None where the rule excludes the block."""
     cal, core = b["cal"], b["core"]
-    S = mean(v.get("selectivity") for v in cal.values())
-    n_read = sum(bool(v.get("readable")) for v in cal.values())
-    A = mean(v.get("answer_auroc") for v in cal.values() if "answer_auroc" in v)
-    n_ans = sum(bool(v.get("answer_capable")) for v in cal.values()) if any("answer_capable" in v for v in cal.values()) else None
-    if b["core_ineligible"] or not core:
-        O, n_own, n_cells = None, None, len(cal)
-    else:
+    S = mean(v.get("selectivity") for v in cal.values()) if b["probe"] else None
+    n_read = sum(bool(v.get("readable")) for v in cal.values()) if b["probe"] else None
+    if b["included"]:
+        A = mean(v.get("answer_auroc") for v in cal.values() if "answer_auroc" in v)
+        n_ans = sum(bool(v.get("answer_capable")) for v in cal.values())
         O = mean(v.get("O_q") for v in core.values()); n_own = sum(owned(v) for v in core.values()); n_cells = len(core)
-    return {"S": S, "n_read": n_read, "n": n_cells, "A": A, "n_ans": n_ans, "O": O, "n_own": n_own,
-            "answer_defined": A is not None}
+    else:
+        A = n_ans = O = n_own = None; n_cells = 0
+    return {"S": S, "n_read": n_read, "n_probe": len(cal) if b["probe"] else 0, "n": n_cells, "A": A, "n_ans": n_ans,
+            "O": O, "n_own": n_own, "answer_defined": A is not None, "why": b["why"]}
 
 
 # --------------------------------------------------------------------------------------------- Table 1
@@ -173,9 +180,12 @@ def table_main(blocks):
          r"\textsc{Ans} = mean clean-answer AUROC, with the number of answer-capable concepts (lower bound $>0.5$); "
          r"\textsc{Own} = mean ownership $O_q$, with the number of owned concepts (steering reference met and all simultaneous "
          r"lower bounds $>0$). The three right columns give the owned share of clinical cells (NIH + CheXpert), of COCO cells, "
-         r"and their ratio. The \textsc{Read} count in the last row is over every probe-graded cell and the \textsc{Ans}/\textsc{Own} counts over the cells with a scored write matrix. Cells are shaded by value: sage for \textsc{Read}/\textsc{Ans} (darker = higher), slate for positive and "
-         r"terracotta for negative mean ownership (darker = larger magnitude); grey = ineligible yes/no template; "
-         r"``--'' = block not run. Checkpoints are sorted by clinical owned share, descending.}",
+         r"and their ratio. A block enters the \textsc{Ans} and \textsc{Own} counts only if both its write matrix and its "
+         r"calibration module completed; the \textsc{Read} count in the last row is over every probe-graded cell (calibration "
+         r"completed, including blocks whose write matrix is ineligible or incomplete), and the \textsc{Ans}/\textsc{Own} counts "
+         r"over the cells with a scored write matrix. Cells are shaded by value: sage for \textsc{Read}/\textsc{Ans} (darker = higher), slate for positive and "
+         r"terracotta for negative mean ownership (darker = larger magnitude); grey ``inel.'' = ineligible yes/no template, "
+         r"grey ``inc.'' = write matrix incomplete at packaging; ``--'' = block not run. Checkpoints are sorted by clinical owned share, descending.}",
          r"\label{tab:cf-main}",
          r"\resizebox{\textwidth}{!}{%", r"\begin{tabular}{l@{\hspace{3pt}}ccc@{\hspace{4pt}}ccc@{\hspace{4pt}}ccc@{\hspace{4pt}}ccc}", r"\toprule",
          r"& \multicolumn{3}{c}{NIH ChestX-ray14} & \multicolumn{3}{c}{CheXpert Plus} & \multicolumn{3}{c}{COCO (control)} & \multicolumn{3}{c}{Owned share} \\",
@@ -189,19 +199,20 @@ def table_main(blocks):
             st = stats.get((m, d))
             if not st:
                 cells += ["--", "--", "--"]; continue
-            cells.append(f"{shade_pos(st['S'], (0.05, 0.12, 0.20), 'cfSage')}{fmt(st['S'])}$^{{{st['n_read']}}}$")
+            if st["n_read"] is not None:
+                cells.append(f"{shade_pos(st['S'], (0.05, 0.12, 0.20), 'cfSage')}{fmt(st['S'])}$^{{{st['n_read']}}}$")
+                agg[d]["S"].append(st["S"]); agg[d]["read"] += st["n_read"]; agg[d]["n"] += st["n_probe"]
+            else:
+                cells.append(f"\\cellcolor{{cfGrey}}{st['why']}")
             if st["answer_defined"]:
                 cells.append(f"{shade_pos(st['A'], (0.6, 0.75, 0.9), 'cfSage')}{fmt(st['A'])}$^{{{st['n_ans']}}}$")
+                agg[d]["A"].append(st["A"]); agg[d]["ans"] += st["n_ans"]; agg[d]["n_ans"] += st["n"]
             else:
-                cells.append(r"\cellcolor{cfGrey}--")
+                cells.append(f"\\cellcolor{{cfGrey}}{st['why']}")
             if st["n_own"] is None:
-                cells.append(r"\cellcolor{cfGrey}inel.")
+                cells.append(f"\\cellcolor{{cfGrey}}{st['why']}")
             else:
                 cells.append(f"{shade_own(st['O'])}{fmt(st['O'], 2, True)}$^{{{st['n_own']}}}$")
-            agg[d]["S"].append(st["S"]); agg[d]["read"] += st["n_read"]; agg[d]["n"] += st["n"]
-            if st["answer_defined"] and st["n_own"] is not None:
-                agg[d]["A"].append(st["A"]); agg[d]["ans"] += st["n_ans"]; agg[d]["n_ans"] += st["n"]
-            if st["n_own"] is not None:
                 agg[d]["O"].append(st["O"]); agg[d]["own"] += st["n_own"]; agg[d]["n_own"] += st["n"]
         cr, co, ct = chest_rate(m); qr, qo, qt = coco_rate(m)
         if ct:
@@ -251,8 +262,10 @@ def table_families(blocks, stats):
                 if not b:
                     continue
                 if d in CHEST:
-                    S += [v.get("selectivity") for v in b["cal"].values()]
-                    A += [v.get("answer_auroc") for v in b["cal"].values() if "answer_auroc" in v]
+                    if b["probe"]:
+                        S += [v.get("selectivity") for v in b["cal"].values()]
+                    if b["included"]:
+                        A += [v.get("answer_auroc") for v in b["cal"].values() if "answer_auroc" in v]
                     if st["n_own"] is not None:
                         own_c += st["n_own"]; tot_c += st["n"]
                 elif st["n_own"] is not None:
@@ -297,7 +310,7 @@ def table_controls(blocks):
         for d, _ in DATASETS:
             xs = []
             for (m, dd), b in blocks.items():
-                if dd == d and not b["core_ineligible"]:
+                if dd == d and b["included"]:
                     xs += f(b)
             med, lo, hi = med_iqr(xs)
             nd = 1 if "Label" in label else 3
@@ -308,7 +321,7 @@ def table_controls(blocks):
     for d, _ in DATASETS:
         n_ref = n_own = n_cells = 0
         for (m, dd), b in blocks.items():
-            if dd == d and not b["core_ineligible"]:
+            if dd == d and b["included"]:
                 for v in b["core"].values():
                     n_cells += 1; n_ref += bool(v.get("steering_reference")); n_own += owned(v)
         cells += [f"\\multicolumn{{2}}{{c}}{{{n_ref - n_own} of {n_cells} (reference met: {n_ref}; owned: {n_own})}}"]
@@ -344,25 +357,25 @@ def table_ownership(blocks, ds, label, order):
     concepts = None
     for m in models:
         b = blocks[(m, ds)]
-        if b["core"]:
+        if b["included"]:
             concepts = list(b["core"].keys()); break
     if concepts is None:
-        concepts = list(next(iter(blocks[(m, ds)]["cal"].keys())) for m in models[:1])
+        concepts = list(blocks[(models[0], ds)]["cal"].keys())
     L = [r"\begin{table}[h]", r"\centering", r"\scriptsize", r"\setlength{\tabcolsep}{4pt}", r"\renewcommand{\arraystretch}{1.08}",
          r"\input{tables/cf_colors}",
          r"\caption{\textbf{Ownership on " + label + r".} Each cell is the ownership contrast $O_q$ of the concept's own write against its strongest "
          r"clinical competitor at $\alpha=+0.25$. Cells are shaded slate for positive and terracotta for negative values (darker = larger magnitude, "
          r"thresholds $0.02$, $0.10$, $0.25$). Bold marks owned cells (steering reference met and all simultaneous lower bounds $>0$). "
          r"A dagger marks cells whose write meets the steering reference but loses to a competitor. Grey ``inel.'' marks checkpoints whose "
-         r"yes/no template is ineligible. Checkpoints are in the order of Table~\ref{tab:cf-main}.}",
+         r"yes/no template is ineligible and grey ``inc.'' a write matrix incomplete at packaging (neither enters any count). Checkpoints are in the order of Table~\ref{tab:cf-main}.}",
          r"\label{tab:cf-own-" + ds + r"}",
          r"\begin{tabular}{l" + "r" * len(concepts) + r"}", r"\toprule",
          "Checkpoint & " + " & ".join(concepts) + r" \\", r"\midrule"]
     n_own = {c: 0 for c in concepts}
     for m in models:
         b = blocks[(m, ds)]
-        if b["core_ineligible"] or not b["core"]:
-            L.append(f"{NAMES[m]} & " + " & ".join(r"\cellcolor{cfGrey}inel." for _ in concepts) + r" \\")
+        if not b["included"]:
+            L.append(f"{NAMES[m]} & " + " & ".join(f"\\cellcolor{{cfGrey}}{b['why']}" for _ in concepts) + r" \\")
             continue
         cells = []
         for c in concepts:
@@ -442,7 +455,9 @@ def table_gates(blocks):
 
 if __name__ == "__main__":
     (OUT / "cf_colors.tex").write_text(COLORS)
-    blocks = load()
+    blocks = load_blocks()
+    n_inc = sum(b["included"] for b in blocks.values()); n_probe = sum(b["probe"] for b in blocks.values())
+    print(f"{len(blocks)} blocks: {n_inc} with a scored write matrix, {n_probe} probe-graded (rule: cf_inclusion.block_included)")
     stats, order = table_main(blocks)
     table_families(blocks, stats)
     table_controls(blocks)
