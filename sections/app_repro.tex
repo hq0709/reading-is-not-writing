@@ -1,12 +1,12 @@
 \section{Reproducibility specification}
 \label{app:repro}
 
-This appendix states the hook paths, the consumed-token mask, the projection and the probe, the control constructions, the cohort roles, and the protocol record. Every statement below is read from the released adapters (\texttt{src/cftransfer/adapters/}), the registered protocol file, and the per-block artifacts.
+This appendix documents the hook paths, consumed-token mask, projection and probe, control constructions, cohort roles, and protocol record. Every statement below comes from the released adapters (\texttt{src/cftransfer/adapters/}), the registered protocol file, and the per-block artifacts.
 
 \subsection{Consumed loci per family}
 \label{app:repro-loci}
 
-Table~\ref{tab:cf-loci} gives the module path of the primary locus and of the connector locus exactly as the adapters name them, together with the rule that identifies the consumed final block. Each adapter resolves the block index at load time from the loaded checkpoint's own configuration, and each block's preflight file records the resolved path, the hidden dimension, the consumer, and any branch that bypasses the locus. Table~\ref{tab:cf-models} gives the consumed-token count per image at the primary locus for every checkpoint.
+Table~\ref{tab:cf-loci} gives the primary and connector locus module paths exactly as the adapters name them, together with the rule for identifying the consumed final block. Each adapter resolves the block index at load time from the loaded checkpoint's own configuration. Each block's preflight file records the resolved path, hidden dimension, consumer, and any branch that bypasses the locus. Table~\ref{tab:cf-models} gives the consumed-token count per image at the primary locus for every checkpoint.
 
 \begin{table}[h]
 \centering
@@ -35,7 +35,7 @@ Llama~3.2 Vision (\texttt{mllama}) & \texttt{model.vision\_model.}\allowbreak\te
 \subsection{The consumed-token mask}
 \label{app:repro-mask}
 
-The write of Equation~\ref{eq:intervention} is applied to the token positions the consumer reads at that locus and to no other entry of the hooked tensor. The adapter derives those positions for each batch from the processor's own outputs. Two tensor shapes occur. The Qwen family hands the merger a flat $(N,D)$ tensor in which every image occupies one contiguous slice, and the adapter computes the slice bounds from \texttt{image\_grid\_thw} (the connector slice is a quarter of the length, one merged token per $2\times2$ patch group). Every other family hands the consumer a batched $(B,T,D)$ tensor, and the adapter supplies one boolean mask per batch element:
+The write of Equation~\ref{eq:intervention} changes only the entries of the hooked tensor corresponding to token positions the consumer reads at that locus. The adapter derives these positions for each batch from the processor's own outputs. Two tensor shapes occur. The Qwen family passes the merger a flat $(N,D)$ tensor in which every image occupies one contiguous slice. The adapter computes the slice bounds from \texttt{image\_grid\_thw} (the connector slice is a quarter of the length, one merged token per $2\times2$ patch group). Every other family passes the consumer a batched $(B,T,D)$ tensor. The adapter supplies one boolean mask per batch element:
 
 \begin{itemize}[leftmargin=*,itemsep=1pt,topsep=2pt]
 \item Gemma~3 and MedGemma: all 4{,}096 patch rows; the tower produces no CLS row. The mask length is checked against the count of \texttt{<image\_soft\_token>} placeholders in the language-model input.
@@ -44,30 +44,30 @@ The write of Equation~\ref{eq:intervention} is applied to the token positions th
 \item Llama~3.2 Vision: the 1{,}601 rows (CLS and 1{,}600 patches) of the one real $560\times560$ tile. The seven zero-padding rows of each tile and the three padding tiles are excluded, and the mask is checked against \texttt{aspect\_ratio\_mask} and the last position of \texttt{cross\_attention\_mask}.
 \end{itemize}
 
-The hook raises rather than falls back: it raises when a flat layout does not cover the hooked tensor exactly, when a mask length differs from the token axis, when a batch element has no consumed token, and when the hooked module fires more than once in one forward.
+The hook raises an error rather than falling back when a flat layout does not exactly cover the hooked tensor, a mask length differs from the token-axis length, a batch element has no consumed token, or the hooked module fires more than once in one forward pass.
 
-Preflight check (C) verifies the mask. It captures the locus tensor on a clean pass and on a pass steered at $\alpha=+0.25$ along the first concept direction, and reports the largest absolute difference outside the mask, the largest absolute change in the consumer's output, and the largest absolute change in the answer logits. Across all \cfBlocks{} blocks the change outside the consumed tokens is $0$ at both loci, while the consumer's output and the answer logits both change. The same files record a bitwise-identical repeated clean pass (check A) and a bitwise-identical $\alpha=0$ pass (check B) for every block.
+Preflight check (C) verifies the mask. It captures the locus tensor on a clean pass and a pass steered at $\alpha=+0.25$ along the first concept direction. It reports the largest absolute difference outside the mask and the largest absolute changes in the consumer's output and answer logits. Across all \cfBlocks{} blocks, the change outside the consumed tokens is $0$ at both loci, while both the consumer's output and the answer logits change. The same files record a bitwise-identical repeated clean pass (check A) and a bitwise-identical $\alpha=0$ pass (check B) for every block.
 
 \subsection{Projection, lift, scaler, and probe}
 \label{app:repro-probe}
 
-The projection $R\in\R^{D\times512}$ is one draw of \texttt{PCG64(0).standard\_normal((D,512))} divided by $\sqrt{512}$ and stored in float32, so the entries are independent $\mathcal{N}(0,1/512)$ variates. The seed is $0$ for every checkpoint, dataset, and locus; $D$ is the family's hidden dimension. The columns of $R$ are neither normalised nor orthogonalised, and the lifted direction of Equation~\ref{eq:lift} is normalised once, in model space, to unit $\ell_2$ norm. The gram matrix $R^{\top}R/D$ is full rank at 512 in every one of the \cfAltdirdBlocks{} blocks that carry the displacement module, with condition number \cfAltdirdCondMin{}--\cfAltdirdCondMax{}; Table~\ref{tab:cf-altdird} reports its eigenvalue range.
+The projection $R\in\R^{D\times512}$ is one draw of \texttt{PCG64(0).standard\_normal((D,512))} divided by $\sqrt{512}$ and stored in float32. Its entries are independent $\mathcal{N}(0,1/512)$ variates. The seed is $0$ for every checkpoint, dataset, and locus; $D$ is the family's hidden dimension. We neither normalise nor orthogonalise the columns of $R$. We normalise the lifted direction of Equation~\ref{eq:lift} once, in model space, to unit $\ell_2$ norm. The Gram matrix $R^{\top}R/D$ has full rank 512 in every one of the \cfAltdirdBlocks{} blocks that carry the displacement module, with condition number \cfAltdirdCondMin{}--\cfAltdirdCondMax{}. Table~\ref{tab:cf-altdird} reports its eigenvalue range.
 
-Projected features are $R^{\top}\hvec_i$ for the token-mean read vector $\hvec_i$. The featurewise scale $\boldsymbol s$ and mean come from a \texttt{StandardScaler} fitted on the training rows alone, and every row is standardised as $(R^{\top}\hvec-\boldsymbol\mu)\oslash\max(\boldsymbol s,10^{-8})$. Each concept probe is \texttt{LogisticRegression} with $C=1$, \texttt{solver="lbfgs"}, \texttt{max\_iter=2000}, \texttt{class\_weight=None}, and \texttt{random\_state=0}, fitted on the training rows whose label for that concept is known. The positive-class coefficient fixes the clinical pole of the direction. The two refit seeds resample the training units with replacement, keep every row of a sampled unit at its multiplicity, and refit the scaler and the six probes against the same projection; the random family, the shams, and the control probes stay at seed 0.
+The token-mean read vector $\hvec_i$ yields projected features $R^{\top}\hvec_i$. A \texttt{StandardScaler} fitted only on training rows supplies the featurewise scale $\boldsymbol s$ and mean. Every row is standardised as $(R^{\top}\hvec-\boldsymbol\mu)\oslash\max(\boldsymbol s,10^{-8})$. Each concept probe uses \texttt{LogisticRegression} with $C=1$, \texttt{solver="lbfgs"}, \texttt{max\_iter=2000}, \texttt{class\_weight=None}, and \texttt{random\_state=0}, fitted on training rows with a known label for that concept. The positive-class coefficient fixes the clinical pole of the direction. For each of the two refit seeds, we resample training units with replacement, retain every row of each sampled unit at that unit's multiplicity, and refit the scaler and six probes using the same projection. The random family, shams, and control probes remain at seed 0.
 
 \subsection{Control constructions}
 \label{app:repro-controls}
 
-\paragraph{Random directions.} One \texttt{PCG64(0)} draw of a $119\times D$ standard-normal matrix, each row normalised to unit $\ell_2$ norm. The same 119 directions serve every question of the block.
+\paragraph{Random directions.} We draw one $119\times D$ standard-normal matrix with \texttt{PCG64(0)} and normalise each row to unit $\ell_2$ norm. The same 119 directions serve every question in the block.
 
-\paragraph{Coordinate-permutation sham.} The same generator, immediately after the random draw, produces one permutation of $\{0,\dots,D{-}1\}$ per concept in protocol concept order. Concept $c$'s sham is $\hat\wvec_c$ with its coordinates rearranged by concept $c$'s own permutation, so the sham carries the same coordinate multiset and the same unit norm as the direction it shams. Each question is written with its own sham.
+\paragraph{Coordinate-permutation sham.} Immediately after the random draw, the same generator produces one permutation of $\{0,\dots,D{-}1\}$ per concept in protocol concept order. Concept $c$'s sham is $\hat\wvec_c$ with its coordinates rearranged by concept $c$'s own permutation. The sham preserves the direction's coordinate multiset and unit norm. Each question is written with its own sham.
 
-\paragraph{Matched random-label probes.} Each row carries a type identifier: view $\times$ sex $\times$ age decade on the chest sets, and aspect-ratio $\times$ area buckets on COCO. Control seed $k\in\{0,\dots,19\}$ walks the sorted type names and draws one label from \texttt{PCG64($k$).integers(0,2)} for each; a draw that assigns one label to every type has its first entry flipped. Every row of a type receives that type's label. Each control probe is then fitted on the same training rows, the same known-label subset, and the same hyperparameters as the concept probe, which gives it the concept probe's capacity and nuisance structure. A block fits control probes when its training rows span at least eight types. Selectivity is Equation~\ref{eq:selectivity}. Its bootstrap over calibration units keeps a draw when the real AUROC is finite and at least ten of the twenty control AUROCs are finite, and a cell is graded for readability when at least 1{,}900 of the 2{,}000 draws are kept.
+\paragraph{Matched random-label probes.} Each row has a type identifier: view $\times$ sex $\times$ age decade on the chest sets, and aspect-ratio $\times$ area buckets on COCO. For control seed $k\in\{0,\dots,19\}$, we traverse the sorted type names and draw one label per type from \texttt{PCG64($k$).integers(0,2)}; if all types receive the same label, we flip the first entry. Every row of a type receives that type's label. We fit each control probe on the same training rows and known-label subset, with the same hyperparameters as the concept probe, giving it the concept probe's capacity and nuisance structure. A block fits control probes when its training rows span at least eight types. Selectivity is Equation~\ref{eq:selectivity}. Its bootstrap over calibration units keeps a draw when the real AUROC is finite and at least ten of the twenty control AUROCs are finite. We grade a cell for readability when at least 1{,}900 of the 2{,}000 draws are kept.
 
 \subsection{Cohort roles}
 \label{app:repro-cohorts}
 
-Table~\ref{tab:cf-roles} gives the size of every role and what it is used for. The roles are disjoint by patient on the chest sets and by image on COCO. The calibration role decides readability and answer capability and nothing else: it fits no probe, and no write is scored on it. The test role carries every write.
+Table~\ref{tab:cf-roles} lists each role's size and use. The roles are disjoint by patient on the chest sets and by image on COCO. We use the calibration role only to determine readability and answer capability. We fit no probe and score no write on it. The test role carries every write.
 
 \begin{table}[h]
 \centering
@@ -92,9 +92,9 @@ valid & -- & \cfValidRows{} (\cfValidRows{}) & -- & The regrade on radiologist c
 \subsection{Protocol record and amendments}
 \label{app:repro-protocol}
 
-Every block writes a run record that carries the protocol identifier \texttt{cf-transfer-v1}, the run identifier \texttt{cf-transfer-v1:<checkpoint>:<dataset>:mayo}, the evaluation-code commit that produced the block, the pinned checkpoint and processor revisions, the library versions, the dtypes, and the resolved processing settings including the rendered chat template. All \cfBlocks{} blocks carry the protocol identifier \texttt{cf-transfer-v1}. The protocol file registers its own code reference commit \texttt{763072d3}.
+Each block writes a run record containing the protocol identifier \texttt{cf-transfer-v1}, the run identifier \texttt{cf-transfer-v1:<checkpoint>:<dataset>:mayo}, the evaluation-code commit that produced the block, the pinned checkpoint and processor revisions, the library versions, the dtypes, and the resolved processing settings, including the rendered chat template. All \cfBlocks{} blocks carry the protocol identifier \texttt{cf-transfer-v1}. The protocol file registers its own code reference commit \texttt{763072d3}.
 
-Table~\ref{tab:cf-amendments} lists what the protocol file gained after the first wave and the date it gained it. The six planned modules and the connector calibration derived from them carry no amendment date. The robustness tables of Appendix~\ref{app:cf-robustness} report, for each amendment module, the blocks that carry it.
+Table~\ref{tab:cf-amendments} lists additions to the protocol file after the first wave and the date of each addition. The six planned modules and the connector calibration derived from them carry no amendment date. The robustness tables in Appendix~\ref{app:cf-robustness} identify the blocks that carry each amendment module.
 
 \begin{table}[h]
 \centering
