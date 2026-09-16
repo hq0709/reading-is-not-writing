@@ -2,7 +2,7 @@
 \centering
 \scriptsize
 \setlength{\tabcolsep}{4pt}
-\caption{\textbf{Rescue and loss per cell.} For every block with the answer-direction module and every concept: whether the label direction $\hat w_q$ is owned (the paper's grade) and whether the answer direction $a_q$ is owned under the same rules (steering reference and fixed-family advantage over the other five $a_d$), the two ownership contrasts $O_q$ and $O^a_q$, the column selectivity $S_d$ of the label direction ($W_{d,d}/\sum_q|W_{q,d}|$), and the whitened cosine $\cos_\Sigma(a_q,\hat w_q)$.}
+\caption{\textbf{Rescue and loss per cell.} For every block with the answer-direction module and every concept: whether the label direction $\hat w_q$ is owned (the paper's grade) and whether the answer direction $a_q$ is owned under the same rules (steering reference and fixed-family advantage over the other five $a_d$), the two ownership contrasts $O_q$ and $O^a_q$, the column selectivity index $S_d$ of the label direction ($W_{d,d}/\sum_q|W_{q,d}|$, signed), and the cosine $\cos_\Sigma(a_q,\hat w_q)$ whitened by the training-feature covariance in the projected, train-scaled space, per cell.}
 \label{tab:cf-rescue}
 \begin{tabular}{lllccrrrr}
 \toprule

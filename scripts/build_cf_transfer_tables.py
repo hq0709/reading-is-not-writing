@@ -371,8 +371,11 @@ def table_contingency():
               ("COCO, all cells", [r for r in rows if r["dataset"] == "coco"])]
     L = [r"\begin{table}[t]", r"\centering", r"\small",
          r"\caption{\textbf{Steering reference against verdict.} Primary write-matrix cells of the included blocks, split by whether the "
-         r"concept write meets the steering reference and by the simultaneous-bound verdict of the clinical comparison; owned cells are the "
-         r"reference-meeting cells with the advantage verdict.}", r"\label{tab:cf-contingency}",
+         r"concept write meets the steering reference ($W_{q,q}>0$, above the 95th percentile of the 119 random writes, and above the "
+         r"absolute sham) and by the simultaneous-bound verdict of the comparison with the five other clinical directions: advantage "
+         r"(every lower bound of $W_{q,q}-W_{q,d}$ positive), stronger competitor (some upper bound below zero), or unresolved. Owned "
+         r"cells are the reference-meeting cells with the advantage verdict. The middle rows restrict the chest cells to those that "
+         r"are both readable and answerable.}", r"\label{tab:cf-contingency}",
          r"\begin{tabular}{llrrrr}", r"\toprule", r"Cells & Steering reference & advantage & stronger competitor & unresolved & total \\", r"\midrule"]
     for name, sel in groups:
         c = counts(sel)

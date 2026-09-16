@@ -2,7 +2,7 @@
 \centering
 \scriptsize
 \setlength{\tabcolsep}{4pt}
-\caption{\textbf{The direction the reader responds to.} For each block, the answer direction $a_q$ is a ridge regression of the model's own clean answer margin on the same projected, train-scaled features the probes use (3{,}000 training rows), lifted like the probe normal and written at the same dose against the same reference family. Columns: concepts whose $a_q$ is owned (steering reference and fixed-family advantage over the other five $a_d$); concepts whose $a_q$ write beats the strongest logistic competitor of the label direction; median own write $W^a_{q,q}$; median cosine between $a_q$ and the label direction $\hat w_q$; median cross-validated $R^2$ of the regression; and, for reference, the concepts owned by the label direction.}
+\caption{\textbf{The direction the reader responds to.} For each block, the answer direction $a_q$ is a ridge regression of the model's own clean answer margin on the same projected, train-scaled features the probes use (3{,}000 training rows), lifted like the probe normal and written at the same dose against the same reference family. Columns: concepts whose $a_q$ is owned (steering reference and fixed-family advantage over the other five $a_d$); concepts whose $a_q$ write beats the strongest logistic competitor of the label direction; median own write $W^a_{q,q}$; raw model-space cosine between $a_q$ and the label direction $\hat w_q$, median over the six concepts of the block; median cross-validated $R^2$ of the regression; and, for reference, the concepts owned by the label direction.}
 \label{tab:cf-ansdir}
 \resizebox{\textwidth}{!}{\begin{tabular}{llrrrrrr}
 \toprule

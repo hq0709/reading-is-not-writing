@@ -10,7 +10,7 @@ beyond means, medians, and quantiles stated in the captions. Every figure is che
 rendering (check_overlaps), and the check is printed with the figure name.
 
 Main text
-  fig1_framework        read / write / answer schematic with the seed inset
+  fig1_method           (a) read and write at the consumed block, (b) the three comparisons of the grade, (c) the seed cell from macros
   fig2_overview         (a) graded fractions per dataset, (b) model landscape, (c) dose response, (d) rank ECDF
   fig3_example          one chest radiograph and one natural image: P(yes) per question under three inputs
   fig4_write_matrices   6x6 write matrices W_{q,d} for three checkpoints on NIH (top) and COCO (bottom)
@@ -35,7 +35,7 @@ from matplotlib.colors import LinearSegmentedColormap, TwoSlopeNorm   # noqa: E4
 from matplotlib.lines import Line2D                     # noqa: E402
 from matplotlib.text import Text                        # noqa: E402
 from matplotlib.ticker import MaxNLocator               # noqa: E402
-from matplotlib.patches import FancyArrowPatch, FancyBboxPatch, PathPatch, Rectangle   # noqa: E402
+from matplotlib.patches import Circle, FancyArrowPatch, FancyBboxPatch, PathPatch, Rectangle   # noqa: E402
 from matplotlib.path import Path as MPath               # noqa: E402
 from matplotlib.transforms import Bbox, offset_copy     # noqa: E402
 import numpy as np                                      # noqa: E402
@@ -311,59 +311,225 @@ def round_up(v, q=0.1):
 
 
 # ============================================================================================== fig1
-def fig1_framework(blocks):
-    f = plt.figure(figsize=(fs.WIDTH, fs.H1))
-    ax = f.add_axes((0, 0, 1, 1)); ax.set_xlim(0, 5.5); ax.set_ylim(0, 2.4); ax.set_axis_off(); ax.grid(False)
+def macros():
+    """The paper's number macros (tables/cf_numbers.json, written by build_numbers.py with tables/cf_numbers.tex). Figures
+    that print a campaign number take it from here, as the macro's exact string, so figure and prose cannot disagree."""
+    return json.loads((ROOT / "tables" / "cf_numbers.json").read_text())["macros"]
 
-    def box(x, y, w, h, title, body, color):
-        ax.add_patch(FancyBboxPatch((x, y), w, h, boxstyle="round,pad=0.015,rounding_size=0.05", facecolor="white",
-                                    edgecolor=color, linewidth=1.0, zorder=2))
-        ax.add_patch(FancyBboxPatch((x, y + h - 0.24), w, 0.24, boxstyle="round,pad=0.015,rounding_size=0.05",
-                                    facecolor=color, edgecolor=color, linewidth=1.0, zorder=3))
-        ax.text(x + w / 2, y + h - 0.12, title, ha="center", va="center", fontsize=8.5, color="white", fontweight="bold", zorder=4)
-        ax.text(x + w / 2, y + (h - 0.24) / 2, body, ha="center", va="center", fontsize=8, color=fs.INK, linespacing=1.3, zorder=4)
 
-    def arrow(p, q, lw=1.1, color=fs.CHARCOAL):
-        ax.add_patch(FancyArrowPatch(p, q, arrowstyle="-|>", mutation_scale=8, linewidth=lw, color=color, shrinkA=1.5, shrinkB=1.5, zorder=5))
+def element_boxes(fig, ax):
+    """Display bboxes of the schematic's framed elements (boxes, tokens, circles) and every inset axes, plus sampled
+    display points along every arrow and connector line of `ax`. Used by check_elements."""
+    fig.canvas.draw(); r = fig.canvas.get_renderer()
+    boxes = [(p.get_label() or type(p).__name__, p.get_window_extent(r)) for p in ax.patches
+             if not isinstance(p, FancyArrowPatch) and p.get_label() != "_bracket"]
+    boxes += [(f"axes:{a.get_label()}", a.get_window_extent(r)) for a in fig.axes if a is not ax]
+    lines = []
+    for p in ax.patches:
+        if isinstance(p, FancyArrowPatch):
+            path = p.get_path()                                         # display coordinates, arrow head included
+            pts = path.interpolated(40).vertices if len(path.vertices) > 1 else path.vertices
+            lines.append((p.get_label() or "arrow", pts))
+    for ln in ax.lines:
+        xy = ax.transData.transform(np.column_stack(ln.get_data()))
+        dense = np.vstack([np.linspace(xy[i], xy[i + 1], 40) for i in range(len(xy) - 1)]) if len(xy) > 1 else xy
+        lines.append((ln.get_label() or "line", dense))
+    return boxes, lines
 
-    y0, h = 1.42, 0.86
-    xs, w, gap = [0.08, 1.44, 2.80, 4.16], 1.26, 0.10
-    box(xs[0], y0, w, h, "consumed visual block", "tokens the LM reads, $h_{it}$\n(final block; pooled $h_i$)", fs.SLATE)
-    box(xs[1], y0, w, h, "read", "logistic probe on $h_i$\n$\\rightarrow$ direction $\\hat{w}_c$\n$+$20 random-label controls", fs.HAZE)
-    box(xs[2], y0, w, h, "write", "$h' = h + \\alpha\\,\\|h_t\\|\\,\\hat{w}_c$\nsame tokens, $\\alpha=+0.25$", fs.TERRACOTTA)
-    box(xs[3], y0, w, h, "answer", "$P(\\mathrm{yes}\\mid q)$, fp32 logits\n$W_{q,d}$: paired change", fs.SAGE)
-    for x0 in xs[:-1]:
-        arrow((x0 + w + 0.01, y0 + h / 2), (x0 + w + gap - 0.01, y0 + h / 2))
 
-    bx, by, bw, bh = 0.08, 0.10, 3.00, 1.16
-    ax.add_patch(FancyBboxPatch((bx, by), bw, bh, boxstyle="round,pad=0.015,rounding_size=0.05", facecolor="#FBFAF8",
-                                edgecolor="#8a8a8a", linewidth=0.8, zorder=1))
-    ax.text(bx + 0.10, by + bh - 0.10, "compare on the same rows, dose, and endpoint", fontsize=8.5, fontweight="bold", color=fs.INK, va="top")
-    rows = [("concept write", "$W_{q,q}$", fs.HAZE), ("five competing clinical writes", "$\\max_{d\\neq q}W_{q,d}$", fs.TERRACOTTA),
-            ("119 random directions", "95th percentile", fs.GREY), ("coordinate-permutation sham", "$|\\mathrm{sham}|$", fs.LILAC)]
-    for i, (name, stat, col) in enumerate(rows):
-        yy = by + bh - 0.30 - i * 0.165
-        ax.plot(bx + 0.17, yy, marker="s", ms=4.6, color=col, mec="white", ls="none", zorder=3)
-        ax.text(bx + 0.28, yy, name, fontsize=8, color=fs.INK, va="center")
-        ax.text(bx + 1.95, yy, stat, fontsize=8, color=fs.MUTED, va="center")
-    ax.text(bx + 0.10, by + 0.06, "owned: $O_q=W_{q,q}-\\max_{d\\neq q}W_{q,d}>0$ (max-$T$ bounds), $W_{q,q}>$ p95, $|$sham$|$",
-            fontsize=7.6, color=fs.INK, va="bottom")
-    arrow((xs[1] + 0.35, y0), (xs[1] + 0.35, by + bh + 0.02))
-    arrow((xs[3] + 0.63, y0), (xs[3] + 0.63, by + bh + 0.02))
+def check_elements(fig, ax, name, pad_pt=0.8):
+    """Schematic overlap check on top of check_overlaps: (1) no text crosses an arrow or connector line; (2) every text
+    lies either wholly inside a framed element or wholly outside it (no text straddles a frame); (3) framed elements do
+    not partially overlap each other (nesting is allowed). Prints each violation and a one-line verdict."""
+    boxes, lines = element_boxes(fig, ax); texts = text_bboxes(fig); bad = 0
+    m = pad_pt * fig.dpi / 72
+    for lt, tb in texts:
+        if ":tick" in lt or lt.endswith(":legend"):
+            continue
+        inner = Bbox([[tb.x0 + m, tb.y0 + m], [tb.x1 - m, tb.y1 - m]])
+        for ll, pts in lines:
+            if ((pts[:, 0] > inner.x0) & (pts[:, 0] < inner.x1) & (pts[:, 1] > inner.y0) & (pts[:, 1] < inner.y1)).any():
+                print(f"  [{name}] TEXT x LINE: {lt}  x  {ll}"); bad += 1
+        for lb, bb in boxes:
+            if lt.startswith(lb.replace("axes:", "") + ":"):
+                continue                                                # a text of the inset axes itself
+            inside = tb.x0 >= bb.x0 - 0.5 and tb.x1 <= bb.x1 + 0.5 and tb.y0 >= bb.y0 - 0.5 and tb.y1 <= bb.y1 + 0.5
+            ov = Bbox.intersection(inner, bb)
+            if ov is not None and ov.width > 0 and ov.height > 0 and not inside:
+                print(f"  [{name}] TEXT STRADDLES FRAME: {lt}  x  {lb}"); bad += 1
+    for i in range(len(boxes)):
+        for j in range(i + 1, len(boxes)):
+            (li, bi), (lj, bj) = boxes[i], boxes[j]
+            ov = Bbox.intersection(bi, bj)
+            if ov is None or ov.width <= 1 or ov.height <= 1:
+                continue
+            nested = (bi.x0 <= bj.x0 and bi.x1 >= bj.x1 and bi.y0 <= bj.y0 and bi.y1 >= bj.y1) or \
+                     (bj.x0 <= bi.x0 and bj.x1 >= bi.x1 and bj.y0 <= bi.y0 and bj.y1 >= bi.y1)
+            if not nested:
+                print(f"  [{name}] FRAMES OVERLAP: {li}  x  {lj}"); bad += 1
+    print(f"  [{name}] element check: {'clean' if bad == 0 else f'{bad} issue(s)'}")
+    return bad
 
-    ins = f.add_axes((0.655, 0.175, 0.32, 0.31)); ins.grid(True, axis="y")
-    vals, labels, cols = [0.190, 0.252, 0.017], ["Effusion\nwrite", "Nodule\nwrite", "sham"], [fs.HAZE, fs.TERRACOTTA, fs.LILAC]
-    bars = ins.bar(range(3), vals, color=cols, width=0.62, edgecolor="none", zorder=3)
-    bars[1].set_edgecolor(fs.CHARCOAL); bars[1].set_linewidth(1.1)
-    ins.set_ylim(0, 0.31); ins.set_yticks([0, 0.1, 0.2, 0.3]); ins.tick_params(labelsize=7.5)
-    fs.ref_line(ins, y=0.137, label="random p95", where="right")
-    for b, v in zip(bars, vals):
-        ins.annotate(f"{v:.3f}", (b.get_x() + b.get_width() / 2, v), xytext=(0, 2), textcoords="offset points",
-                     ha="center", va="bottom", fontsize=7.5, fontweight="bold", color=fs.INK)
-    ins.set_xticks(range(3)); ins.set_xticklabels(labels, fontsize=7.5)
-    ins.set_title("seed: Effusion question, Qwen2.5-VL-7B, NIH", fontsize=8, pad=3)
-    ins.set_ylabel(r"$\Delta P(\mathrm{yes})$", fontsize=8)
-    fs.save(f, FIG / "fig1_framework")
+
+FIG1_IMAGE = "/rodata/azradonc_dev/m253405/cache/nih/images/00005446_000.png"     # the NIH row of Figure 3(a)
+
+
+def fig1_method(blocks):
+    """Figure 1: the method and the result in one view. (a) one image through the vision tower to the final visual block the
+    language model consumes; the probe reads the concept from the tokens pooled over the consumed positions; the lifted
+    direction is written back onto the same positions at a relative dose; the connector and language model answer one
+    question. (b) the grade: the same write against its three comparisons. (c) the seed cell, every number a macro."""
+    from PIL import Image
+    Mx = macros()
+    FW, FH = fs.WIDTH, 3.40
+    f = plt.figure(figsize=(FW, FH))
+    ax = f.add_axes((0, 0, 1, 1), label="schematic"); ax.set_xlim(0, FW); ax.set_ylim(0, FH); ax.set_axis_off(); ax.grid(False)
+    OWN, COMP, REF, OTHER = fs.HAZE, fs.TERRACOTTA, fs.SLATE, fs.STONE
+    INKC = fs.INK
+
+    def box(x, y, w, h, text, edge, label, fontsize=7.5, fill="white"):
+        ax.add_patch(FancyBboxPatch((x, y), w, h, boxstyle="round,pad=0,rounding_size=0.05", facecolor=fill, edgecolor=edge,
+                                    linewidth=0.9, zorder=2, label=label))
+        ax.text(x + w / 2, y + h / 2, text, ha="center", va="center", fontsize=fontsize, color=INKC, linespacing=1.2, zorder=4)
+
+    def arrow(p, q, label, color=fs.CHARCOAL, lw=0.9, style="-|>", ms=7, connection=None):
+        kw = dict(connectionstyle=connection) if connection else {}
+        ax.add_patch(FancyArrowPatch(p, q, arrowstyle=style, mutation_scale=ms, linewidth=lw, color=color, shrinkA=0, shrinkB=0,
+                                     zorder=3, label=label, **kw))
+
+    # ------------------------------------------------------------------------------------------------ (a) pipeline
+    ax.text(0.06, FH - 0.04, "(a)  read and write at the final visual block the language model consumes", ha="left", va="top",
+            fontsize=8.5, color=INKC)
+    yc = 2.30                                                           # centre line of the pipeline row
+    # image
+    im = Image.open(FIG1_IMAGE).convert("L"); iw, ih = im.size; S = 0.66
+    axi = f.add_axes(rect(FW, FH, 0.08, yc - S / 2, S, S), label="image")
+    axi.imshow(im, cmap="gray", interpolation="lanczos"); axi.set_xticks([]); axi.set_yticks([]); axi.grid(False)
+    for sp in axi.spines.values():
+        sp.set_edgecolor("#8a8a8a"); sp.set_linewidth(0.6)
+    ax.text(0.08 + S / 2, yc - S / 2 - 0.05, "image $i$", ha="center", va="top", fontsize=7.5, color=fs.MUTED)
+    # vision tower
+    tx0, tw, th = 0.86, 0.50, 0.50
+    arrow((0.08 + S + 0.02, yc), (tx0 - 0.02, yc), "a:img-tower")
+    box(tx0, yc - th / 2, tw, th, "vision\ntower", fs.CHARCOAL, "tower")
+    # token strips: block output h_it and written output h'_it, the same positions; position 0 is not consumed
+    NT, TS, TG = 5, 0.13, 0.035; pitch = TS + TG; strip_w = NT * pitch - TG; T_MARK = 2
+    s1 = tx0 + tw + 0.14
+    xp = s1 + strip_w + 0.20                                            # the add node between the two strips
+    s2 = xp + 0.20
+
+    def strip(x0, written, tag):
+        for k in range(NT):
+            x = x0 + k * pitch
+            consumed = k > 0
+            face = "white" if not consumed else (tint(OWN, 0.45) if written else tint(REF, 0.35))
+            ax.add_patch(Rectangle((x, yc - TS / 2), TS, TS, facecolor=face, edgecolor=fs.CHARCOAL if k == T_MARK else "#8a8a8a",
+                                   linewidth=1.0 if k == T_MARK else 0.6, hatch=None if consumed else "//////", zorder=2,
+                                   label=f"{tag}-tok{k}"))
+        ax.text(x0 + T_MARK * pitch + TS / 2, yc - TS / 2 - 0.04, "$t$", ha="center", va="top", fontsize=7.5, color=INKC)
+
+    arrow((tx0 + tw + 0.02, yc), (s1 - 0.02, yc), "a:tower-strip")
+    strip(s1, False, "h")
+    strip(s2, True, "hw")
+    ax.text(s1 + strip_w / 2, yc - TS / 2 - 0.15, "$h_{it}$", ha="center", va="top", fontsize=8, color=INKC)
+    ax.text(s2 + strip_w / 2, yc - TS / 2 - 0.15, "$h^{\\prime}_{it}$", ha="center", va="top", fontsize=8, color=INKC)
+    ax.text((s1 + s2 + strip_w) / 2, yc - TS / 2 - 0.36, "same consumed positions $t$ (hatched: not consumed)", ha="center",
+            va="top", fontsize=7.3, color=INKC)
+    # add node
+    R_ADD = 0.065
+    arrow((s1 + strip_w + 0.02, yc), (xp - R_ADD - 0.01, yc), "a:strip-add")
+    ax.add_patch(Circle((xp, yc), R_ADD, facecolor="white", edgecolor=fs.CHARCOAL, linewidth=0.9, zorder=2, label="add"))
+    ax.plot([xp - 0.035, xp + 0.035], [yc, yc], color=fs.CHARCOAL, lw=0.9, zorder=3, label="_plus")
+    ax.plot([xp, xp], [yc - 0.035, yc + 0.035], color=fs.CHARCOAL, lw=0.9, zorder=3, label="_plus")
+    arrow((xp + R_ADD + 0.01, yc), (s2 - 0.02, yc), "a:add-strip")
+    # read: bracket over the consumed tokens of h, up to the probe
+    bx0, bx1, by = s1 + pitch - 0.01, s1 + strip_w + 0.01, yc + TS / 2 + 0.05
+    ax.plot([bx0, bx0, bx1, bx1], [by, by + 0.04, by + 0.04, by], color=fs.CHARCOAL, lw=0.7, zorder=3, label="_bracket_line")
+    bmid = (bx0 + bx1) / 2
+    py0, ph, pw = 2.86, 0.28, 0.86
+    arrow((bmid, by + 0.04), (bmid, py0 - 0.02), "a:pool-probe")
+    ax.text(bmid - 0.05, (by + 0.04 + py0) / 2, "mean over\nconsumed $t$", ha="right", va="center", fontsize=7.3, color=INKC, linespacing=1.1)
+    box(bmid - pw / 2, py0, pw, ph, "probe reads\nEffusion", OWN, "probe", fontsize=7.6)
+    # lift and write: from the probe to the add node
+    arrow((bmid + pw / 2 + 0.02, py0 + ph / 2), (xp, yc + R_ADD + 0.01), "a:lift-write", color=OWN, lw=1.1,
+          connection="angle,angleA=0,angleB=90,rad=0")
+    ax.text(bmid + pw / 2 + 0.10, py0 + ph / 2 + 0.035, "lift $\\hat w_c$", ha="left", va="bottom", fontsize=7.5, color=INKC)
+    ax.text(xp + 0.07, yc + 0.40, "add $\\alpha\\,\\Vert h_{it}\\Vert\\,\\hat w_d$ to every consumed $t$, $\\alpha=+0.25$\n$d$: $c$, five clinical, 119 random, sham",
+            ha="left", va="center", fontsize=7.3, color=INKC, linespacing=1.25)
+    # connector, language model, answer
+    cx0, cw = s2 + strip_w + 0.14, 0.56
+    arrow((s2 + strip_w + 0.02, yc), (cx0 - 0.02, yc), "a:strip-conn")
+    box(cx0, yc - th / 2, cw, th, "connector", fs.CHARCOAL, "connector", fontsize=7.6)
+    lx0, lw_ = cx0 + cw + 0.12, 0.62
+    arrow((cx0 + cw + 0.02, yc), (lx0 - 0.02, yc), "a:conn-lm")
+    box(lx0, yc - th / 2, lw_, th, "language\nmodel", fs.CHARCOAL, "lm", fontsize=7.6)
+    ax.text(lx0 + lw_ / 2, py0 + ph, "question $q$: Is there a pleural\neffusion in this chest radiograph?", ha="center", va="top",
+            fontsize=7.3, color=INKC, linespacing=1.15)
+    arrow((lx0 + lw_ / 2, py0 - 0.02), (lx0 + lw_ / 2, yc + th / 2 + 0.02), "a:q-lm")
+    ox = lx0 + lw_ + 0.12
+    arrow((lx0 + lw_ + 0.02, yc), (ox - 0.02, yc), "a:lm-out")
+    ax.text(ox, yc, "$P(\\mathrm{yes}\\mid q)$", ha="left", va="center", fontsize=8, color=INKC)
+
+    # ------------------------------------------------------------------------------------------------ (b) the grade
+    W = {"Effusion": Mx["cfSeedWEff"], "Atelectasis": Mx["cfSeedWAtel"], "Pneumothorax": Mx["cfSeedWPneu"],
+         "Cardiomegaly": Mx["cfSeedWCard"], "Mass": Mx["cfSeedWMass"], "Nodule": Mx["cfSeedWNodule"]}
+    p95, sham = Mx["cfSeedEffRandP"], Mx["cfSeedEffSham"]
+    O, Olo, Ohi = Mx["cfSeedEffO"], Mx["cfSeedEffOLo"], Mx["cfSeedEffOHi"]
+    wq = float(W["Effusion"])
+    c1 = wq > 0
+    c2 = wq > float(p95) and wq > float(sham)
+    c3 = float(Olo) > 0                                                 # every simultaneous lower bound positive
+    top_b = 1.74
+    ax.text(0.06, top_b, "(b)  the grade: one write, three comparisons", ha="left", va="top", fontsize=8.5, color=INKC)
+    ax.text(0.06, top_b - 0.24, "$W_{q,d}$: mean change in $P(\\mathrm{yes}\\mid q)$ under the write of $d$", ha="left", va="top",
+            fontsize=7.5, color=INKC)
+    rows = [(OWN, "own effect", "$W_{q,q}>0$", c1),
+            (REF, "random and sham", "$W_{q,q}>$ random p95 and $>|\\mathrm{sham}|$", c2),
+            (COMP, "five clinical directions", "$W_{q,q}-W_{q,d}>0$ for every $d\\neq q$", c3)]
+    y = top_b - 0.58
+    for col, name, rule, ok in rows:
+        ax.add_patch(Rectangle((0.10, y - 0.045), 0.09, 0.09, facecolor=col, edgecolor="none", zorder=2, label=f"key-{name}"))
+        ax.text(0.26, y + 0.01, name, ha="left", va="bottom", fontsize=8, color=INKC)
+        ax.text(0.26, y - 0.01, rule, ha="left", va="top", fontsize=7.8, color=INKC)
+        f.text(2.42 / FW, y / FH, "✓" if ok else "✗", fontsize=6.5, color="white", ha="center", va="center", family="DejaVu Sans",
+               fontweight="bold", bbox=dict(boxstyle="round,pad=0.25,rounding_size=0.25", fc=fs.SAGE if ok else fs.TERRACOTTA, ec="none"), zorder=6)
+        y -= 0.31
+    verdict = "owned" if (c1 and c2 and c3) else ("stronger competitor" if float(Ohi) < 0 else "unresolved")
+    ax.text(0.06, y + 0.10, f"owned: all three hold under simultaneous max-$T$ bounds\nseed cell: {verdict}", ha="left", va="top", fontsize=7.8,
+            color=INKC, linespacing=1.2)
+
+    # ------------------------------------------------------------------------------------------------ (c) the seed cell
+    names = list(W); vals = np.array([float(W[c]) for c in names])
+    AX0, AY0, AW, AH = 3.12, 0.36, 2.30, 1.04
+    axc = f.add_axes(rect(FW, FH, AX0, AY0, AW, AH), label="seed")
+    cols = [OWN if c == "Effusion" else COMP if c == "Nodule" else tint(COMP, 0.35) for c in names]
+    xs = np.arange(len(names))
+    axc.bar(xs, vals, width=0.62, color=cols, edgecolor="none", zorder=3)
+    axc.set_xlim(-0.55, len(names) - 0.45); axc.set_ylim(0, 0.33)
+    axc.set_yticks([0, 0.1, 0.2, 0.3]); axc.tick_params(labelsize=7.5); axc.grid(True, axis="y"); axc.grid(False, axis="x")
+    axc.set_xticks(xs); axc.set_xticklabels([SHORT_CONCEPT[c] for c in names], fontsize=7.5)
+    axc.set_ylabel("$W_{q,d}$, $q$ = Effusion", fontsize=7.8, labelpad=2)
+    axc.set_xlabel("written direction $d$", fontsize=7.8, labelpad=2)
+    axc.axhline(float(p95), color=REF, ls="--", lw=0.9, zorder=2)
+    axc.axhline(float(sham), color=REF, ls=":", lw=1.0, zorder=2)
+    axc.annotate(f"random p95 {p95}", (2.5, float(p95)), xytext=(0, 1.5), textcoords="offset points", ha="center", va="bottom",
+                 fontsize=7.2, color=REF)
+    axc.annotate(f"$|$sham$|$ {sham}", (2.5, float(sham)), xytext=(0, 1.5), textcoords="offset points", ha="center", va="bottom",
+                 fontsize=7.2, color=REF)
+    for c, col in (("Effusion", OWN), ("Nodule", COMP)):
+        j = names.index(c)
+        axc.annotate(W[c], (j, float(W[c])), xytext=(0, 1.5), textcoords="offset points", ha="center", va="bottom", fontsize=7.5,
+                     fontweight="bold", color=INKC)
+    axc.plot([0.31, len(names) - 1 + 0.42], [wq, wq], color=OWN, lw=0.8, ls=(0, (2, 1.5)), zorder=2)
+    axc.annotate("", xy=(len(names) - 1 + 0.42, float(W["Nodule"])), xytext=(len(names) - 1 + 0.42, wq),
+                 arrowprops=dict(arrowstyle="<->", lw=0.8, color=fs.CHARCOAL, shrinkA=0, shrinkB=0, mutation_scale=5))
+    axc.text(len(names) - 1 - 0.45, float(W["Nodule"]), f"$O_q={O}$  $[{Olo},\\ {{{Ohi}}}]$", ha="right", va="center", fontsize=7.5, color=INKC,
+             bbox=dict(boxstyle="square,pad=0.15", fc="white", ec="none"))
+    ax.text(2.72, top_b, "(c)  seed cell: Effusion, Qwen2.5-VL-7B, NIH", ha="left", va="top", fontsize=8.5,
+            color=INKC)
+    check_overlaps(f, "fig1_method")
+    check_elements(f, ax, "fig1_method")
+    fs.save(f, FIG / "fig1_method")
 
 
 # ============================================================================================== fig2
@@ -1090,14 +1256,14 @@ def figA2_examples(blocks):
 
 
 # ============================================================================================== main
-KEEP = {"fig1_framework", "fig2_overview", "fig3_example", "fig4_write_matrices", "fig5_same_write", "fig6_ladders",
+KEEP = {"fig1_method", "fig2_overview", "fig3_example", "fig4_write_matrices", "fig5_same_write", "fig6_ladders",
         "figA1_write_structure", "figA2_examples"}
 
 
 def main(only=None):
     fs.use_house_style()
     blocks = load_blocks()
-    jobs = {"fig1_framework": lambda: fig1_framework(blocks), "fig2_overview": lambda: fig2_overview(blocks),
+    jobs = {"fig1_method": lambda: fig1_method(blocks), "fig2_overview": lambda: fig2_overview(blocks),
             "fig3_example": lambda: fig3_example(blocks), "fig4_write_matrices": lambda: fig4_write_matrices(blocks),
             "fig5_same_write": lambda: fig5_same_write(blocks), "fig6_ladders": lambda: fig6_ladders(blocks),
             "figA1_write_structure": lambda: figA1_write_structure(blocks), "figA2_examples": lambda: figA2_examples(blocks)}

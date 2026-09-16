@@ -355,6 +355,13 @@ def prose_macros(M: dict, rows: list[dict], wb: dict, warn: list) -> None:
     M["cfSeedEffRandP"] = fx(e["random_p95"], 3); M["cfSeedEffSham"] = fx(e["abs_sham"], 3)
     M["cfSeedEffO"] = fx(e["O_q"], 3, True); M["cfSeedEffOLo"] = fx(e["O_q_ci95_percentile"][0], 3, True)
     M["cfSeedEffOHi"] = fx(e["O_q_ci95_percentile"][1], 3, True)
+    # the seed row of the write matrix (Figure 1 draws every bar from these macros): the three competitors the prose does not name
+    Wrow = wb[("q25-7", "nih")]["s"]["core"]["W"]["Effusion"]
+    for c, name in (("Pneumothorax", "cfSeedWPneu"), ("Cardiomegaly", "cfSeedWCard"), ("Mass", "cfSeedWMass")):
+        M[name] = fx(Wrow[f"concept:{c}"], 3)
+    for c, name in (("Effusion", "cfSeedWEff"), ("Nodule", "cfSeedWNodule"), ("Atelectasis", "cfSeedWAtel")):
+        if name in M and fx(Wrow[f"concept:{c}"], 3) != M[name]:
+            warn.append(f"seed: summary W[Effusion, {c}] {fx(Wrow[f'concept:{c}'], 3)} differs from geometry.json {M[name]}")
     if e["argmax_other"] != "Nodule" or e["rank_in_random_family"] != 2:
         warn.append(f"seed: Effusion's strongest competitor is {e['argmax_other']} and its rank {e['rank_in_random_family']} "
                     f"(prose says Nodule and second)")
@@ -629,6 +636,7 @@ def main() -> Path:
     ch, co = C["chest"], C["coco"]
     cells = [r for r in rows if t(r["cell"])]
     M = {}
+    warn = []
     # campaign
     M["cfCheckpoints"] = len({r["model_key"] for r in rows})
     M["cfBlocks"] = C["all"]["blocks"]; M["cfWriteBlocks"] = C["all"]["write_blocks"]; M["cfProbeBlocks"] = C["all"]["probe_blocks"]
@@ -646,13 +654,30 @@ def main() -> Path:
     M["cfChestOwned"] = ch["owned"]; M["cfChestOwnedPct"] = pct(ch["owned"], ch["write_cells"])
     M["cfChestCompetitor"] = ch["stronger_competitor"]; M["cfChestCompetitorPct"] = pct(ch["stronger_competitor"], ch["write_cells"])
     M["cfChestRefMet"] = ch["reference_met"]; M["cfChestRefBelow"] = ch["write_cells"] - ch["reference_met"]; M["cfChestRefNotOwned"] = ch["reference_met_not_owned"]
+    # ---- steering reference x verdict (Table cf-contingency, same row selection as build_cf_transfer_tables.table_contingency):
+    #      chest cells, the readable-and-answerable chest subset, and COCO cells, each split into reference met / not met
     import csv as _csv, collections as _co
     _tf = lambda x: x.lower() in ("true", "1")
-    cc = _co.Counter((_tf(r["steering_reference"]), r["verdict"]) for r in _csv.DictReader(open(ci.RUNS / "manifest.csv"))
-                     if r["module"] == "CORE" and r["verdict"] and _tf(r["block_included"]) and _tf(r["is_primary_template"]) and r["dataset"] in ci.CHEST)
-    M["cfChestRefStrong"] = cc[(True, "stronger_competitor")]; M["cfChestRefUnres"] = cc[(True, "unresolved")]
-    if cc[(True, "fixed_family_advantage")] != ch["owned"] or cc[(True, "stronger_competitor")] + cc[(True, "unresolved")] != ch["reference_met_not_owned"]:
-        warn.append(f"contingency: manifest counts {dict(cc)} disagree with the chest summary (owned {ch['owned']}, ref-met-not-owned {ch['reference_met_not_owned']})")
+    prim = [r for r in _csv.DictReader(open(ci.RUNS / "manifest.csv"))
+            if r["module"] == "CORE" and r["verdict"] and _tf(r["block_included"]) and _tf(r["is_primary_template"])]
+    groups = {"Chest": [r for r in prim if r["dataset"] in ci.CHEST],
+              "ReadAns": [r for r in prim if r["dataset"] in ci.CHEST and _tf(r["readable"]) and _tf(r["answer_capable"])],
+              "Coco": [r for r in prim if r["dataset"] == "coco"]}
+    for g, sel in groups.items():
+        cc = _co.Counter((_tf(r["steering_reference"]), r["verdict"]) for r in sel)
+        if g == "Chest" and (cc[(True, "fixed_family_advantage")] != ch["owned"]
+                             or cc[(True, "stronger_competitor")] + cc[(True, "unresolved")] != ch["reference_met_not_owned"]):
+            warn.append(f"contingency: manifest counts {dict(cc)} disagree with the chest summary (owned {ch['owned']}, ref-met-not-owned {ch['reference_met_not_owned']})")
+        if g == "ReadAns":
+            M["cfReadAnsRefMet"] = sum(cc[(True, v)] for v in ("fixed_family_advantage", "stronger_competitor", "unresolved"))
+            M["cfReadAnsRefBelow"] = sum(cc[(False, v)] for v in ("fixed_family_advantage", "stronger_competitor", "unresolved"))
+            M["cfReadAnsCompetitor"] = cc[(True, "stronger_competitor")] + cc[(False, "stronger_competitor")]
+        M[f"cf{g}RefStrong"] = cc[(True, "stronger_competitor")]; M[f"cf{g}RefUnres"] = cc[(True, "unresolved")]
+        M[f"cf{g}BelowAdv"] = cc[(False, "fixed_family_advantage")]; M[f"cf{g}BelowStrong"] = cc[(False, "stronger_competitor")]
+        M[f"cf{g}BelowUnres"] = cc[(False, "unresolved")]
+    M["cfChestBelowStrongPct"] = pct(M["cfChestBelowStrong"], ch["stronger_competitor"])
+    if M["cfChestRefStrong"] + M["cfChestBelowStrong"] != ch["stronger_competitor"]:
+        warn.append("contingency: stronger-competitor verdicts above and below the reference do not add up to cfChestCompetitor")
     M["cfReadAns"] = ch["readable_and_answerable"]; M["cfReadAnsOwned"] = ch["owned_among_readable_and_answerable"]
     M["cfReadAnsOwnedPct"] = pct(ch["owned_among_readable_and_answerable"], ch["readable_and_answerable"])
     M["cfRestN"] = ch["rest"]; M["cfRestOwned"] = ch["owned_among_rest"]; M["cfRestOwnedPct"] = pct(ch["owned_among_rest"], ch["rest"])
@@ -690,7 +715,6 @@ def main() -> Path:
     coco_p = [pct(A["coco"][fam], A["coco"]["n"]) for fam in ("logistic",) + FAMILIES]
     M["cfAltdirChestPctMin"], M["cfAltdirChestPctMax"] = min(chest_p), max(chest_p)
     M["cfAltdirCocoPctMin"], M["cfAltdirCocoPctMax"] = min(coco_p), max(coco_p)
-    warn = []
     robustness_macros(M, rows, wb, warn)
     round2_macros(M, rows, wb, warn)
     extcomp_macros(M, wb, warn)

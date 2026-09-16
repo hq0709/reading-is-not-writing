@@ -4,7 +4,7 @@
 
 Reads runs/manifest.csv (cf_inclusion.read_manifest), tables/table_cf_main.tex, figures/fig2_counts.json (written by
 plot_paper_figures.py fig2_overview), figures/figA1_own_share.json (figA1_write_structure), tables/cf_numbers.json
-(build_numbers.py), runs/robustness/round2.json with tables/table_cf_valid.tex and tables/table_cf_attr.tex (round-2 and ATTR macros), and, when main.pdf exists and pdftotext is available, the rendered abstract and Section 5.1.
+(build_numbers.py), tables/table_cf_contingency.tex (the Section 5.1 decomposition macros), runs/robustness/round2.json with tables/table_cf_valid.tex and tables/table_cf_attr.tex (round-2 and ATTR macros), and, when main.pdf exists and pdftotext is available, the rendered abstract and Section 5.1.
 """
 from __future__ import annotations
 
@@ -71,6 +71,25 @@ def main():
     expect("cfChestOwned", M["cfChestOwned"], C["chest"]["owned"])
     expect("cfCocoOwned/N", (M["cfCocoOwned"], M["cfCocoOwnedN"]), (C["coco"]["owned"], C["coco"]["write_cells"]))
     expect("cfCells", M["cfCells"], C["all"]["write_cells"])
+    # contingency macros (Section 5.1 decomposition) vs Table cf-contingency
+    ct = (ROOT / "tables" / "table_cf_contingency.tex").read_text()
+    crow = re.findall(r"^(.*?) & (met|not met) & (\d+) & (\d+) & (\d+) & (\d+) \\\\$", ct, flags=re.M)
+    tab, grp = {}, None
+    for name, met, adv, strong, unres, tot in crow:
+        grp = name.strip() or grp
+        tab[(grp, met)] = tuple(map(int, (adv, strong, unres, tot)))
+    print("contingency macros vs Table cf-contingency:")
+    for g, G in (("Chest, all cells", "Chest"), ("Chest, readable and answerable", "ReadAns"), ("COCO, all cells", "Coco")):
+        own = {"Chest": "cfChestOwned", "ReadAns": "cfReadAnsOwned", "Coco": "cfCocoOwned"}[G]
+        refmet = {"Chest": "cfChestRefMet", "ReadAns": "cfReadAnsRefMet", "Coco": "cfCocoRefMet"}[G]
+        expect(f"{G} reference met (owned, strong, unresolved, total)", (M[own], M[f"cf{G}RefStrong"], M[f"cf{G}RefUnres"], M[refmet]), tab.get((g, "met")))
+        expect(f"{G} reference not met (advantage, strong, unresolved)", (M[f"cf{G}BelowAdv"], M[f"cf{G}BelowStrong"], M[f"cf{G}BelowUnres"]), tab.get((g, "not met"))[:3])
+    expect("cfChestRefBelow", M["cfChestRefBelow"], tab[("Chest, all cells", "not met")][3])
+    expect("cfReadAnsRefBelow", M["cfReadAnsRefBelow"], tab[("Chest, readable and answerable", "not met")][3])
+    expect("cfChestCompetitor = strong above + below", M["cfChestCompetitor"], M["cfChestRefStrong"] + M["cfChestBelowStrong"])
+    expect("cfReadAnsCompetitor = strong above + below", M["cfReadAnsCompetitor"], M["cfReadAnsRefStrong"] + M["cfReadAnsBelowStrong"])
+    expect("cfCocoCompetitor = strong above + below", M["cfCocoCompetitor"], M["cfCocoRefStrong"] + M["cfCocoBelowStrong"])
+    expect("cfReadAns = met + not met", M["cfReadAns"], M["cfReadAnsRefMet"] + M["cfReadAnsRefBelow"])
     # round-2 macros and tables vs runs/robustness/round2.json
     r2p = ci.RUNS / "robustness" / "round2.json"
     if r2p.exists() and "cfValidCells" in M:
@@ -149,9 +168,20 @@ def main():
                        f"Yet only {M['cfChestOwned']} cells ({M['cfChestOwnedPct']}%) are owned",
                        f"In {M['cfChestCompetitor']} cells ({M['cfChestCompetitorPct']}%), the verdict",
                        f"owns {M['cfCocoOwnedPct']}% of cells",
-                       f"Objects are owned in {M['cfCocoOwned']} of {M['cfCocoOwnedN']} cells ({M['cfCocoOwnedPct']}%)"):
+                       f"Objects are owned in {M['cfCocoOwned']} of {M['cfCocoOwnedN']} cells ({M['cfCocoOwnedPct']}%)",
+                       ):
             found = phrase in flat or phrase.replace("–", "-") in flat
             expect(f"prose: {phrase[:60]}...", found, True)
+        # The decomposition sentences are rewritten by the prose pass, so they are checked as an ordered number
+        # sequence inside a bounded window instead of as a fixed string.
+        for name, nums in (("chest decomposition", (M["cfChestAnswerableN"], M["cfChestRefMet"], M["cfChestRefMet"], M["cfChestOwned"],
+                                                    M["cfChestRefStrong"], M["cfChestRefUnres"])),
+                           ("below-reference share", (M["cfChestBelowStrong"], M["cfChestCompetitor"], M["cfChestBelowStrongPct"])),
+                           ("readable-and-answerable decomposition", (M["cfReadAns"], M["cfReadAnsRefMet"], M["cfReadAnsOwned"],
+                                                                      M["cfReadAnsRefStrong"], M["cfReadAnsRefUnres"],
+                                                                      M["cfReadAnsCompetitor"], M["cfReadAnsBelowStrong"], M["cfReadAnsRefBelow"]))):
+            pat = r"[^0-9]{0,90}".join(rf"\b{re.escape(str(n))}\b" for n in nums)
+            expect(f"prose: {name} {nums}", bool(re.search(pat, flat)), True)
     print("ALL CONSISTENT" if bad == 0 else f"{bad} DISAGREEMENT(S)")
     sys.exit(1 if bad else 0)
 

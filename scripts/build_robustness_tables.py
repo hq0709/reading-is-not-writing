@@ -40,10 +40,11 @@ def geometry():
     dg, lg, lo, assoc = d["direction_geometry"], d["label_geometry"], d["leave_one_out"], d["association"]
     L = [r"\begin{table}[h]", r"\centering", r"\scriptsize", r"\setlength{\tabcolsep}{4pt}",
          r"\caption{\textbf{Direction and label geometry against off-diagonal dominance.} Per dataset: blocks with a complete write "
-         r"matrix; mean off-diagonal cosine between the six write directions in model space (random pairs of unit vectors give "
-         r"$0.023$); mean off-diagonal $\phi$ between the six test labels; the fraction of cells whose strongest competitor is the "
-         r"most similar direction, and the most co-occurring label (chance $0.20$); Spearman correlation over off-diagonal cells "
-         r"between the competitor advantage $W_{q,d}-W_{q,q}$ and cosine; cells with $O_q>0$ over all cells of the dataset, the same after "
+         r"matrix; the raw model-space cosine between the six write directions, mean over the off-diagonal pairs of every block (the "
+         r"mean absolute cosine between pairs of random unit directions, averaged over blocks, is $0.023$); mean off-diagonal $\phi$ "
+         r"between the six test labels; the fraction of cells whose strongest competitor is the direction with the largest raw "
+         r"model-space cosine, and the most co-occurring label (chance $0.20$); Spearman correlation over off-diagonal cells "
+         r"between the competitor advantage $W_{q,d}-W_{q,q}$ and the raw model-space cosine of that pair; cells with $O_q>0$ over all cells of the dataset, the same after "
          r"removing each cell's strongest competitor, and the fraction of cells with at least two competitors above the own write. "
          r"These three columns report the sign of $O_q$, not the owned grade. Bottom: COCO cells with $O_q>0$ when the competitor "
          r"set is restricted to a co-occurring family (mean within-family $\phi$ in parentheses).}",
@@ -185,7 +186,8 @@ def ansdir():
          r"(3{,}000 training rows), lifted like the probe normal and written at the same dose against the same reference "
          r"family. Columns: concepts whose $a_q$ is owned (steering reference and fixed-family advantage over the other five "
          r"$a_d$); concepts whose $a_q$ write beats the strongest logistic competitor of the label direction; median own write "
-         r"$W^a_{q,q}$; median cosine between $a_q$ and the label direction $\hat w_q$; median cross-validated $R^2$ of the "
+         r"$W^a_{q,q}$; raw model-space cosine between $a_q$ and the label direction $\hat w_q$, median over the six concepts of the "
+         r"block; median cross-validated $R^2$ of the "
          r"regression; and, for reference, the concepts owned by the label direction.}",
          r"\label{tab:cf-ansdir}",
          r"\resizebox{\textwidth}{!}{\begin{tabular}{llrrrrrr}", r"\toprule",
@@ -321,10 +323,15 @@ def validation():
          r"\caption{\textbf{What the answer direction reads, and how selective the columns of $W$ are.} Top: for every block with the "
          r"answer-direction module, the median over the six questions of the AUROC of the answer direction $a_q$ and of the probe normal "
          r"$\hat w_q$ against the test label (known-label rows), of the AUROC of both scores against the model's own clean answer, of the "
-         r"Pearson correlation between the two scores over the 600 test rows, and of their cosine, raw (model space) and whitened by the "
-         r"covariance of the training features ($\cos_\Sigma=a^{\top}\Sigma w/\sqrt{a^{\top}\Sigma a\,w^{\top}\Sigma w}$). Bottom, per "
-         r"dataset over every block with a write matrix: column selectivity $S_d=W_{d,d}/\sum_q|W_{q,d}|$ (median; directions with "
-         r"$S_d\geq0.5$), and ownership recomputed on the rows whose label for $q$ is known: cells whose $O_q$ keeps its sign and owned "
+         r"Pearson correlation between the two scores over the 600 test rows, and of their cosine in two metrics: raw, between the "
+         r"lifted vectors in model space (cos raw), and whitened, between the coefficient vectors in the projected, train-scaled space "
+         r"under the covariance $\Sigma$ of the training features ($\cos_\Sigma=a^{\top}\Sigma w/\sqrt{a^{\top}\Sigma a\,w^{\top}\Sigma w}$). "
+         r"The alignment row pools the answer-direction cells and reports $\cos_\Sigma$ per cell and its median over cells. Bottom, per "
+         r"dataset over every block with a write matrix: the signed column-selectivity index $S_d=W_{d,d}/\sum_q|W_{q,d}|$ of each "
+         r"direction in each block, as the median over cells and the number of cells with $S_d\geq0.5$. $S_d$ keeps the sign of the "
+         r"direction's effect on its own question, counts negative changes in the denominator, and weights every cell equally. It "
+         r"differs from the write-flow share of Figure~\ref{fig:cf-w-structure}, which keeps only positive changes, weights each "
+         r"write by the size of its effect, and pools all checkpoints and directions into one ratio per dataset. The remaining columns give the median number of rows whose label for $q$ is known and ownership recomputed on those rows: cells whose $O_q$ keeps its sign and owned "
          r"cells (paper verdict) that stay owned under the full grade on those rows---the steering reference recomputed there and the "
          r"simultaneous max-$T$ advantage over the same six-direction family. NIH and COCO have every test label known, so "
          r"their known-row numbers reproduce the all-row numbers.}",
@@ -445,8 +452,8 @@ def altdird():
          r"\caption{\textbf{Displacement-lifted directions.} The difference-of-means and pattern vectors $\boldsymbol u$ of the projected, "
          r"train-scaled space lifted as displacements, $\hat\wvec\propto R(R^{\top}R)^{-1}\mathrm{diag}(\boldsymbol s)\,\boldsymbol u$ (the "
          r"minimum-norm preimage, so $R^{\top}\hat\wvec\propto\mathrm{diag}(\boldsymbol s)\,\boldsymbol u$ exactly), and written with the CORE "
-         r"protocol. Per dataset: cells owned (the paper's rule within each family) over cells, and the median model-space cosine to the "
-         r"logistic normal; the logistic row counts the paper's grade on the same blocks. The spectrum of $R^{\top}R/D$ is full rank in every "
+         r"protocol. Per dataset: cells owned (the paper's rule within each family) over cells, and the raw model-space cosine to the "
+         r"logistic normal, median over cells; the logistic row counts the paper's grade on the same blocks. The spectrum of $R^{\top}R/D$ is full rank in every "
          r"block (" + f"{P['all']['blocks']}" + r" blocks; eigenvalues $" + sci(gs["min_eigenvalue"]) + r"$--$" + sci(gs["max_eigenvalue"])
          + r"$, condition number " + f"{gs['condition_min']:.1f}--{gs['condition_max']:.1f}" + r").}",
          r"\label{tab:cf-altdird}",
@@ -531,9 +538,10 @@ def attr():
          r"the sham. Top: per checkpoint and dataset, owned attribute cells and owned clinical cells inside the same family, and "
          r"which attributes are owned. Bottom: per attribute and dataset, medians over blocks of the probe AUROC against the "
          r"attribute label, the probe selectivity against the stratum controls, the AUROC of the probe score against the model's own "
-         r"clean answer, and the absolute model-space cosine between the attribute direction and the six clinical normals; the last "
-         r"column counts the blocks where the attribute is owned. The largest median $|\cos|$ over the "
-         + f"{len(ch['per_pair_median_abs_cos'])}" + r" attribute--finding pairs is " + f2(mm.get("median_abs_cos")) + r" ("
+         r"clean answer, and the absolute raw model-space cosine between the attribute direction and the six clinical normals "
+         r"(median over blocks and the six normals); the last column counts the blocks where the attribute is owned. Taken per "
+         r"attribute--finding pair as the median over blocks, the largest absolute raw model-space cosine over the "
+         + f"{len(ch['per_pair_median_abs_cos'])}" + r" pairs is " + f2(mm.get("median_abs_cos")) + r" ("
          + _pair_label(mm.get("pair")) + r").}",
          r"\label{tab:cf-attr}",
          r"\begin{tabular}{llrrccc}", r"\toprule",
@@ -574,7 +582,8 @@ def rescue():
          r"\caption{\textbf{Rescue and loss per cell.} For every block with the answer-direction module and every concept: whether the "
          r"label direction $\hat w_q$ is owned (the paper's grade) and whether the answer direction $a_q$ is owned under the same rules "
          r"(steering reference and fixed-family advantage over the other five $a_d$), the two ownership contrasts $O_q$ and $O^a_q$, the column "
-         r"selectivity $S_d$ of the label direction ($W_{d,d}/\sum_q|W_{q,d}|$), and the whitened cosine $\cos_\Sigma(a_q,\hat w_q)$.}",
+         r"selectivity index $S_d$ of the label direction ($W_{d,d}/\sum_q|W_{q,d}|$, signed), and the cosine $\cos_\Sigma(a_q,\hat w_q)$ "
+         r"whitened by the training-feature covariance in the projected, train-scaled space, per cell.}",
          r"\label{tab:cf-rescue}",
          r"\begin{tabular}{lllccrrrr}", r"\toprule",
          r"Checkpoint & Dataset & Concept & $\hat w_q$ owned & $a_q$ owned & $O_q$ & $O^a_q$ & $S_d$ & $\cos_\Sigma$ \\", r"\midrule"]
