@@ -19,8 +19,11 @@ Sources and rules
                          or any alternative family.
   median W_qq            median over write-matrix cells per dataset, three decimals.
   selectivity            mean probe selectivity of Effusion and Cardiomegaly over probe-graded chest blocks.
-  round 2                runs/robustness/round2.json (VALID, ALTDIRD, ANSDIRT, full-grade PRECISION); each section's block set must
-                         equal the included blocks carrying that module (ANSDIRT: blocks scored on every test row).
+  round 2                runs/robustness/round2.json (VALID, ALTDIRD, ANSDIRT, ATTR, full-grade PRECISION); each section's block set must
+                         equal the included blocks carrying that module (ANSDIRT and ATTR: blocks scored on every test row).
+  ATTR                   per dataset and pooled over the chest sets: owned attribute cells and owned clinical cells of the same
+                         nine-direction family, the median probe and answer AUROC range over the three attributes, and the largest
+                         median |cosine| between an attribute direction and a clinical normal.
   robustness             runs/robustness/{geometry,scale,pairs,validation}.json (scripts/mayo/robustness_*.py in the code
                          repository, which discover blocks with the same rule); every file's block set must equal the
                          manifest's included set or this script stops. PRECISION, ANSDIR and label-gap numbers come from
@@ -326,7 +329,7 @@ def robustness_macros(M: dict, rows: list[dict], wb: dict, warn: list) -> None:
 
 
 def round2_macros(M: dict, rows: list[dict], wb: dict, warn: list) -> None:
-    """Macros for the round-2 modules (Tables cf-valid, cf-altdird, cf-ansdirt and the full-grade columns of cf-precision), from
+    """Macros for the round-2 modules (Tables cf-valid, cf-altdird, cf-ansdirt, cf-attr and the full-grade columns of cf-precision), from
     runs/robustness/round2.json (scripts/mayo/robustness_round2.py). Each section's block set is checked against the included
     blocks that carry the module; owned counts on the test side are checked against the manifest."""
     R2 = json.loads((ROB / "round2.json").read_text())
@@ -391,6 +394,35 @@ def round2_macros(M: dict, rows: list[dict], wb: dict, warn: list) -> None:
     for b in T["blocks"]:
         if b.get("iy_owned_matches_summary_ansdir") is False:
             warn.append(f"ansdirt: {b['block']} IY-owned set differs from summary.json ansdir")
+    # ---- ATTR (Table cf-attr): three non-clinical attributes of the same radiographs written inside one nine-direction family
+    B = R2["attr"]; Pa = B["per_dataset"]
+    expect_blocks = {k for k in wb if wb[k]["s"].get("attr") and done(k, "ATTR")
+                     and wb[k]["s"]["attr"].get("n_scored_rows_min") == wb[k]["s"]["attr"].get("n_rows")}
+    got = {key(b["block"]) for b in B["blocks"]}
+    if got != expect_blocks:
+        raise RuntimeError(f"round2.json attr blocks differ from the included blocks with ATTR scored on every row by "
+                           f"{sorted(got ^ expect_blocks)}; rerun scripts/mayo/robustness_round2.py")
+    M["cfAttrBlocks"] = Pa["chest"]["blocks"]
+    for g, G in (("nih", "Nih"), ("chexpert", "Chex"), ("chest", "Chest")):
+        d = Pa[g]
+        M[f"cfAttr{G}Blocks"] = d["blocks"]
+        M[f"cfAttr{G}AttrOwned"] = d["attr_owned"]; M[f"cfAttr{G}AttrN"] = d["attr_cells"]
+        M[f"cfAttr{G}ClinOwned"] = d["clin_owned"]; M[f"cfAttr{G}ClinN"] = d["clin_cells"]
+        M[f"cfAttr{G}AttrPct"] = pct(d["attr_owned"], d["attr_cells"]); M[f"cfAttr{G}ClinPct"] = pct(d["clin_owned"], d["clin_cells"])
+    pa_ = Pa["chest"]["per_attribute"]
+    au = [p["median_auroc_real"] for p in pa_.values() if p["blocks"]]
+    an = [p["median_answer_auroc"] for p in pa_.values() if p["blocks"]]
+    M["cfAttrAurocMin"] = fx(min(au), 3) if au else "--"; M["cfAttrAurocMax"] = fx(max(au), 3) if au else "--"
+    M["cfAttrAnswerAurocMin"] = fx(min(an), 2) if an else "--"; M["cfAttrAnswerAurocMax"] = fx(max(an), 2) if an else "--"
+    mm = Pa["chest"]["max_median_abs_cos_pair"] or {}
+    M["cfAttrCosMax"] = fx(mm["median_abs_cos"], 2) if mm.get("median_abs_cos") is not None else "--"
+    M["cfAttrReadable"] = Pa["chest"]["attr_readable"]
+    if Pa["chest"]["attribute_random_reference"]:
+        warn.append("attr: an attribute question carries a random family (Table cf-attr caption says the sham alone is its reference)")
+    if Pa["chest"]["clinical_random_reference"] is False:
+        warn.append("attr: a clinical question in the nine-direction family lacks its random family")
+    if M["cfAttrReadable"] != M["cfAttrChestAttrN"]:
+        warn.append(f"attr: {M['cfAttrReadable']} of {M['cfAttrChestAttrN']} attribute probes are readable (prose says the attributes are read at least as well as the findings)")
     # ---- PRECISION full grade (Table cf-precision, full-grade columns)
     Pr = R2["precision"]; pa = Pr["aggregate"]
     M["cfPrecisionGradeBlocks"] = pa["blocks"]; M["cfPrecisionGradeCells"] = pa["graded_cells"]

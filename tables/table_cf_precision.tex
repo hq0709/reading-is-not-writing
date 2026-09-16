@@ -2,7 +2,7 @@
 \centering
 \scriptsize
 \setlength{\tabcolsep}{4pt}
-\caption{\textbf{Numerics.} The CORE grid (six clinical directions, 119 random directions, and the sham at $\alpha=+0.25$) on the first 200 test rows rescored with fp32 weights and forward pass, and in bf16 at batch size one, against the CORE values (bf16, batched) on the same rows. Point columns: the largest change over the 36 clinical cells $\max|\Delta W_{q,d}|$, the largest change in ownership $\max|\Delta O_q|$, and the concepts whose two point verdicts (own write above the strongest competitor; own write above the random 95th percentile) agree with CORE's. Full-grade columns: the complete grade recomputed under each setting and for CORE on the same 200 rows (steering reference against the 119-direction random 95th percentile and the sham, $6\times5$ max-$T$ verdict over 2{,}000 unit-bootstrap draws): concepts whose verdict changes and whose steering reference changes, the largest change over all $6\times126$ written cells $\max|\Delta W|$, and the largest change in a contrast $\max|\Delta C_{q,d}|$. 2 blocks have completed the module.}
+\caption{\textbf{Numerics.} The CORE grid (six clinical directions, 119 random directions, and the sham at $\alpha=+0.25$) on the first 200 test rows rescored with fp32 weights and forward pass, and in bf16 at batch size one, against the CORE values (bf16, batched) on the same rows. Point columns: the largest change over the 36 clinical cells $\max|\Delta W_{q,d}|$, the largest change in ownership $\max|\Delta O_q|$, and the concepts whose two point verdicts (own write above the strongest competitor; own write above the random 95th percentile) agree with CORE's. Full-grade columns: the complete grade recomputed under each setting and for CORE on the same 200 rows (steering reference against the 119-direction random 95th percentile and the sham, $6\times5$ max-$T$ verdict over 2{,}000 unit-bootstrap draws): concepts whose verdict changes and whose steering reference changes, the largest change over all $6\times126$ written cells $\max|\Delta W|$, and the largest change in a contrast $\max|\Delta C_{q,d}|$. 6 blocks have completed the module.}
 \label{tab:cf-precision}
 \resizebox{\textwidth}{!}{\begin{tabular}{llrlrrrrrrrr}
 \toprule
@@ -10,10 +10,18 @@ Checkpoint & Dataset & rows & setting & \multicolumn{4}{c}{point verdicts (36 cl
 \cmidrule(lr){5-8}\cmidrule(lr){9-12}
  & & & & $\max|\Delta W|$ & $\max|\Delta O|$ & agree comp. & agree p95 & verdict changes & reference changes & $\max|\Delta W|$ & $\max|\Delta C|$ \\
 \midrule
+Gemma 3 4B & NIH ChestX-ray14 & 200 & fp32 weights and forward & 0.0439 & 0.0309 & 6/6 & 6/6 & 0/6 & 0/6 & 0.0544 & 0.0493 \\
+ & &  & bf16, batch size one & 0.0261 & 0.0377 & 6/6 & 6/6 & 0/6 & 0/6 & 0.0261 & 0.0377 \\
+InternVL3.5-8B & NIH ChestX-ray14 & 200 & fp32 weights and forward & 0.0012 & 0.0005 & 6/6 & 6/6 & 0/6 & 0/6 & 0.0018 & 0.0014 \\
+ & &  & bf16, batch size one & 0.0018 & 0.0012 & 6/6 & 6/6 & 0/6 & 0/6 & 0.0018 & 0.0014 \\
+MedGemma 4B & NIH ChestX-ray14 & 200 & fp32 weights and forward & 0.0081 & 0.0047 & 6/6 & 6/6 & 0/6 & 0/6 & 0.0125 & 0.0069 \\
+ & &  & bf16, batch size one & 0.0047 & 0.0016 & 6/6 & 6/6 & 0/6 & 0/6 & 0.0056 & 0.0054 \\
 Qwen2.5-VL-7B & COCO & 200 & fp32 weights and forward & 0.0023 & 0.0025 & 6/6 & 6/6 & 0/6 & 0/6 & 0.0060 & 0.0032 \\
  & &  & bf16, batch size one & 0.0017 & 0.0013 & 6/6 & 6/6 & 0/6 & 0/6 & 0.0028 & 0.0020 \\
 Qwen2.5-VL-7B & NIH ChestX-ray14 & 200 & fp32 weights and forward & 0.0060 & 0.0035 & 6/6 & 6/6 & 0/6 & 0/6 & 0.0087 & 0.0063 \\
  & &  & bf16, batch size one & 0.0060 & 0.0042 & 6/6 & 6/6 & 0/6 & 0/6 & 0.0065 & 0.0049 \\
+Qwen3-VL-8B & NIH ChestX-ray14 & 200 & fp32 weights and forward & 0.0116 & 0.0084 & 6/6 & 6/6 & 0/6 & 0/6 & 0.0177 & 0.0089 \\
+ & &  & bf16, batch size one & 0.0083 & 0.0086 & 6/6 & 6/6 & 0/6 & 0/6 & 0.0204 & 0.0089 \\
 \bottomrule
 \end{tabular}}
 \end{table}

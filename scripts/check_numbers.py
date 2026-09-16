@@ -4,7 +4,7 @@
 
 Reads runs/manifest.csv (cf_inclusion.read_manifest), tables/table_cf_main.tex, figures/fig2_counts.json (written by
 plot_paper_figures.py fig2_overview), figures/figA1_own_share.json (figA1_write_structure), tables/cf_numbers.json
-(build_numbers.py), runs/robustness/round2.json with tables/table_cf_valid.tex (round-2 macros), and, when main.pdf exists and pdftotext is available, the rendered abstract and Section 5.1.
+(build_numbers.py), runs/robustness/round2.json with tables/table_cf_valid.tex and tables/table_cf_attr.tex (round-2 and ATTR macros), and, when main.pdf exists and pdftotext is available, the rendered abstract and Section 5.1.
 """
 from __future__ import annotations
 
@@ -89,6 +89,24 @@ def main():
         vt = re.search(r"\\textit\{all\} \((\d+) blocks\) & (\d+) & (\d+) & (\d+)/(\d+) & (\d+)/(\d+)", (ROOT / "tables" / "table_cf_valid.tex").read_text())
         expect("Table cf-valid totals row", tuple(map(int, vt.groups())) if vt else None,
                (va["blocks"], va["owned_test"], va["owned_valid"], va["verdict_agree"], va["cells"], va["owned_agree"], va["cells"]))
+    # ATTR macros and Table cf-attr against runs/robustness/round2.json
+    if r2p.exists() and M.get("cfAttrBlocks"):
+        at = json.loads(r2p.read_text())["attr"]["per_dataset"]
+        print("ATTR macros vs runs/robustness/round2.json:")
+        expect("cfAttrBlocks", M["cfAttrBlocks"], at["chest"]["blocks"])
+        for g, G in (("nih", "Nih"), ("chexpert", "Chex"), ("chest", "Chest")):
+            expect(f"cfAttr{G} attribute/clinical owned of N",
+                   (M[f"cfAttr{G}AttrOwned"], M[f"cfAttr{G}AttrN"], M[f"cfAttr{G}ClinOwned"], M[f"cfAttr{G}ClinN"]),
+                   (at[g]["attr_owned"], at[g]["attr_cells"], at[g]["clin_owned"], at[g]["clin_cells"]))
+        pa = [p for p in at["chest"]["per_attribute"].values() if p["blocks"]]
+        expect("cfAttrAurocMin/Max", (M["cfAttrAurocMin"], M["cfAttrAurocMax"]),
+               (f"{min(p['median_auroc_real'] for p in pa):.3f}", f"{max(p['median_auroc_real'] for p in pa):.3f}"))
+        expect("cfAttrAnswerAurocMin/Max", (M["cfAttrAnswerAurocMin"], M["cfAttrAnswerAurocMax"]),
+               (f"{min(p['median_answer_auroc'] for p in pa):.2f}", f"{max(p['median_answer_auroc'] for p in pa):.2f}"))
+        expect("cfAttrCosMax", M["cfAttrCosMax"], f"{at['chest']['max_median_abs_cos_pair']['median_abs_cos']:.2f}")
+        tt = re.findall(r"\\textit\{chest\} & (\d+) blocks? & (\d+)/(\d+) & (\d+)/(\d+)", (ROOT / "tables" / "table_cf_attr.tex").read_text())
+        expect("Table cf-attr chest totals row", tuple(map(int, tt[0])) if tt else None,
+               (at["chest"]["blocks"], at["chest"]["attr_owned"], at["chest"]["attr_cells"], at["chest"]["clin_owned"], at["chest"]["clin_cells"]))
     a1 = ROOT / "figures" / "figA1_own_share.json"
     if a1.exists():
         s = json.loads(a1.read_text())

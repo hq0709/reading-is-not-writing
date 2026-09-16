@@ -1,7 +1,7 @@
 """Robustness tables for the paper from runs/robustness/*.json (geometry, scale, pairs, validation, refit, round2) and, for
 the addendum modules (ALTDIR, ANSDIR, EXTCOMP, TOKENW), from the summaries of the blocks under the paper's one inclusion rule
 (cf_inclusion.block_included: CORE and CALIBRATION in run.json completed_modules). The round-2 tables (VALID, ALTDIRD,
-ANSDIRT, and the full-grade PRECISION columns) read runs/robustness/round2.json (scripts/mayo/robustness_round2.py in the
+ANSDIRT, ATTR, and the full-grade PRECISION columns) read runs/robustness/round2.json (scripts/mayo/robustness_round2.py in the
 code repository, which applies the same rule and admits a module only when it covers every row)."""
 import json
 import sys
@@ -494,6 +494,68 @@ def ansdirt():
 
 
 
+ATTR_LABEL = {"view_AP": "AP (portable) projection", "sex_F": "female sex", "age_60": r"age $\geq60$"}
+ATTR_SHORT = {"view_AP": "view AP", "sex_F": "sex F", "age_60": r"age $\geq60$"}
+
+
+def _pair_label(pair):
+    """'sex_F~Nodule' -> 'female sex with Nodule'."""
+    if not pair:
+        return "--"
+    a, _, c = pair.partition("~")
+    return f"{ATTR_LABEL.get(a, a)} with {c}"
+
+
+def attr():
+    """ATTR: three non-clinical attributes of the same radiographs fitted, lifted and written like the six findings inside one
+    nine-direction family. Per checkpoint and dataset the owned attribute cells beside the owned clinical cells of the same
+    family, then per attribute and dataset the probe AUROC, selectivity, answer AUROC and owned count
+    (runs/robustness/round2.json attr section)."""
+    B = _r2()["attr"]; P = B["per_dataset"]; attrs = B["attributes"]
+    dss = [ds for ds in ("nih", "chexpert", "coco") if P[ds]["blocks"]]
+    ch = P["chest"]
+    groups = [(ds, NAMES[ds]) for ds in dss] + ([("chest", r"\textit{chest}")] if len(dss) > 1 else [])
+    mm = ch["max_median_abs_cos_pair"] or {}
+    L = [r"\begin{table}[p]", r"\centering", r"\scriptsize", r"\setlength{\tabcolsep}{4pt}",
+         r"\caption{\textbf{Non-clinical attributes of the same radiographs.} Three attributes of each film---an anteroposterior "
+         r"(portable) projection, female sex, and age at least 60---are read from the dataset's own metadata and fitted on the same "
+         r"images, features, projection, and probe settings as the clinical probes. The three attribute directions and the six "
+         r"clinical directions are lifted and written together as one nine-direction family at the primary dose and template, and "
+         r"graded with the paper's rule ($9\times8$ max-$T$ verdict over 2{,}000 shared unit-bootstrap draws). Attribute questions have "
+         r"no random family, so their steering reference is the sham alone; clinical questions keep the random 95th percentile and "
+         r"the sham. Top: per checkpoint and dataset, owned attribute cells and owned clinical cells inside the same family, and "
+         r"which attributes are owned. Bottom: per attribute and dataset, medians over blocks of the probe AUROC against the "
+         r"attribute label, the probe selectivity against the stratum controls, the AUROC of the probe score against the model's own "
+         r"clean answer, and the absolute model-space cosine between the attribute direction and the six clinical normals; the last "
+         r"column counts the blocks where the attribute is owned. The largest median $|\cos|$ over the "
+         + f"{len(ch['per_pair_median_abs_cos'])}" + r" attribute--finding pairs is " + f2(mm.get("median_abs_cos")) + r" ("
+         + _pair_label(mm.get("pair")) + r").}",
+         r"\label{tab:cf-attr}",
+         r"\begin{tabular}{llrrccc}", r"\toprule",
+         r"Checkpoint & Dataset & attributes owned & findings owned & " + " & ".join(ATTR_SHORT[a] for a in attrs) + r" \\", r"\midrule"]
+    for b in sorted(B["blocks"], key=lambda b: _ckpt_key(b["block"])):
+        L.append(f"{CKPT.get(b['model'], b['model'])} & {NAMES[b['dataset']]} & {b['attr_owned']}/{b['attr_cells']} & {b['clin_owned']}/{b['clin_cells']} & "
+                 + " & ".join("yes" if b["attributes"][a]["owned"] else "--" for a in attrs) + r" \\")
+    if B["blocks"]:
+        L.append(r"\midrule")
+    for g, name in groups:
+        d = P[g]
+        L.append(f"{name} & {d['blocks']} block{'s' if d['blocks'] != 1 else ''} & {d['attr_owned']}/{d['attr_cells']} & {d['clin_owned']}/{d['clin_cells']} & "
+                 + " & ".join(f"{d['per_attribute'][a]['owned']}/{d['per_attribute'][a]['blocks']}" for a in attrs) + r" \\")
+    L += [r"\midrule", r"\multicolumn{7}{l}{\textit{Attribute probes and directions: medians over the blocks of each dataset}} \\",
+          r"Attribute & Dataset & probe AUROC & selectivity & answer AUROC & med.\ $|\cos|$ & owned \\", r"\midrule"]
+    for a in attrs:
+        for g, name in groups:
+            d = P[g]["per_attribute"][a]
+            if not d["blocks"]:
+                continue
+            L.append(f"{ATTR_LABEL[a]} & {name} & {f2(d['median_auroc_real'], 3)} & {f2(d['median_selectivity'])} & {f2(d['median_answer_auroc'])} & "
+                     f"{f2(d['median_abs_cos_to_clinical'])} & {d['owned']}/{d['blocks']} \\\\")
+    L += [r"\bottomrule", r"\end{tabular}", r"\end{table}"]
+    (OUT / "table_cf_attr.tex").write_text("\n".join(L) + "\n")
+    print("table_cf_attr.tex", {g: P[g]["blocks"] for g, _ in groups})
+
+
 def rescue():
     """Per answer-direction cell: ownership by the label direction and by a_q, O_q, O^a_q, column selectivity of the label
     direction, and the whitened cosine (validation.json + the blocks' summaries)."""
@@ -539,3 +601,4 @@ if __name__ == "__main__":
     valid()
     altdird()
     ansdirt()
+    attr()

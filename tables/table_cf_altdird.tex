@@ -2,17 +2,17 @@
 \centering
 \scriptsize
 \setlength{\tabcolsep}{4pt}
-\caption{\textbf{Displacement-lifted directions.} The difference-of-means and pattern vectors $\boldsymbol u$ of the projected, train-scaled space lifted as displacements, $\hat\wvec\propto R(R^{\top}R)^{-1}\mathrm{diag}(\boldsymbol s)\,\boldsymbol u$ (the minimum-norm preimage, so $R^{\top}\hat\wvec\propto\mathrm{diag}(\boldsymbol s)\,\boldsymbol u$ exactly), and written with the CORE protocol. Per dataset: cells owned (the paper's rule within each family) over cells, and the median model-space cosine to the logistic normal; the logistic row counts the paper's grade on the same blocks. The spectrum of $R^{\top}R/D$ is full rank in every block (56 blocks; eigenvalues $1.7\times10^{-4}$--$5.7\times10^{-3}$, condition number 5.3--33.2).}
+\caption{\textbf{Displacement-lifted directions.} The difference-of-means and pattern vectors $\boldsymbol u$ of the projected, train-scaled space lifted as displacements, $\hat\wvec\propto R(R^{\top}R)^{-1}\mathrm{diag}(\boldsymbol s)\,\boldsymbol u$ (the minimum-norm preimage, so $R^{\top}\hat\wvec\propto\mathrm{diag}(\boldsymbol s)\,\boldsymbol u$ exactly), and written with the CORE protocol. Per dataset: cells owned (the paper's rule within each family) over cells, and the median model-space cosine to the logistic normal; the logistic row counts the paper's grade on the same blocks. The spectrum of $R^{\top}R/D$ is full rank in every block (57 blocks; eigenvalues $1.7\times10^{-4}$--$5.7\times10^{-3}$, condition number 5.3--33.2).}
 \label{tab:cf-altdird}
 \begin{tabular}{lrrrrrr}
 \toprule
-Direction & \multicolumn{2}{c}{NIH ChestX-ray14 (19 blocks)} & \multicolumn{2}{c}{CheXpert Plus (18 blocks)} & \multicolumn{2}{c}{COCO (19 blocks)} \\
+Direction & \multicolumn{2}{c}{NIH ChestX-ray14 (19 blocks)} & \multicolumn{2}{c}{CheXpert Plus (19 blocks)} & \multicolumn{2}{c}{COCO (19 blocks)} \\
 \cmidrule(lr){2-3}\cmidrule(lr){4-5}\cmidrule(lr){6-7}
  & owned & med.\ $\cos$ & owned & med.\ $\cos$ & owned & med.\ $\cos$ \\
 \midrule
-logistic normal & 7/114 & -- & 17/108 & -- & 100/114 & -- \\
-difference of means, displacement lift & 21/114 & 0.08 & 17/108 & 0.03 & 58/114 & 0.19 \\
-pattern, displacement lift & 17/114 & 0.09 & 14/108 & 0.03 & 49/114 & 0.19 \\
+logistic normal & 7/114 & -- & 19/114 & -- & 100/114 & -- \\
+difference of means, displacement lift & 21/114 & 0.08 & 19/114 & 0.03 & 58/114 & 0.19 \\
+pattern, displacement lift & 17/114 & 0.09 & 17/114 & 0.03 & 49/114 & 0.19 \\
 \bottomrule
 \end{tabular}
 \end{table}
