@@ -2,7 +2,7 @@
 \centering
 \scriptsize
 \setlength{\tabcolsep}{4pt}
-\caption{\textbf{What the answer direction reads, and how selective the columns of $W$ are.} Top: for every block with the answer-direction module, the median over the six questions of the AUROC of the answer direction $a_q$ and of the probe normal $\hat w_q$ against the test label (known-label rows), of the AUROC of both scores against the model's own clean answer, of the Pearson correlation between the two scores over the 600 test rows, and of their cosine, raw (model space) and whitened by the covariance of the training features ($\cos_\Sigma=a^{\top}\Sigma w/\sqrt{a^{\top}\Sigma a\,w^{\top}\Sigma w}$). Bottom, per dataset over every block with a write matrix: column selectivity $S_d=W_{d,d}/\sum_q|W_{q,d}|$ (median; directions with $S_d\geq0.5$), and ownership recomputed on the rows whose label for $q$ is known: cells whose $O_q$ keeps its sign and owned cells (paper verdict) that stay owned under the percentile verdict on those rows. NIH and COCO have every test label known, so their known-row numbers reproduce the all-row numbers.}
+\caption{\textbf{What the answer direction reads, and how selective the columns of $W$ are.} Top: for every block with the answer-direction module, the median over the six questions of the AUROC of the answer direction $a_q$ and of the probe normal $\hat w_q$ against the test label (known-label rows), of the AUROC of both scores against the model's own clean answer, of the Pearson correlation between the two scores over the 600 test rows, and of their cosine, raw (model space) and whitened by the covariance of the training features ($\cos_\Sigma=a^{\top}\Sigma w/\sqrt{a^{\top}\Sigma a\,w^{\top}\Sigma w}$). Bottom, per dataset over every block with a write matrix: column selectivity $S_d=W_{d,d}/\sum_q|W_{q,d}|$ (median; directions with $S_d\geq0.5$), and ownership recomputed on the rows whose label for $q$ is known: cells whose $O_q$ keeps its sign and owned cells (paper verdict) that stay owned under the full grade on those rows---the steering reference recomputed there and the simultaneous max-$T$ advantage over the same six-direction family. NIH and COCO have every test label known, so their known-row numbers reproduce the all-row numbers.}
 \label{tab:cf-validation}
 \resizebox{\textwidth}{!}{\begin{tabular}{llrrrrrrr}
 \toprule
@@ -24,7 +24,7 @@ Gemma 3 12B & COCO & 0.93 & 0.96 & 0.80 & 0.76 & 0.81 & 0.59 & 0.79 \\
 Dataset & blocks & cells & median $S_d$ & $S_d\geq0.5$ & known rows (median) & sign of $O_q$ kept & owned kept & \\
 \midrule
 NIH ChestX-ray14 & 21 & 126 & 0.10 & 2/126 & 600 & 126/126 & 10/10 & \\
-CheXpert Plus & 20 & 120 & 0.12 & 1/120 & 165 & 114/120 & 18/19 & \\
+CheXpert Plus & 20 & 120 & 0.12 & 1/120 & 165 & 114/120 & 17/19 & \\
 COCO & 20 & 120 & 0.64 & 84/120 & 600 & 120/120 & 101/101 & \\
 \bottomrule
 \end{tabular}}

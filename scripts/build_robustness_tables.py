@@ -43,9 +43,10 @@ def geometry():
          r"matrix; mean off-diagonal cosine between the six write directions in model space (random pairs of unit vectors give "
          r"$0.023$); mean off-diagonal $\phi$ between the six test labels; the fraction of cells whose strongest competitor is the "
          r"most similar direction, and the most co-occurring label (chance $0.20$); Spearman correlation over off-diagonal cells "
-         r"between the competitor advantage $W_{q,d}-W_{q,q}$ and cosine; the fraction of cells with $O_q>0$, the same after "
-         r"removing the strongest competitor, and the fraction with at least two competitors above the own write. Bottom: "
-         r"COCO ownership when the competitor set is restricted to a co-occurring family (mean within-family $\phi$ in parentheses).}",
+         r"between the competitor advantage $W_{q,d}-W_{q,q}$ and cosine; cells with $O_q>0$ over all cells of the dataset, the same after "
+         r"removing each cell's strongest competitor, and the fraction of cells with at least two competitors above the own write. "
+         r"These three columns report the sign of $O_q$, not the owned grade. Bottom: COCO cells with $O_q>0$ when the competitor "
+         r"set is restricted to a co-occurring family (mean within-family $\phi$ in parentheses).}",
          r"\label{tab:cf-geometry}",
          r"\resizebox{\textwidth}{!}{\begin{tabular}{lrrrrrrrrr}", r"\toprule",
          r"Dataset & blocks & cos & $\phi$ & comp.\ = max cos & comp.\ = max $\phi$ & $\rho$(adv., cos) & $O_q>0$ & $O_q^{-d^*}>0$ & $\geq2$ above \\", r"\midrule"]
@@ -67,9 +68,10 @@ def scale():
     d = json.loads((ROB / "scale.json").read_text())
     m, st, rf, cn, bt = d["item1_margin_scale"], d["item2_ceiling"]["strata"], d["item3_refit"]["per_dataset"], d["item4_connector"]["per_dataset"], d["item5_batch"]
     L = [r"\begin{table}[h]", r"\centering", r"\scriptsize", r"\setlength{\tabcolsep}{4pt}",
-         r"\caption{\textbf{Ownership under alternative scales, strata, refits, and loci.} Per dataset: owned cells on the "
-         r"probability scale (the paper's verdict) and on the logit-margin scale (same rules; percentile interval for $O^m_q$), with "
-         r"the cells owned on both; cells with $O_q>0$ among owned and among not-owned cells when every cell is restricted to its "
+         r"\caption{\textbf{Ownership under alternative scales, strata, refits, and loci.} Per dataset: cells with the complete owned "
+         r"grade on the probability scale (the paper's grade) and on the logit-margin scale (the steering reference recomputed on "
+         r"that scale and a positive percentile interval for $O^m_q$), with the cells owned on both; cells with $O_q>0$ (the sign "
+         r"alone) among owned and among not-owned cells when every cell is restricted to its "
          r"unsaturated rows ($0.01<P(\mathrm{yes})<0.99$ on the clean pass); median $|O_q(\text{seed }k)-O_q(\text{seed }0)|$ over the "
          r"two refit seeds and the owned cells that keep $O_q>0$ under both (REFIT exists for NIH and COCO); median $|W_{q,q}|$ at the "
          r"primary and connector loci and connector cells whose write beats the connector random family.}",
@@ -212,8 +214,9 @@ def extcomp():
          r"\caption{\textbf{Ownership under an extended competitor family.} Extra clinical directions fitted like the protocol "
          r"normals for every additional dataset label with at least 100 known positives and negatives (NIH: Consolidation, "
          r"Edema, Infiltration; CheXpert: Enlarged Cardiomediastinum, Fracture, Lung Lesion, Lung Opacity, Pneumonia, Support "
-         r"Devices) and written at the same dose; ownership is then the margin over the five protocol competitors and every "
-         r"extra direction.}",
+         r"Devices) and written at the same dose. Both columns count the concepts of six with the complete owned grade: the "
+         r"steering reference and a simultaneous advantage over every competitor of the stated family, which for the extended "
+         r"family is the five protocol competitors together with every extra direction.}",
          r"\label{tab:cf-extcomp}",
          r"\begin{tabular}{llrrr}", r"\toprule",
          r"Checkpoint & Dataset & extra directions & owned (six directions) & owned (extended family) \\", r"\midrule"]
@@ -322,7 +325,8 @@ def validation():
          r"covariance of the training features ($\cos_\Sigma=a^{\top}\Sigma w/\sqrt{a^{\top}\Sigma a\,w^{\top}\Sigma w}$). Bottom, per "
          r"dataset over every block with a write matrix: column selectivity $S_d=W_{d,d}/\sum_q|W_{q,d}|$ (median; directions with "
          r"$S_d\geq0.5$), and ownership recomputed on the rows whose label for $q$ is known: cells whose $O_q$ keeps its sign and owned "
-         r"cells (paper verdict) that stay owned under the percentile verdict on those rows. NIH and COCO have every test label known, so "
+         r"cells (paper verdict) that stay owned under the full grade on those rows---the steering reference recomputed there and the "
+         r"simultaneous max-$T$ advantage over the same six-direction family. NIH and COCO have every test label known, so "
          r"their known-row numbers reproduce the all-row numbers.}",
          r"\label{tab:cf-validation}",
          r"\resizebox{\textwidth}{!}{\begin{tabular}{llrrrrrrr}", r"\toprule",
@@ -348,7 +352,7 @@ def validation():
     for ds in ("nih", "chexpert", "coco"):
         c, k = col[ds], kl[ds]
         owned_cells = [q for b in d["known_label"]["blocks"] if b["dataset"] == ds for q in b["per_question"].values() if q["summary_owned"]]
-        kept = sum(bool(q["owned_known"]) for q in owned_cells)      # paper-owned cells still owned by the known-row percentile verdict
+        kept = sum(bool(q["owned_known_full_grade"]) for q in owned_cells)   # paper-owned cells still owned by the FULL grade on the known rows
         L.append(f"{NAMES[ds]} & {c['n_blocks']} & {c['n_cells']} & {f2(c['median_S_d'])} & {c['n_S_ge_0.5']}/{c['n_cells']} & {k['median_n_rows_known']:.0f} & "
                  f"{k['n_sign_agrees']}/{k['n_cells']} & {kept}/{len(owned_cells)} & \\\\")
     L += [r"\bottomrule", r"\end{tabular}}", r"\end{table}"]
@@ -412,14 +416,15 @@ def valid():
          r"recomputed on " + rows_txt + r" frontal films of the CheXpert validation set (one per patient, radiologist consensus labels, no "
          r"patient shared with any campaign role) with the campaign rules: the steering reference against the random 95th percentile and "
          r"the sham on those rows, and the $6\times5$ max-$T$ verdict over 2{,}000 unit-bootstrap draws. The test grade is the same "
-         r"computation on the 600 labeler-labelled test rows. Columns: owned concepts on the test and valid rows, concepts whose verdict "
-         r"and whose ownership agree, and the median $|O_q(\text{valid})-O_q(\text{test})|$ (90th percentile over all cells " + f2(a["p90_abs_dO_q"], 3)
+         r"computation on the 600 labeler-labelled test rows. Columns: concepts of six with the complete owned grade on the test rows and "
+         r"on the valid rows, concepts of six whose clinical-comparison verdict agrees across the two cohorts, concepts of six whose "
+         r"owned grade agrees across the two cohorts, and the median $|O_q(\text{valid})-O_q(\text{test})|$ (90th percentile over all cells " + f2(a["p90_abs_dO_q"], 3)
          + r"). On the " + str(a["supported_cells"]) + r" cells with at least 10 positives and 10 negatives on both cohorts, readability agrees in "
          + f"{a['readable_agree_supported']} of {a['readable_compared_supported']}" + r" and answer capability in "
          + f"{a['answer_capable_agree_supported']} of {a['answer_capable_compared_supported']}" + r".}",
          r"\label{tab:cf-valid}",
          r"\begin{tabular}{lrrrrr}", r"\toprule",
-         r"Checkpoint & owned (test) & owned (valid) & verdict agrees & ownership agrees & median $|\Delta O_q|$ \\", r"\midrule"]
+         r"Checkpoint & owned (test) & owned (valid) & verdict agrees & owned grade agrees & median $|\Delta O_q|$ \\", r"\midrule"]
     for b in sorted(V["blocks"], key=lambda b: _ckpt_key(b["block"])):
         L.append(f"{CKPT.get(b['model'], b['model'])} & {b['owned_test']} & {b['owned_valid']} & {b['verdict_agree']}/{b['n_cells']} & "
                  f"{b['owned_agree']}/{b['n_cells']} & {f2(b['median_abs_dO_q'], 3)} \\\\")

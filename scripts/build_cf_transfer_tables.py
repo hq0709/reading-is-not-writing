@@ -300,7 +300,9 @@ def table_controls(blocks):
     L = [r"\begin{table}[h]", r"\centering", r"\scriptsize", r"\setlength{\tabcolsep}{4pt}",
          r"\caption{\textbf{Reference family and controls.} Median and interquartile range over all cells (first four rows) or over all "
          r"blocks with the corresponding module (remaining rows), per dataset. The last row counts concept cells whose write meets the "
-         r"steering reference (above the random p95 and the sham) but loses to a competing clinical direction.}",
+         r"steering reference (above the random p95 and the sham) and misses the complete owned grade: their simultaneous advantage "
+         r"over the five clinical competitors is not positive. Table~\ref{tab:cf-contingency} splits these cells into "
+         r"stronger-competitor and unresolved cells.}",
          r"\label{tab:cf-controls}",
          r"\resizebox{\textwidth}{!}{%", r"\begin{tabular}{lrrrrrr}", r"\toprule",
          r"& \multicolumn{2}{c}{NIH ChestX-ray14} & \multicolumn{2}{c}{CheXpert Plus} & \multicolumn{2}{c}{COCO (control)} \\",

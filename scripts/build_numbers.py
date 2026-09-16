@@ -124,6 +124,12 @@ def fx(v, nd, signed=False) -> str:
     return f"{v:+.{nd}f}" if signed else f"{v:.{nd}f}"
 
 
+def sci(x, nd=1) -> str:
+    """Math-mode scientific notation: 1.7\\times10^{-4} (same formatter as build_robustness_tables.sci)."""
+    m, e = f"{x:.{nd}e}".split("e")
+    return f"{m}\\times10^{{{int(e)}}}"
+
+
 def fp(p):
     """p-value for math mode: two decimals, or a power of ten below 0.001 (e.g. 8\\times10^{-11})."""
     if p is None or p != p:
@@ -180,6 +186,12 @@ def robustness_macros(M: dict, rows: list[dict], wb: dict, warn: list) -> None:
     sat = S["item2_ceiling"]["saturation"]["per_dataset_median_block_sat"]
     for ds, D in DS_MACRO.items():
         M[f"cfScaleSat{D}"] = fx(sat[ds], 2)
+    ufg = S["item2_ceiling"]["unsaturated_full_grade"]["chest"]
+    M["cfScaleUnsatGradeN"] = ufg["owned_p_evaluable"]; M["cfScaleUnsatGradeKept"] = ufg["owned_p_owned_unsaturated"]
+    M["cfScaleUnsatGradeRef"] = ufg["owned_p_reference_kept"]; M["cfScaleUnsatGradeAdv"] = ufg["owned_p_advantage_kept"]
+    M["cfScaleUnsatGradeGained"] = ufg["not_owned_owned_unsaturated"]; M["cfScaleUnsatGradeOtherN"] = ufg["not_owned_evaluable"]
+    if ufg["owned_p_evaluable"] != ufg["owned_p"]:
+        warn.append(f"scale: {ufg['owned_p'] - ufg['owned_p_evaluable']} owned chest cell(s) have too few unsaturated rows to regrade")
     uns = [S["item2_ceiling"]["strata"][ds]["unsaturated"] for ds in ci.CHEST]
     M["cfScaleUnsatOwned"] = sum(u["owned_p_evaluable"] for u in uns); M["cfScaleUnsatOwnedKept"] = sum(u["owned_p_O_pos"] for u in uns)
     M["cfScaleUnsatOtherPos"] = sum(u["not_owned_O_pos"] for u in uns); M["cfScaleUnsatOther"] = sum(u["not_owned_evaluable"] for u in uns)
@@ -243,6 +255,8 @@ def robustness_macros(M: dict, rows: list[dict], wb: dict, warn: list) -> None:
     M["cfValColSelGeHalfChest"] = str(csel["nih"]["n_S_ge_0.5"] + csel["chexpert"]["n_S_ge_0.5"]); M["cfValColSelNChest"] = str(csel["nih"]["n_cells"] + csel["chexpert"]["n_cells"])
     M["cfValKnownSignAgree"] = str(kn["chexpert"]["n_sign_agrees"]); M["cfValKnownN"] = str(kn["chexpert"]["n_cells"])
     M["cfValKnownOwnedSummary"] = str(kn["chexpert"]["n_owned_summary"]); M["cfValKnownOwnedKnown"] = str(kn["chexpert"]["n_owned_known"])
+    M["cfValKnownOwnedFull"] = str(kn["chexpert"]["n_owned_summary_and_owned_known_full_grade"])
+    M["cfValKnownOwnedFullAll"] = str(kn["chexpert"]["n_owned_known_full_grade"])
     col = V["column_selectivity"]
     for ds, D in DS_MACRO.items():
         M[f"cfColSel{D}"] = fx(col["per_dataset"][ds]["median_S_d"], 2)
@@ -313,6 +327,9 @@ def robustness_macros(M: dict, rows: list[dict], wb: dict, warn: list) -> None:
     for mk, D in (("q25-7", "Qwen"), ("lingshu-32", "Ling")):
         c = [medcos(ans[(mk, ds)]) for ds in ci.CHEST]; M[f"cfAnsCos{D}Min"] = fx(min(c), 2); M[f"cfAnsCos{D}Max"] = fx(max(c), 2)
     c = [medcos(pq) for (mk, ds), pq in ans.items() if ds == "coco"]; M["cfAnsCosCocoMin"] = fx(min(c), 2); M["cfAnsCosCocoMax"] = fx(max(c), 2)
+    ch = [medcos(pq) for (mk, ds), pq in ans.items() if ds in ci.CHEST]
+    M["cfAnsCosChestMin"] = fx(min(ch), 2); M["cfAnsCosChestMax"] = fx(max(ch), 2); M["cfAnsCosChestMed"] = fx(statistics.median(ch), 2)
+    M["cfAnsCosCocoMed"] = fx(statistics.median(c), 2)
     M["cfAnsGemOwnedNih"] = owned_n(ans[("gemma3-12", "nih")]); M["cfAnsGemOwnedChex"] = owned_n(ans[("gemma3-12", "chexpert")])
     # aggregate over every ANSDIR block: cells, a_q owned, label direction owned (paper grade, validation.json), and
     # cells whose a_q write beats the strongest logistic competitor (simultaneous lower bound above zero)
@@ -326,6 +343,162 @@ def robustness_macros(M: dict, rows: list[dict], wb: dict, warn: list) -> None:
         M[f"cfAns{tag}OwnedLabel"] = sum(sum(c["core_owned"] for c in vb[f"{k[0]}/{k[1]}"]["per_question"].values()) for k in keys)
         M[f"cfAns{tag}Beats"] = sum(beats_n(ans[k]) for k in keys)
     M["cfAnsBlocks"] = len(ans)
+
+
+def prose_macros(M: dict, rows: list[dict], wb: dict, warn: list) -> None:
+    """Numbers the prose quotes directly and that used to be typed into the text: the seed cell of Qwen2.5-VL-7B on NIH,
+    the dose response of Figure 2(c), the largest Qwen2.5-VL-72B chest ownership, the token-weighted writes of the two
+    Qwen blocks, the Gemma 3 4B clean-yes share, the shared-tower direction cosine, and the two gate bounds."""
+    import math
+    # ---- seed cell (Table cf-seed is built from this same block)
+    e = wb[("q25-7", "nih")]["s"]["core"]["per_question"]["Effusion"]
+    M["cfSeedEffRandP"] = fx(e["random_p95"], 3); M["cfSeedEffSham"] = fx(e["abs_sham"], 3)
+    M["cfSeedEffO"] = fx(e["O_q"], 3, True); M["cfSeedEffOLo"] = fx(e["O_q_ci95_percentile"][0], 3, True)
+    M["cfSeedEffOHi"] = fx(e["O_q_ci95_percentile"][1], 3, True)
+    if e["argmax_other"] != "Nodule" or e["rank_in_random_family"] != 2:
+        warn.append(f"seed: Effusion's strongest competitor is {e['argmax_other']} and its rank {e['rank_in_random_family']} "
+                    f"(prose says Nodule and second)")
+    # ---- dose response, from the cache Figure 2(c) plots, under the same gate
+    dose = json.loads((ci.RUNS / "figures" / "dose_curves.json").read_text())
+    dose = {k: v for k, v in dose.items() if v}
+    done = {}
+    for r in ci.read_manifest():
+        done.setdefault((r["model_key"], r["dataset"]), (t(r["block_included"]), set(m for m in r["completed_modules"].split("|") if m)))
+    expect = {f"{mk}/{ds}" for (mk, ds), (inc, mods) in done.items() if inc and "DOSE" in mods}
+    if set(dose) != expect:
+        raise RuntimeError(f"runs/figures/dose_curves.json differs from the included blocks with DOSE by {sorted(set(dose) ^ expect)}; "
+                           f"delete it and rerun cftransfer.figures.dose_curves")
+    def med(ds, a):
+        xs = [v[str(a)] for k, v in dose.items() if k.endswith("/" + ds) and str(a) in v]
+        return float(np.nanmedian(xs))
+    M["cfDoseCocoLow"] = fx(med("coco", -0.1), 2, True); M["cfDoseCocoPeak"] = fx(med("coco", 0.25), 2, True)
+    M["cfDoseCocoHalf"] = fx(med("coco", 0.5), 2, True)
+    alphas = sorted({float(a) for v in dose.values() for a in v})
+    nih = [med("nih", a) for a in alphas]
+    M["cfDoseNihMin"] = fx(min(nih), 3, True); M["cfDoseNihMax"] = fx(max(nih), 3, True)
+    if med("coco", 0.5) <= 0:
+        warn.append("dose: the COCO median at alpha +0.5 is not positive (prose says it remains positive)")
+    if max(nih) >= 0:
+        warn.append("dose: a NIH dose median is not negative (prose gives a negative range)")
+    # ---- largest Qwen2.5-VL-72B chest ownership (Section 5.5 names Atelectasis)
+    q72 = wb[("q25-72", "nih")]["s"]["core"]["per_question"]
+    M["cfOQwenSeventyTwoAtel"] = fx(q72["Atelectasis"]["O_q"], 2)
+    if max(q72, key=lambda q: q72[q]["O_q"]) != "Atelectasis":
+        warn.append("families: Atelectasis is no longer Qwen2.5-VL-72B's largest NIH ownership (prose names it)")
+    # ---- token-weighted writes of the two Qwen blocks the prose names
+    tw_chest = tw_chest_n = tw_coco = tw_coco_n = 0
+    for (mk, ds), b in wb.items():
+        a = b["s"].get("tokenw")
+        if not a or mk not in ("q25-7", "q3-8"):
+            continue
+        for v in ("tokenw", "topq"):                       # the two variants of Table cf-tokenw
+            pq = (a.get(v) or {}).get("per_question") or {}
+            n = len(pq); own = sum(ci.owned(c) for c in pq.values())
+            if ds in ci.CHEST:
+                tw_chest += own; tw_chest_n += n
+            else:
+                tw_coco += own; tw_coco_n += n
+    M["cfTokenwChestOwned"] = tw_chest; M["cfTokenwChestN"] = tw_chest_n
+    M["cfTokenwCocoOwned"] = tw_coco; M["cfTokenwCocoN"] = tw_coco_n
+    # ---- Gemma 3 4B clean-yes share on the chest sets (scale.json saturation, high side)
+    S = json.loads((ROB / "scale.json").read_text())
+    sat = [b["saturation"]["sat_hi"] for b in S["blocks"] if b.get("status") == "OK" and b["model"] == "gemma3-4" and b["dataset"] in ci.CHEST]
+    M["cfGemmaFourYesMin"] = pct(min(sat), 1); M["cfGemmaFourYesMax"] = pct(max(sat), 1)
+    # ---- shared-tower write-vector cosine over the bf16-equal Gemma 3 / MedGemma pairs (floored, the prose says "above")
+    P = json.loads((ROB / "pairs.json").read_text())
+    cs = [pr["write_vectors"]["min_cos"] for fam in ("gemma3", "medgemma") for d in P["task3_tower_sharing"][fam]["per_dataset"].values()
+          for pr in d["pairs"] if (pr.get("write_vectors") or {}).get("min_cos") is not None and not pr["write_vectors"]["identical"]]
+    M["cfPairsTowerCosMin"] = f"{math.floor(min(cs) * 1e4) / 1e4:.4f}"
+    # ---- gate bounds: fp32-versus-model logit difference (ceiled, the prose says "below") and the declared batch deviation
+    g = [((b.get("preflight") or {}).get("vis.last") or {}).get("G_fp32_vs_model_max_abs_diff") for b in S["blocks"] if b.get("status") == "OK"]
+    g = [x for x in g if x is not None]
+    M["cfGateFpMax"] = f"{math.ceil(max(g) * 100) / 100:.2f}"
+    # ---- COCO ownership margins of the Qwen / Lingshu / Gemma families (Section 5.3)
+    fams = ("q25", "q3-", "lingshu", "gemma3")
+    co = [f(r["O_q"]) for r in rows if t(r["cell"]) and t(r["block_included"]) and r["dataset"] == "coco" and t(r["owned"])
+          and r["model_key"].startswith(fams)]
+    M["cfCocoMarginMin"] = fx(math.floor(min(co) * 100) / 100, 2); M["cfCocoMarginMax"] = fx(math.ceil(max(co) * 100) / 100, 2)
+    # ---- InternVL3.5 chest writes (Section 5.5)
+    iv = [abs(f(r["W_qq"])) for r in rows if t(r["cell"]) and t(r["block_included"]) and r["dataset"] in ci.CHEST
+          and r["model_key"].startswith("iv35")]
+    M["cfInternvlWqqMax"] = fx(math.ceil(max(iv) * 100) / 100, 2)
+    # ---- |cos| of the difference-of-means and pattern directions with the logistic normal (Section 5.6): per block the
+    #      median over concepts, from fits/vis.last/altdir_seed0.npz (cos_model over cftransfer.altdir.FAMILY_ORDER)
+    FAM_ORDER = ("logistic", "dom", "pattern", "orth", "resid")
+    li = FAM_ORDER.index("logistic")
+    cosb = []
+    for (mk, ds) in wb:
+        f_npz = ci.RUNS / mk / ds / "fits" / "vis.last" / "altdir_seed0.npz"
+        if not f_npz.exists():
+            continue
+        cm = np.load(f_npz, allow_pickle=False)["cos_model"]
+        for fam in ("dom", "pattern"):
+            fi = FAM_ORDER.index(fam)
+            cosb.append(float(np.median([abs(cm[c, li, fi]) for c in range(cm.shape[0])])))
+    M["cfAltdirCosMin"] = fx(math.floor(min(cosb) * 100) / 100, 2); M["cfAltdirCosMax"] = fx(math.ceil(max(cosb) * 100) / 100, 2)
+    M["cfAltdirCosBlocks"] = len(cosb) // 2
+    if M["cfAltdirCosBlocks"] != M["cfAltdirBlocks"]:
+        warn.append(f"altdir: {M['cfAltdirCosBlocks']} blocks carry a fitted-direction file vs {M['cfAltdirBlocks']} scored ALTDIR blocks "
+                    f"(the prose reports the cosines across the scored blocks)")
+    b5 = S["item5_batch"]["distribution"]["vis.last"]
+    M["cfGateBatchMax"] = fx(b5["max_abs_candidate_logit_diff"]["max"], 2)
+    if b5.get("max_abs_candidate_logit_diff", {}).get("argmax_block", "gemma3-12/nih").split("/")[0] != "gemma3-12":
+        warn.append("gates: the largest declared batch deviation is no longer a Gemma 3 12B block (prose names it)")
+
+
+def extcomp_macros(M: dict, wb: dict, warn: list) -> None:
+    """EXTCOMP (Table cf-extcomp): blocks scored, cells owned under the six-direction family, and how many of them
+    keep ownership when every extra dataset label with enough support joins the competitor family. Same source and
+    same per-cell rule as scripts/build_robustness_tables.py extcomp()."""
+    blocks = owned = ext = retained = 0
+    for k, b in sorted(wb.items()):
+        a = b["s"].get("extcomp")
+        if not a:
+            continue
+        blocks += 1
+        core = b["s"]["core"]["per_question"]
+        for q, v in a["per_question"].items():
+            lo = ci.owned(core[q])
+            eo = bool(v["W_qq"] > 0 and v["W_qq"] > v.get("random_p95", 0) and v["W_qq"] > v.get("abs_sham", 0)
+                      and v.get("verdict") == "fixed_family_advantage")
+            owned += lo; ext += eo; retained += lo and eo
+    M["cfExtcompBlocks"] = blocks; M["cfExtcompOwned"] = owned; M["cfExtcompRetained"] = retained; M["cfExtcompExtOwned"] = ext
+    if ext != retained:
+        warn.append(f"extcomp: {ext - retained} cell(s) owned under the extended family but not under the six directions "
+                    f"(prose reports retention of the {owned} owned cells)")
+
+
+def support_macros(M: dict, rows: list[dict], warn: list) -> None:
+    """Support eligibility of the readability / answerability denominators. A cell needs at least ten known positives
+    and ten known negatives in the grading cohort (Section 3.3); a cell below that support can never be graded
+    readable or answerable, so it enters the published denominators as a failure. These macros give the counts and
+    the eligible-only shares."""
+    cells = [r for r in rows if t(r["cell"])]
+    def inel(r):
+        return r["n_pos"] == "" or r["n_neg"] == "" or int(r["n_pos"]) < 10 or int(r["n_neg"]) < 10
+    groups = {"Nih": ("nih",), "Chex": ("chexpert",), "Coco": ("coco",), "Chest": ci.CHEST}
+    for D, dss in groups.items():
+        probe = [r for r in cells if r["dataset"] in dss and t(r["probe_graded"]) and r["readable"] != ""]
+        wm = [r for r in cells if r["dataset"] in dss and t(r["block_included"])]
+        M[f"cfSupportInel{D}"] = sum(inel(r) for r in wm)
+        pe = [r for r in probe if not inel(r)]; we = [r for r in wm if not inel(r)]
+        M[f"cfSupportReadable{D}"] = sum(t(r["readable"]) for r in pe); M[f"cfSupportReadableN{D}"] = len(pe)
+        M[f"cfSupportReadablePct{D}"] = pct(M[f"cfSupportReadable{D}"], len(pe))
+        M[f"cfSupportAnswerable{D}"] = sum(t(r["answer_capable"]) for r in we); M[f"cfSupportAnswerableN{D}"] = len(we)
+        M[f"cfSupportAnswerablePct{D}"] = pct(M[f"cfSupportAnswerable{D}"], len(we))
+    if M["cfSupportReadableChest"] != M["cfChestReadable"] or M["cfSupportAnswerableChest"] != M["cfChestAnswerable"]:
+        warn.append("support: an eligible-only chest cell was graded readable or answerable below the support rule")
+    if M["cfSupportReadablePctChest"] < M["cfChestReadablePct"] or M["cfSupportAnswerablePctChest"] < M["cfChestAnswerablePct"]:
+        warn.append("support: the eligible-only chest share is below the all-cell share (prose says it is higher)")
+
+
+def dose_macros(M: dict, rows: list[dict]) -> None:
+    """Blocks entering Figure 2(c) and the D column of Table cf-coverage: included blocks with DOSE completed."""
+    done = {}
+    for r in rows:
+        done.setdefault((r["model_key"], r["dataset"]), (t(r["block_included"]), set(m for m in r["completed_modules"].split("|") if m)))
+    for ds, D in DS_MACRO.items():
+        M[f"cfDoseBlocks{D}"] = sum(inc and "DOSE" in mods for (mk, d), (inc, mods) in done.items() if d == ds)
 
 
 def round2_macros(M: dict, rows: list[dict], wb: dict, warn: list) -> None:
@@ -375,6 +548,9 @@ def round2_macros(M: dict, rows: list[dict], wb: dict, warn: list) -> None:
             M[f"cfAltdird{G}Cos{F}"] = fx(d[fam]["median_cos_to_logistic"], 2) if d["blocks"] else "--"
     gs = P["all"]["gram_spectrum"]
     M["cfAltdirdCondMin"] = fx(gs["condition_min"], 1); M["cfAltdirdCondMax"] = fx(gs["condition_max"], 1)
+    M["cfAltdirdCondMedian"] = fx(gs["condition_median"], 1)
+    M["cfAltdirdEigMin"] = sci(gs["min_eigenvalue"]); M["cfAltdirdEigMax"] = sci(gs["max_eigenvalue"])
+    M["cfAltdirdGramDim"] = gs["n"][0] if isinstance(gs["n"], list) else gs["n"]
     if not gs["all_full_rank"]:
         warn.append("altdird: an R^T R / D spectrum is rank deficient (Table cf-altdird caption says full rank)")
     man = {g: sum(owned_cell[(b["model"], b["dataset"], q)] for b in A["blocks"] if b["dataset"] in dss for q in b["per_question"])
@@ -388,6 +564,9 @@ def round2_macros(M: dict, rows: list[dict], wb: dict, warn: list) -> None:
     for g, G in (("chest", "Chest"), ("coco", "Coco")):
         M[f"cfAnsdirt{G}Blocks"] = ag[g]["blocks"]; M[f"cfAnsdirt{G}IYOwned"] = ag[g]["iy_owned"]
         M[f"cfAnsdirt{G}Kept"] = ag[g]["kept_pairs"]; M[f"cfAnsdirt{G}KeptN"] = ag[g]["pairs"]; M[f"cfAnsdirt{G}KeptPct"] = pct(ag[g]["kept_pairs"], ag[g]["pairs"])
+        # unconditional: owned (cell, held-out template) pairs over every such pair, not only the pairs owned under the primary template
+        M[f"cfAnsdirt{G}OwnedPairs"] = ag[g]["owned_pairs"]; M[f"cfAnsdirt{G}PairsAll"] = ag[g]["all_pairs"]
+        M[f"cfAnsdirt{G}OwnedPairsPct"] = pct(ag[g]["owned_pairs"], ag[g]["all_pairs"])
     if T.get("partial_blocks"):
         print("  NOTE: ANSDIRT blocks scored on fewer than all test rows are not counted: "
               + ", ".join(f"{b['block']} ({b['status']}, {min(b['n_scored_rows_min'].values())}/{b['n_rows']} rows)" for b in T["partial_blocks"]))
@@ -417,6 +596,13 @@ def round2_macros(M: dict, rows: list[dict], wb: dict, warn: list) -> None:
     mm = Pa["chest"]["max_median_abs_cos_pair"] or {}
     M["cfAttrCosMax"] = fx(mm["median_abs_cos"], 2) if mm.get("median_abs_cos") is not None else "--"
     M["cfAttrReadable"] = Pa["chest"]["attr_readable"]
+    # the same blocks' clinical probes, for "the attributes are read at least as well as the findings"
+    ab = {tuple(b["block"].split("/")) for b in B["blocks"]}
+    cl = [v["auroc_real"] for k in ab for v in ci.calibration(wb[k]).values() if v.get("auroc_real") is not None]
+    M["cfAttrClinAuroc"] = fx(statistics.median(cl), 3) if cl else "--"
+    if au and min(au) < statistics.median(cl):
+        warn.append(f"attr: an attribute's median probe AUROC {min(au):.3f} is below the clinical median {statistics.median(cl):.3f} "
+                    f"(prose says the attributes are read at least as well)")
     if Pa["chest"]["attribute_random_reference"]:
         warn.append("attr: an attribute question carries a random family (Table cf-attr caption says the sham alone is its reference)")
     if Pa["chest"]["clinical_random_reference"] is False:
@@ -507,6 +693,10 @@ def main() -> Path:
     warn = []
     robustness_macros(M, rows, wb, warn)
     round2_macros(M, rows, wb, warn)
+    extcomp_macros(M, wb, warn)
+    prose_macros(M, rows, wb, warn)
+    support_macros(M, rows, warn)
+    dose_macros(M, rows)
     for w in warn:
         print("  WARNING:", w)
     # write
@@ -514,6 +704,9 @@ def main() -> Path:
          "% Rule: a block enters the write-matrix counts iff run.json completed_modules contains CORE and CALIBRATION;",
          "% readability counts run over probe-graded cells (CALIBRATION completed). See scripts/cf_inclusion.py.",
          f"% {M['cfBlocks']} blocks, {M['cfWriteBlocks']} included, {M['cfCells']} write-matrix cells, {M['cfProbeCells']} probe-graded cells."]
+    bad = [k for k in M if not k.isalpha()]
+    if bad:
+        raise RuntimeError(f"macro names must be letters only (TeX control sequences take no digits): {bad}")
     for k, v in M.items():
         L.append(f"\\providecommand{{\\{k}}}{{}}\\renewcommand{{\\{k}}}{{{v}}}")
     OUT.mkdir(exist_ok=True)

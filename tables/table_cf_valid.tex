@@ -2,11 +2,11 @@
 \centering
 \scriptsize
 \setlength{\tabcolsep}{4pt}
-\caption{\textbf{The grade on radiologist labels.} For every CheXpert block with the valid module, the complete grade is recomputed on 200 frontal films of the CheXpert validation set (one per patient, radiologist consensus labels, no patient shared with any campaign role) with the campaign rules: the steering reference against the random 95th percentile and the sham on those rows, and the $6\times5$ max-$T$ verdict over 2{,}000 unit-bootstrap draws. The test grade is the same computation on the 600 labeler-labelled test rows. Columns: owned concepts on the test and valid rows, concepts whose verdict and whose ownership agree, and the median $|O_q(\text{valid})-O_q(\text{test})|$ (90th percentile over all cells 0.021). On the 76 cells with at least 10 positives and 10 negatives on both cohorts, readability agrees in 73 of 76 and answer capability in 60 of 76.}
+\caption{\textbf{The grade on radiologist labels.} For every CheXpert block with the valid module, the complete grade is recomputed on 200 frontal films of the CheXpert validation set (one per patient, radiologist consensus labels, no patient shared with any campaign role) with the campaign rules: the steering reference against the random 95th percentile and the sham on those rows, and the $6\times5$ max-$T$ verdict over 2{,}000 unit-bootstrap draws. The test grade is the same computation on the 600 labeler-labelled test rows. Columns: concepts of six with the complete owned grade on the test rows and on the valid rows, concepts of six whose clinical-comparison verdict agrees across the two cohorts, concepts of six whose owned grade agrees across the two cohorts, and the median $|O_q(\text{valid})-O_q(\text{test})|$ (90th percentile over all cells 0.021). On the 76 cells with at least 10 positives and 10 negatives on both cohorts, readability agrees in 73 of 76 and answer capability in 60 of 76.}
 \label{tab:cf-valid}
 \begin{tabular}{lrrrrr}
 \toprule
-Checkpoint & owned (test) & owned (valid) & verdict agrees & ownership agrees & median $|\Delta O_q|$ \\
+Checkpoint & owned (test) & owned (valid) & verdict agrees & owned grade agrees & median $|\Delta O_q|$ \\
 \midrule
 Qwen2.5-VL-3B & 0 & 0 & 5/6 & 6/6 & 0.005 \\
 Qwen2.5-VL-7B & 0 & 0 & 6/6 & 6/6 & 0.005 \\

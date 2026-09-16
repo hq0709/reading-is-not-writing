@@ -107,9 +107,26 @@ def O_of(blocks, mk, ds):
     return {c: v["O_q"] for c, v in b["s"]["core"]["per_question"].items()} if b else None
 
 
+def dose_blocks_expected():
+    """The one inclusion rule for the dose panel and the coverage table: a block included by the manifest
+    (CORE and CALIBRATION completed) whose completed_modules also contain DOSE."""
+    done = {}
+    for r in ci.read_manifest():
+        done.setdefault((r["model_key"], r["dataset"]), set(m for m in r["completed_modules"].split("|") if m))
+    return {f"{mk}/{ds}" for (mk, ds), b in ci.load_runs().items() if b["included"] and "DOSE" in done[(mk, ds)]}
+
+
 def dose_cache():
+    """runs/figures/dose_curves.json, gated on the same rule as Table cf-coverage: the cache must carry exactly the
+    included blocks with DOSE, so Figure 2(c) and the coverage table can never disagree."""
     p = RUNS / "figures" / "dose_curves.json"
-    return json.loads(p.read_text()) if p.exists() else {}
+    curves = json.loads(p.read_text()) if p.exists() else {}
+    curves = {k: v for k, v in curves.items() if v}
+    expected = dose_blocks_expected()
+    if set(curves) != expected:
+        raise RuntimeError(f"{p}: dose curves differ from the included blocks with DOSE by {sorted(set(curves) ^ expected)}; "
+                           f"delete the cache and rerun cftransfer.figures.dose_curves in the code repository")
+    return curves
 
 
 def panel(ax, letter, text):
@@ -437,6 +454,8 @@ def fig2_overview(blocks):
     ax.annotate(f"NIH, {ends['nih'][2]} blocks", (ends["nih"][0], ends["nih"][1]), xytext=(-2, -9), textcoords="offset points",
                 ha="right", va="top", fontsize=7, color=DS_COL["nih"])
     panel(ax, "c", "dose response, median and IQR over blocks")
+    (FIG / "fig2_dose_blocks.json").write_text(json.dumps({ds: ends[ds][2] for ds in ends}, indent=1) + "\n")
+    print("  fig2(c) dose blocks: " + "  ".join(f"{ds} {ends[ds][2]}" for ds in ends))
 
     # (d) rank ECDF ---------------------------------------------------------------------------------------------
     ax = axes[1, 1]; xs = np.arange(1, 121)

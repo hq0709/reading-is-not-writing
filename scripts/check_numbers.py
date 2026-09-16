@@ -107,6 +107,30 @@ def main():
         tt = re.findall(r"\\textit\{chest\} & (\d+) blocks? & (\d+)/(\d+) & (\d+)/(\d+)", (ROOT / "tables" / "table_cf_attr.tex").read_text())
         expect("Table cf-attr chest totals row", tuple(map(int, tt[0])) if tt else None,
                (at["chest"]["blocks"], at["chest"]["attr_owned"], at["chest"]["attr_cells"], at["chest"]["clin_owned"], at["chest"]["clin_cells"]))
+    # Figure 2(c) dose blocks against the manifest (included blocks with DOSE completed) and the macros
+    f2d = ROOT / "figures" / "fig2_dose_blocks.json"
+    done = {}
+    for r in rows:
+        done.setdefault((r["model_key"], r["dataset"]), (r["block_included"] == "true", set(m for m in r["completed_modules"].split("|") if m)))
+    man_dose = {ds: sum(inc and "DOSE" in mods for (mk, d), (inc, mods) in done.items() if d == ds) for ds in DS}
+    print("Figure 2(c) dose blocks vs manifest:")
+    for ds, D in (("nih", "Nih"), ("chexpert", "Chex"), ("coco", "Coco")):
+        expect(f"macro cfDoseBlocks{D}", M[f"cfDoseBlocks{D}"], man_dose[ds])
+    if f2d.exists():
+        g = json.loads(f2d.read_text())
+        for ds in g:
+            expect(f"figure 2(c) {ds} blocks", g[ds], man_dose[ds])
+    else:
+        print("  (figures/fig2_dose_blocks.json missing: run plot_paper_figures.py)")
+    # EXTCOMP macros against Table cf-extcomp
+    et = (ROOT / "tables" / "table_cf_extcomp.tex").read_text()
+    er = re.findall(r"& (\d+)/6 & (\d+)/6 \\\\", et)
+    if er:
+        print("EXTCOMP macros vs Table cf-extcomp:")
+        expect("cfExtcompBlocks", M["cfExtcompBlocks"], len(er))
+        expect("cfExtcompOwned", M["cfExtcompOwned"], sum(int(a) for a, _ in er))
+        expect("cfExtcompExtOwned", M["cfExtcompExtOwned"], sum(int(b) for _, b in er))
+        expect("cfExtcompRetained within both counts", M["cfExtcompRetained"] <= min(M["cfExtcompOwned"], M["cfExtcompExtOwned"]), True)
     a1 = ROOT / "figures" / "figA1_own_share.json"
     if a1.exists():
         s = json.loads(a1.read_text())
