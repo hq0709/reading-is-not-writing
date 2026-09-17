@@ -5,8 +5,11 @@ ANSDIRT, ATTR, and the full-grade PRECISION columns) read runs/robustness/round2
 code repository, which applies the same rule and admits a module only when it covers every row).
 
 Merged tables: table_cf_altdir.tex carries ALTDIR, ALTDIRD, TOKENW and EXTCOMP (per dataset); table_cf_ansdir.tex carries
-ANSDIR, ANSDIRT and the per-block rescue counts. No table is scaled with \\resizebox: a table that does not fit the text
-width at \\scriptsize loses columns or is split."""
+ANSDIR, ANSDIRT and the per-block rescue counts; table_cf_scale.tex carries the scale, saturation, refit and locus panel
+above the PRECISION panel; table_cf_valid.tex carries the radiologist-label grade above the VALIDFIT arms. REPLAY has no
+table: it changes no grade, so Section 5.5 and Appendix A.8 state it in prose and check_numbers.py reads the module's own
+records. No table is scaled with \\resizebox: a table that does not fit the text width at \\scriptsize loses columns or is
+split."""
 import json
 import sys
 from pathlib import Path
@@ -100,13 +103,18 @@ def scale():
     d = json.loads((ROB / "scale.json").read_text())
     m, st, rf, cn, bt = d["item1_margin_scale"], d["item2_ceiling"]["strata"], d["item3_refit"]["per_dataset"], d["item4_connector"]["per_dataset"], d["item5_batch"]
     L = [r"\begin{table}[h]", r"\centering", r"\scriptsize", r"\setlength{\tabcolsep}{4pt}",
-         r"\caption{\textbf{Ownership under alternative scales, strata, refits, and loci.} Per dataset: cells with the complete owned "
+         r"\caption{\textbf{Ownership under alternative scales, strata, refits, loci, and numerics.} Per dataset: cells with the complete owned "
          r"grade on the probability scale (the paper's grade) and on the logit-margin scale (the steering reference recomputed on "
          r"that scale and a positive percentile interval for $O^m_q$), with the cells owned on both; cells with $O_q>0$ (the sign "
          r"alone) among owned and among not-owned cells when every cell is restricted to its "
          r"unsaturated rows ($0.01<P(\mathrm{yes})<0.99$ on the clean pass); median $|O_q(\text{seed }k)-O_q(\text{seed }0)|$ over the "
          r"two refit seeds and the owned cells that keep $O_q>0$ under both (the refits exist for NIH and COCO); median $|W_{q,q}|$ at the "
-         r"primary and connector loci and connector cells whose write beats the connector random family.}",
+         r"primary and connector loci and connector cells whose write beats the connector random family. The lower panel rescores the "
+         r"write grid on the first 200 test rows of each block with fp32 weights and forward pass, and in bf16 at batch size one, against "
+         r"the bf16 batched grid on the same rows: the largest change over the $6\times126$ written cells, $\max|\Delta W|$, and in a "
+         r"clinical contrast, $\max|\Delta C_{q,d}|$. Regraded under either setting, verdicts change in \cfPrecisionVerdictChanges{} and "
+         r"steering references in \cfPrecisionRefChanges{} of the \cfPrecisionGradeCells{} grades, and the two point verdicts change in "
+         r"\cfPrecisionPointVerdictChanges{}.}",
          r"\label{tab:cf-scale}",
          r"\begin{tabular}{lrrrrrrrrrr}", r"\toprule",
          r" & \multicolumn{3}{c}{owned cells} & \multicolumn{2}{c}{unsaturated, $O_q>0$} & \multicolumn{2}{c}{refits} & "
@@ -125,9 +133,10 @@ def scale():
     L += [r"\midrule", r"\multicolumn{11}{p{0.9\linewidth}}{\textit{Batch effects at the gates (61 blocks): batched-vs-single candidate-logit difference "
           + f"{dist['max_abs_candidate_logit_diff']['min']:.2f}--{dist['max_abs_candidate_logit_diff']['max']:.2f} (median {dist['max_abs_candidate_logit_diff']['median']:.2f}); "
           + f"margin sign agreement in {61 - n_dis} of 61 blocks; owned cells in disagreeing blocks: {bt['owned_cells_in_sign_disagreement_blocks']}.}}}} \\\\",
-          r"\bottomrule", r"\end{tabular}", r"\end{table}"]
+          r"\bottomrule", r"\end{tabular}"]
+    L += [r"", r"\medskip", r"\setlength{\tabcolsep}{5pt}"] + precision_panel() + [r"\end{table}"]
     (OUT / "table_cf_scale.tex").write_text("\n".join(L) + "\n")
-    print("table_cf_scale.tex")
+    print("table_cf_scale.tex (with the numerics panel)")
 
 
 def pairs():
@@ -190,7 +199,7 @@ def valid():
     V = _r2()["valid"]; a = V["aggregate"]
     rows_txt = "/".join(str(n) for n in a["valid_rows"])
     L = [r"\begin{table}[h]", r"\centering", r"\scriptsize", r"\setlength{\tabcolsep}{4pt}",
-         r"\caption{\textbf{The grade on radiologist labels.} For every CheXpert block with the valid module, the complete grade is "
+         r"\caption{\textbf{The grade on radiologist labels, and what refitting on them changes.} For every CheXpert block with the valid module, the complete grade is "
          r"recomputed on " + rows_txt + r" frontal films of the CheXpert validation set (one per patient, radiologist consensus labels, no "
          r"patient shared with any campaign role) with the campaign rules: the steering reference against the random 95th percentile and "
          r"the sham on those rows, and the $6\times5$ max-$T$ verdict over 2{,}000 unit-bootstrap draws. The test grade is the same "
@@ -199,7 +208,9 @@ def valid():
          r"owned grade agrees across the two cohorts, and the median $|O_q(\text{valid})-O_q(\text{test})|$ (90th percentile over all cells " + f2(a["p90_abs_dO_q"], 3)
          + r"). On the " + str(a["supported_cells"]) + r" cells with at least 10 positives and 10 negatives on both cohorts, readability agrees in "
          + f"{a['readable_agree_supported']} of {a['readable_compared_supported']}" + r" and answer capability in "
-         + f"{a['answer_capable_agree_supported']} of {a['answer_capable_compared_supported']}" + r".}",
+         + f"{a['answer_capable_agree_supported']} of {a['answer_capable_compared_supported']}" + r". The lower panel refits the six "
+         r"directions on the radiologist labels themselves and separates the two things that change at once when the refit is compared "
+         r"with the shipped direction: which labels were used, and how many rows were available to fit them.}",
          r"\label{tab:cf-valid}",
          r"\begin{tabular}{lrrrrr}", r"\toprule",
          r"Checkpoint & owned (test) & owned (valid) & verdict agrees & owned grade agrees & median $|\Delta O_q|$ \\", r"\midrule"]
@@ -208,9 +219,10 @@ def valid():
                  f"{b['owned_agree']}/{b['n_cells']} & {f2(b['median_abs_dO_q'], 3)} \\\\")
     L += [r"\midrule",
           f"\\textit{{all}} ({a['blocks']} blocks) & {a['owned_test']} & {a['owned_valid']} & {a['verdict_agree']}/{a['cells']} & {a['owned_agree']}/{a['cells']} & {f2(a['median_abs_dO_q'], 3)} \\\\",
-          r"\bottomrule", r"\end{tabular}", r"\end{table}"]
+          r"\bottomrule", r"\end{tabular}"]
+    L += [r"", r"\medskip"] + validfit_arms_panel() + [r"\end{table}"]
     (OUT / "table_cf_valid.tex").write_text("\n".join(L) + "\n")
-    print("table_cf_valid.tex", a["blocks"], "block(s)")
+    print("table_cf_valid.tex", a["blocks"], "block(s), with the refit-arms panel")
 
 
 ARM_ROW = (("expert_valid200", "radiologist", "200 valid films"),
@@ -220,27 +232,26 @@ ARM_ROW = (("expert_valid200", "radiologist", "200 valid films"),
            ("report_train_full", "report-derived", "every training row"))
 
 
-def validfit_arms():
+def validfit_arms_panel():
     """VALIDFIT arms: the label source of a direction separated from the number of rows it was estimated on
-    (runs/robustness/validfit.json, scripts/mayo/robustness_validfit.py)."""
+    (runs/robustness/validfit.json, scripts/mayo/robustness_validfit.py). This is the lower panel of Table cf-valid:
+    both report the radiologist-labelled cohort, so the paper gives them one number and one caption."""
     V = r3.validfit_arms()
     A = V["aggregate"]["per_arm"]
     m = V["meta"]
     b0 = V["blocks"][0]
-    L = [r"\begin{table}[h]", r"\centering", r"\scriptsize", r"\setlength{\tabcolsep}{4pt}",
-         r"\caption{\textbf{Label source against sample size for the refitted directions.} The expert-label refit is "
-         r"estimated on " + str(b0["n_valid_rows"]) + r" radiologist-labelled films and the shipped direction on about "
-         + f"{b0['n_train_rows']:,}".replace(",", "{,}") + r" report-labelled rows, so comparing only those two confounds "
-         r"which labels were used with how many rows were available. Every arm below keeps the block's own projection, its "
-         r"stored train-only scaler, the protocol's probe settings and the same " + str(m["folds"]) + r"-fold cross-fitting "
-         r"over patients, and every arm is scored on the same films: a film is always scored by a direction that was not "
-         r"fitted on it. The two training subsample arms redraw the fitting rows " + str(m["draws"]) + r" times and report "
-         r"the median; the second draws enough rows to leave the concept with as many labelled rows as the expert refit "
-         r"has. Cosines are to the shipped direction, in the raw model space and under the training covariance. Medians "
-         r"over the " + str(A["expert_valid200"]["cells"]) + r" cells of "
-         + str(m["n_blocks"]) + r" CheXpert blocks.}",
-         r"\label{tab:cf-validfit-arms}",
+    L = [r"\setlength{\tabcolsep}{4pt}",
          r"\begin{tabular}{llrrrrr}", r"\toprule",
+         r"\multicolumn{7}{p{0.95\linewidth}}{\textit{The label source of a refitted direction against the number of rows it was "
+         r"fitted on. The expert-label refit is estimated on " + str(b0["n_valid_rows"]) + r" radiologist-labelled films and the "
+         r"shipped direction on about " + f"{b0['n_train_rows']:,}".replace(",", "{,}") + r" report-labelled rows, so comparing "
+         r"only those two confounds the two. Every arm keeps the block's own projection, its stored train-only scaler, the "
+         r"protocol's probe settings and the same " + str(m["folds"]) + r"-fold cross-fitting over patients, and is scored on the "
+         r"same films by a direction not fitted on them. The two training subsample arms redraw the fitting rows "
+         + str(m["draws"]) + r" times and report the median; the second draws enough rows to leave the concept with as many "
+         r"labelled rows as the expert refit has. Cosines are to the shipped direction. Medians over the "
+         + str(A["expert_valid200"]["cells"]) + r" cells of " + str(m["n_blocks"]) + r" CheXpert blocks.}} \\",
+         r"\midrule",
          r" & & & \multicolumn{2}{c}{cross-fitted AUROC against} & \multicolumn{2}{c}{cosine to shipped} \\",
          r"\cmidrule(lr){4-5}\cmidrule(lr){6-7}",
          r"Labels & Fitted on & rows & radiologist & report & raw & whitened \\", r"\midrule"]
@@ -257,9 +268,10 @@ def validfit_arms():
           + f2(G["sample_size_at_one_label_source"]["delta_auroc_expert_labels"], 2) + r" \\",
           r"\multicolumn{6}{l}{the expert refit against the shipped direction, which mixes the two} & "
           + f2(G["expert_refit_against_the_shipped_direction"]["delta_auroc_expert_labels"], 2) + r" \\",
-          r"\bottomrule", r"\end{tabular}", r"\end{table}"]
-    (OUT / "table_cf_validfit_arms.tex").write_text("\n".join(L) + "\n")
-    print("table_cf_validfit_arms.tex", m["n_blocks"], "block(s),", m["draws"], "draws")
+          r"\bottomrule", r"\end{tabular}"]
+    (OUT / "table_cf_validfit_arms.tex").unlink(missing_ok=True)
+    print(f"refit-arms panel of table_cf_valid.tex: {m['n_blocks']} block(s), {m['draws']} draws")
+    return L
 
 
 
@@ -465,11 +477,12 @@ def answer_direction():
     print("table_cf_ansdir.tex", len(keys), "block(s)")
 
 
-def precision():
+def precision_panel():
     """PRECISION, one row per block: the largest change over the 6x126 written cells and in a clinical contrast, with fp32
     weights and forward and in bf16 at batch size one, against the bf16 batched grid on the same first 200 test rows
     (runs/robustness/round2.json). The facts that do not vary across rows (no verdict, reference or point-verdict change)
-    are stated in the caption through the build_numbers.py macros."""
+    are stated through the build_numbers.py macros in the caption of Table cf-scale, whose lower panel this is: a control
+    that changes no grade does not earn a numbered table of its own."""
     R2 = {b["block"]: b for b in _r2()["precision"]["blocks"]}
     keys = sorted((f"{sp.parent.parent.name}/{sp.parent.name}" for sp, j in included_summaries() if j.get("precision")), key=_ckpt_key)
     if set(keys) != set(R2):
@@ -479,21 +492,17 @@ def precision():
         mk, ds = key.split("/"); s = R2[key]["settings"]
         rows.append(f"{CKPT.get(mk, mk)} & {NAMES[ds]} & " + " & ".join(
             f"{s[st]['max_abs_dW_grid']:.4f} & {s[st]['max_abs_dcontrast']:.4f}" for st in ("fp32", "batch1")) + r" \\")
-    L = [r"\begin{table}[h]", r"\centering", r"\scriptsize", r"\setlength{\tabcolsep}{5pt}",
-         r"\caption{\textbf{Numerics.} The write grid rescored on the first 200 test rows of each block with fp32 weights and forward "
-         r"pass, and in bf16 at batch size one, against the bf16 batched grid on the same rows: the largest change over the $6\times126$ "
-         r"written cells, $\max|\Delta W|$, and in a clinical contrast, $\max|\Delta C_{q,d}|$. Regraded under either setting, verdicts "
-         r"change in \cfPrecisionVerdictChanges{} and steering references in \cfPrecisionRefChanges{} of the \cfPrecisionGradeCells{} "
-         r"grades, and the two point verdicts change in \cfPrecisionPointVerdictChanges{}.}",
-         r"\label{tab:cf-precision}",
-         r"\begin{tabular}{llrrrr}", r"\toprule",
+    L = [r"\begin{tabular}{llrrrr}", r"\toprule",
+         r"\multicolumn{6}{l}{\textit{Numerics: the same grid rescored in fp32 and at batch size one}} \\",
+         r"\midrule",
          r" & & \multicolumn{2}{c}{fp32 weights and forward} & \multicolumn{2}{c}{bf16, batch size one} \\",
          r"\cmidrule(lr){3-4}\cmidrule(lr){5-6}",
          r"Checkpoint & Dataset & $\max|\Delta W|$ & $\max|\Delta C|$ & $\max|\Delta W|$ & $\max|\Delta C|$ \\", r"\midrule"]
     L += rows
-    L += [r"\bottomrule", r"\end{tabular}", r"\end{table}"]
-    (OUT / "table_cf_precision.tex").write_text("\n".join(L) + "\n")
-    print("table_cf_precision.tex", len(keys), "block(s)")
+    L += [r"\bottomrule", r"\end{tabular}"]
+    (OUT / "table_cf_precision.tex").unlink(missing_ok=True)
+    print(f"numerics panel of table_cf_scale.tex: {len(keys)} block(s)")
+    return L
 
 
 def validation():
@@ -751,49 +760,6 @@ def towerswap():
     print("table_cf_towerswap.tex", len(T["blocks"]), "block(s),", len(T["crossover_blocks"]), "crossover(s)")
 
 
-def replay():
-    """REPLAY: the stored token tensors of the consumed block fed to both readers of a shared-tower pair, so that the input is
-    identical bit for bit rather than equal up to rounding. Top: each reader's replayed grade against its own grade, with the
-    drift of its own tower output from the stored tensor. Bottom: how much the difference between two readers changes when they
-    are fed the same tensors instead of each running its own tower."""
-    R = r3.replay(ci.write_blocks(ci.load_runs()))
-    L = [r"\begin{table}[p]", r"\centering", r"\scriptsize", r"\setlength{\tabcolsep}{4pt}",
-         r"\caption{\textbf{Feeding two readers the same tensors.} The token tensors the language model consumes are stored once "
-         r"from the source checkpoint and replayed into every reader of its shared-tower group, so the two readers see the same "
-         r"input bit for bit. Drift is the largest absolute difference between this reader's own tower output and the stored "
-         r"tensor, measured before the replacement, against a mean absolute tensor entry of "
-         + f"{min(b['block_mean_abs'] for b in R['blocks']):.2f}--{max(b['block_mean_abs'] for b in R['blocks']):.2f}"
-         + r". $\Delta W$ and $\Delta O_q$ compare the replayed grade with the block's own grade on the same rows; "
-         r"\emph{moved} counts concepts of six whose difference is simultaneously nonzero, and \emph{grade changes} counts "
-         r"changes of clinical-comparison verdict or of the owned grade. A reader replaying the tensors of its own block is the "
-         r"control for the machinery. In the bottom panel, \emph{own towers} is the mean absolute difference between the two "
-         r"readers' own-question write magnitudes with each reader running its own tower, \emph{same tensors} the same quantity "
-         r"with the replayed input, \emph{change} the second minus the first, and \emph{relative} that change as a percentage of "
-         r"the first. Every block of this table is on " + ", ".join(sorted({NAMES[b["dataset"]] for b in R["blocks"]})) + r".}",
-         r"\label{tab:cf-replay}",
-         r"\begin{tabular}{llrrrcc}", r"\toprule",
-         r"Reader & tensors from & drift & $\max|\Delta W|$ & $\max|\Delta O_q|$ & moved & grade changes \\", r"\midrule"]
-    ex = lambda x: "$0$" if not x else f"${sci(x, 1)}$"
-    for b in R["blocks"]:
-        L.append(f"{CKPT.get(b['reader'], b['reader'])} & "
-                 f"{CKPT.get(b['source_block'], b['source_block'])}"
-                 + ("" if not b["self_replay"] else r" (own)")
-                 + f" & {f2(b['drift_max_abs'], 2)} & {ex(b['max_abs_dW'])} & {ex(b['max_abs_dO'])} & "
-                 f"{b['n_nonzero']}/{b['n_concepts']} & {b['verdict_changes'] + b['owned_changes']} \\\\")
-    L += [r"\midrule", r"\multicolumn{7}{l}{\textit{The difference between two readers of one shared-tower group}} \\",
-          r"Reader pair & tensors from & own towers & same tensors & change & moved & relative \\", r"\midrule"]
-    src = {b["reader"]: b["source_block"] for b in R["blocks"]}
-    for p in R["pairs"]:
-        a, b_ = p["readers"]
-        L.append(f"{CKPT.get(a, a)} and {CKPT.get(b_, b_)} & "
-                 f"{CKPT.get(src.get(a, ''), src.get(a, ''))} & {f2(p['mean_abs_own_towers'], 3)} & "
-                 f"{f2(p['mean_abs_exact'], 3)} & {f2(p['mean_abs_change'], 4)} & {p['n_nonzero_exact']}/{p['n_concepts']} & "
-                 f"{f2(100 * p['mean_abs_change'] / p['mean_abs_own_towers'], 1)}\\% \\\\")
-    L += [r"\bottomrule", r"\end{tabular}", r"\end{table}"]
-    (OUT / "table_cf_replay.tex").write_text("\n".join(L) + "\n")
-    print("table_cf_replay.tex", len(R["blocks"]), "block(s),", len(R["pairs"]), "pair(s)")
-
-
 ENDPOINT_LABEL = {"NY": "negated question", "DA": "forced choice, finding first",
                   "DB": "forced choice, competitor first", "RF": "report continuation"}
 FAM_NAME = {"label": "label direction", "answer": "answer direction"}
@@ -986,15 +952,12 @@ if __name__ == "__main__":
     pairs()
     constructions()
     answer_direction()
-    precision()
     validation()
     refit()
     valid()
-    validfit_arms()
     attr()
     towerswap()
-    replay()
     semend()
     fgobj()
-    for merged in ("altdird", "ansdirt", "extcomp", "tokenw", "rescue"):   # now panels of table_cf_altdir / table_cf_ansdir
+    for merged in ("altdird", "ansdirt", "extcomp", "tokenw", "rescue", "replay"):   # now panels of another table, or dropped for prose
         (OUT / f"table_cf_{merged}.tex").unlink(missing_ok=True)

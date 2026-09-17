@@ -2,7 +2,7 @@
 
     python scripts/check_numbers.py        (exit 1 on any disagreement)
 
-Reads runs/manifest.csv (cf_inclusion.read_manifest), tables/table_cf_main.tex, tables/table_cf_{altdir,ansdir,precision,geometry}.tex,
+Reads runs/manifest.csv (cf_inclusion.read_manifest), tables/table_cf_main.tex, tables/table_cf_{altdir,ansdir,scale,geometry}.tex,
 tables/table_seed_mass.tex with the registered seed tables (table_decoding, table_encoding_mass, table_mass_confirmation), figures/fig2_counts.json (written by
 plot_paper_figures.py fig2_overview), figures/figA1_own_share.json (figA1_write_structure), tables/cf_numbers.json
 (build_numbers.py), tables/table_cf_contingency.tex (the Section 5.1 decomposition macros), runs/robustness/round2.json with tables/table_cf_valid.tex and tables/table_cf_attr.tex (round-2 and ATTR macros), and, when main.pdf exists and pdftotext is available, the rendered abstract and Section 5.1.
@@ -19,7 +19,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 import cf_inclusion as ci   # noqa: E402
-from build_numbers import counts, pct   # noqa: E402
+from build_numbers import counts, pct, sci   # noqa: E402
 
 ROOT = HERE.parent
 DS = ("nih", "chexpert", "coco")
@@ -228,8 +228,8 @@ def main():
         row = tpl[g]; owned_pairs = sum(int(x) for x in re.findall(r"(\d+) \(", row[2]))
         expect(f"cfAnsdirt{G}Kept/KeptN, OwnedPairs/PairsAll", (M[f"cfAnsdirt{G}Kept"], M[f"cfAnsdirt{G}KeptN"], M[f"cfAnsdirt{G}OwnedPairs"], M[f"cfAnsdirt{G}PairsAll"]),
                (int(row[3]), int(row[4]), owned_pairs, 30 * int(row[1])))
-    # Table cf-precision vs the macros quoted in Section 5.8 and in its caption
-    pt = (ROOT / "tables" / "table_cf_precision.tex").read_text()
+    # the numerics panel of Table cf-scale vs the macros quoted in Section 5.8 and in that table's caption
+    pt = (ROOT / "tables" / "table_cf_scale.tex").read_text()
     pr = re.findall(r"& ([\d.]+) & ([\d.]+) & ([\d.]+) & ([\d.]+) \\\\$", pt, flags=re.M)
     print("PRECISION macros vs Table cf-precision:")
     expect("cfPrecisionGradeBlocks = rows", M["cfPrecisionGradeBlocks"], len(pr))
@@ -323,30 +323,34 @@ def main():
                       ("cfSwapOutside", "n_tensors_outside_tower")):
         expect(f"{name} in the caption", str(M[name]) in tw, True)
 
-    rp = (ROOT / "tables" / "table_cf_replay.tex").read_text()
+    # The replay is a control that changes no grade, so it has no table: Section 5.5 and Appendix A.8 carry it in prose.
+    # Every replay macro is therefore checked against the per-replay and per-pair records the module produces.
     R = r3.replay(wb)
-    rp_rows = re.findall(r"^(.+?) & (.+?) & ([\d.]+) & (\$.+?\$) & (\$.+?\$) & (\d+)/(\d+) & (\d+) \\\\$", rp, flags=re.M)
-    expect("Table cf-replay reader rows = cfReplayBlocks", len(rp_rows), M["cfReplayBlocks"])
-    expect("cfReplaySelf = rows whose tensors are their own", M["cfReplaySelf"], sum("(own)" in r[1] for r in rp_rows))
-    expect("cfReplayMoved/Cells = the moved column", (M["cfReplayMoved"], M["cfReplayCells"]),
-           (sum(int(r[5]) for r in rp_rows), sum(int(r[6]) for r in rp_rows)))
-    expect("cfReplayVerdictChanges + cfReplayOwnedChanges = the grade-changes column",
-           M["cfReplayVerdictChanges"] + M["cfReplayOwnedChanges"], sum(int(r[7]) for r in rp_rows))
-    expect("cfReplayMaxDW = the largest write change in the table", f"${M['cfReplayMaxDW']}$",
-           max((r[3] for r in rp_rows), key=lambda x: float(re.sub(r"\\times10\^\{(-?\d+)\}", r"e\1", x.strip("$")))))
-    expect("cfReplayDriftMax = the largest drift in the table", M["cfReplayDriftMax"], max(rp_rows, key=lambda r: float(r[2]))[2])
-    expect("cfReplayDriftZero = rows with zero drift", M["cfReplayDriftZero"], sum(float(r[2]) == 0.0 for r in rp_rows))
-    pr_rows = re.findall(r"^(.+? and .+?) & .+? & ([\d.]+) & ([\d.]+) & (-?[\d.]+) & (\d+)/(\d+) & "
-                         r"(-?[\d.]+)\\% \\\\$", rp, flags=re.M)
-    expect("Table cf-replay pair rows = cfReplayPairs", len(pr_rows), M["cfReplayPairs"])
-    expect("cfReplayPairOwnMin/Max = the own-towers column", (M["cfReplayPairOwnMin"], M["cfReplayPairOwnMax"]),
-           (min(r[1] for r in pr_rows), max(r[1] for r in pr_rows)))
+    rp_rows, pr_rows = R["blocks"], R["pairs"]
+    expect("cfReplayBlocks = the replay records", M["cfReplayBlocks"], len(rp_rows))
+    expect("cfReplaySelf = replays whose tensors are their own", M["cfReplaySelf"], sum(b["self_replay"] for b in rp_rows))
+    expect("cfReplayMoved/Cells = the moved concepts", (M["cfReplayMoved"], M["cfReplayCells"]),
+           (sum(b["n_nonzero"] for b in rp_rows), sum(b["n_concepts"] for b in rp_rows)))
+    expect("cfReplayVerdictChanges + cfReplayOwnedChanges = the grade changes",
+           M["cfReplayVerdictChanges"] + M["cfReplayOwnedChanges"],
+           sum(b["verdict_changes"] + b["owned_changes"] for b in rp_rows))
+    expect("cfReplayMaxDW = the largest write change over the replays", M["cfReplayMaxDW"],
+           sci(max(b["max_abs_dW"] for b in rp_rows)))
+    expect("cfReplayDriftMax = the largest drift over the replays", M["cfReplayDriftMax"],
+           f"{max(b['drift_max_abs'] for b in rp_rows):.2f}")
+    expect("cfReplayDriftZero = replays with zero drift", M["cfReplayDriftZero"],
+           sum(b["drift_max_abs"] == 0.0 for b in rp_rows))
+    expect("cfReplayTensorMin/Max = the mean absolute tensor entry", (M["cfReplayTensorMin"], M["cfReplayTensorMax"]),
+           (f"{min(b['block_mean_abs'] for b in rp_rows):.2f}", f"{max(b['block_mean_abs'] for b in rp_rows):.2f}"))
+    expect("cfReplayPairs = the reader-pair records", M["cfReplayPairs"], len(pr_rows))
+    expect("cfReplayPairOwnMin/Max = the own-tower differences", (M["cfReplayPairOwnMin"], M["cfReplayPairOwnMax"]),
+           (f"{min(p['mean_abs_own_towers'] for p in pr_rows):.3f}", f"{max(p['mean_abs_own_towers'] for p in pr_rows):.3f}"))
     expect("cfReplayChangeMax = the largest absolute change", M["cfReplayChangeMax"],
-           f"{max(abs(float(r[3])) for r in pr_rows):.4f}")
+           f"{max(abs(p['mean_abs_change']) for p in pr_rows):.4f}")
     expect("cfReplayRelMax = the largest absolute relative change", M["cfReplayRelMax"],
-           f"{max(abs(float(r[6])) for r in pr_rows):.1f}")
-    expect("cfReplayPairMoved/Cells = the pair moved column", (M["cfReplayPairMoved"], M["cfReplayPairCells"]),
-           (sum(int(r[4]) for r in pr_rows), sum(int(r[5]) for r in pr_rows)))
+           f"{max(abs(100 * p['mean_abs_change'] / p['mean_abs_own_towers']) for p in pr_rows):.1f}")
+    expect("cfReplayPairMoved/Cells = the pair moved counts", (M["cfReplayPairMoved"], M["cfReplayPairCells"]),
+           (sum(p["n_nonzero_exact"] for p in pr_rows), sum(p["n_concepts"] for p in pr_rows)))
 
     se = (ROOT / "tables" / "table_cf_semend.tex").read_text()
     S = r3.semend(wb)
@@ -461,13 +465,13 @@ def main():
                abs(round(float(M[f"cfFgMatch{K}Pooled"]) - float(row[5]) + float(row[6]), 6)) <= 0.001, True)
     expect("cfFgMatchSelN = every chest cell (the prose says all of them match)", M["cfFgMatchSelN"], M["cfFgChestCells"])
 
-    # Table cf-validfit-arms: the label source separated from the sample size
-    va = (ROOT / "tables" / "table_cf_validfit_arms.tex").read_text()
+    # the refit-arms panel of Table cf-valid: the label source separated from the sample size
+    va = (ROOT / "tables" / "table_cf_valid.tex").read_text()
     arm_rows = {m.group(1) + "|" + m.group(2): m.groups() for m in re.finditer(
         r"^(radiologist|report-derived) & (200 valid films|the same 200 valid films|200 training rows|"
         r"200 labelled training rows|every training row) & (\d+) & ([\d.]+) & ([\d.]+) & (-?[\d.]+) & (-?[\d.]+) \\\\$",
         va, flags=re.M)}
-    expect("Table cf-validfit-arms has five arms", len(arm_rows), 5)
+    expect("the refit-arms panel has five arms", len(arm_rows), 5)
     for key, K in (("radiologist|200 valid films", "Expert"),
                    ("report-derived|the same 200 valid films", "ReportSameFilms"),
                    ("report-derived|200 training rows", "ReportSubCohort"),
@@ -524,7 +528,7 @@ def main():
     # same numbers in the results): reference met, of how many cells, owned, stronger competitor, unresolved, and the
     # share of stronger-competitor verdicts arising below the reference
     print("abstract and introduction decomposition (macros, in order):")
-    order = ["cfChestRefMet", "cfChestAnswerableN", "cfChestOwned", "cfChestRefStrong", "cfChestRefUnres",
+    order = ["cfChestRefMet", "cfChestCellsN", "cfChestOwned", "cfChestRefStrong", "cfChestRefUnres",
              "cfChestCompetitor", "cfChestBelowStrong"]
     # the introduction carries the full decomposition; the abstract carries the two counts that open it
     src = (ROOT / "sections" / "0_abstract.tex").read_text()
@@ -572,7 +576,7 @@ def main():
         print("rendered PDF vs macros:")
         for phrase in (
                        f"readable in {M['cfChestReadable']} of {M['cfChestReadableN']} cells ({M['cfChestReadablePct']}%)",
-                       f"{M['cfChestAnswerable']} of the {M['cfChestAnswerableN']} cells with a scored write matrix ({M['cfChestAnswerablePct']}%)",
+                       f"{M['cfChestAnswerable']} of {M['cfChestAnswerableN']} cells ({M['cfChestAnswerablePct']}%)",
                        f"Yet only {M['cfChestOwned']} cells ({M['cfChestOwnedPct']}%) are owned",
                        f"In {M['cfChestCompetitor']} cells ({M['cfChestCompetitorPct']}%), the verdict",
                        f"owns {M['cfCocoOwnedPct']}% of cells on COCO",

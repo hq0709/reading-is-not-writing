@@ -17,9 +17,8 @@ Outputs (tables/):
   table_cf_controls.tex    Table: reference family and controls per dataset (median, IQR over blocks)
   table_cf_seed.tex        Table: Qwen2.5-VL-7B on NIH per concept (seed replication)
   table_seed_mass.tex      Appendix: the seed study's Mass competition, discovery and confirmation (from the registered tables)
-  table_cf_own_{nih,chexpert,coco}.tex   Appendix: compact ownership tables, checkpoint x concept, O_q per cell
+  table_cf_own.tex         Appendix: the ownership sheet, checkpoint x concept, O_q per cell, one panel per dataset
   table_cf_models.tex      Appendix: checkpoints and families (checkpoint sheet under family rows with the family-level grades)
-  table_cf_gates.tex       Appendix: the seven preflight gates and their observed ranges
   table_cf_coverage.tex    Appendix: modules completed per block (from runs/manifest.csv), primary template, ineligible modules
   table_cf_leaderboard.tex thin wrapper that inputs table_cf_main.tex (kept for the existing \\input)
 """
@@ -408,8 +407,8 @@ def table_contingency():
     print("table_cf_contingency.tex", len(rows), "cells")
 
 
-def table_ownership(blocks, ds, label, order):
-    """Compact checkpoint x concept table of O_q for one dataset (same checkpoint order as Table 1)."""
+def ownership_panel(blocks, ds, label, order):
+    """One dataset's panel of the ownership table: title row, concept header, one row per checkpoint, owned counts."""
     models = [m for m in order if (m, ds) in blocks]
     concepts = None
     for m in models:
@@ -418,16 +417,8 @@ def table_ownership(blocks, ds, label, order):
             concepts = list(b["core"].keys()); break
     if concepts is None:
         concepts = list(blocks[(models[0], ds)]["cal"].keys())
-    L = [r"\begin{table}[h]", r"\centering", r"\scriptsize", r"\setlength{\tabcolsep}{4pt}", r"\renewcommand{\arraystretch}{1.08}",
-         r"\input{tables/cf_colors}",
-         r"\caption{\textbf{Ownership on " + label + r".} Each cell is the ownership contrast $O_q$ of the concept's own write against its strongest "
-         r"clinical competitor at $\alpha=+0.25$. Cells are shaded slate for positive and terracotta for negative values (darker = larger magnitude, "
-         r"thresholds $0.02$, $0.10$, $0.25$). Bold marks owned cells (steering reference met and all simultaneous lower bounds $>0$). "
-         r"A dagger marks cells whose write meets the steering reference but has a stronger competitor; a double dagger marks reference-meeting cells whose comparison is unresolved. Grey ``inel.'' marks checkpoints whose "
-         r"yes/no template is ineligible and grey ``inc.'' a write matrix incomplete at packaging (neither enters any count). Checkpoints are in the order of Table~\ref{tab:cf-main}.}",
-         r"\label{tab:cf-own-" + ds + r"}",
-         r"\begin{tabular}{l" + "r" * len(concepts) + r"}", r"\toprule",
-         "Checkpoint & " + " & ".join(concepts) + r" \\", r"\midrule"]
+    L = [r"\multicolumn{7}{l}{\textbf{" + label + r"}} \\*", r"\midrule",
+         "Checkpoint & " + " & ".join(concepts) + r" \\*", r"\midrule"]
     n_own = {c: 0 for c in concepts}
     for m in models:
         b = blocks[(m, ds)]
@@ -446,9 +437,42 @@ def table_ownership(blocks, ds, label, order):
                 txt += r"$^{\dagger}$" if v.get("verdict") == "stronger_competitor" else r"$^{\ddagger}$"
             cells.append(shade_own(v["O_q"]) + txt)
         L.append(f"{NAMES[m]} & " + " & ".join(cells) + r" \\")
-    L += [r"\midrule", r"\textbf{Owned} & " + " & ".join(str(n_own[c]) for c in concepts) + r" \\",
-          r"\bottomrule", r"\end{tabular}", r"\end{table}"]
-    (OUT / f"table_cf_own_{ds}.tex").write_text("\n".join(L) + "\n")
+    L += [r"\midrule", r"\textbf{Owned} & " + " & ".join(str(n_own[c]) for c in concepts) + r" \\"]
+    return L
+
+
+def table_ownership(blocks, order):
+    """The appendix ownership sheet: O_q per checkpoint and concept, one panel per dataset in the order of Table 1.
+
+    The three panels are 20 checkpoints each, so the merged sheet is taller than a page: it is a longtable rather
+    than a float, with the concept header repeated at every break. Side by side the 18 concept columns do not fit
+    the text width at \\scriptsize, and the paper scales no table with \\resizebox."""
+    L = [r"\clearpage", r"\begingroup", r"\scriptsize", r"\setlength{\tabcolsep}{4pt}", r"\renewcommand{\arraystretch}{1.0}",
+         r"\setlength{\LTcapwidth}{\textwidth}",
+         r"\begin{longtable}{lrrrrrr}",
+         r"\caption{\textbf{Ownership of every concept.} One panel per dataset. Each cell is the ownership contrast "
+         r"$O_q$ of the concept's own write against its strongest clinical competitor at $\alpha=+0.25$. Cells are "
+         r"shaded slate for positive and terracotta for negative values (darker = larger magnitude, thresholds "
+         r"$0.02$, $0.10$, $0.25$). Bold marks owned cells (steering reference met and all simultaneous lower bounds "
+         r"$>0$). A dagger marks cells whose write meets the steering reference but has a stronger competitor; a "
+         r"double dagger marks reference-meeting cells whose comparison is unresolved. Grey ``inel.'' marks "
+         r"checkpoints whose yes/no template is ineligible and grey ``inc.'' a write matrix incomplete at packaging "
+         r"(neither enters any count). The last row of a panel counts that concept's owned cells. Checkpoints are in "
+         r"the order of Table~\ref{tab:cf-main}.}" + "\n" + r"\label{tab:cf-own} \\", r"\toprule", r"\endfirsthead",
+         r"\multicolumn{7}{l}{\textit{Ownership of every concept (continued).}} \\*", r"\toprule", r"\endhead",
+         r"\bottomrule", r"\endlastfoot"]
+    # The three panels do not fit one page. The table starts on a fresh page and breaks between the second and the
+    # third, so every panel keeps its own concept header above its rows rather than continuing headerless.
+    for i, (ds, label) in enumerate(DATASETS):
+        if i == len(DATASETS) - 1:
+            L.append(r"\newpage")
+        elif i:
+            L.append(r"\addlinespace[5pt]")
+        L += ownership_panel(blocks, ds, label, order)
+    L += [r"\end{longtable}", r"\endgroup"]
+    (OUT / "table_cf_own.tex").write_text("\n".join(L) + "\n")
+    for ds, _ in DATASETS:
+        (OUT / f"table_cf_own_{ds}.tex").unlink(missing_ok=True)
 
 
 # --------------------------------------------------------------------------------------------- appendix sheets
@@ -484,43 +508,6 @@ def table_models(blocks, stats):
     L += [r"\bottomrule", r"\end{tabular}", r"\end{table}"]
     (OUT / "table_cf_models.tex").write_text("\n".join(L) + "\n")
     (OUT / "table_cf_families.tex").unlink(missing_ok=True)   # merged into this table
-
-
-def table_gates(blocks):
-    A = B = G = 0.0; cons_lo = cons_hi = None; lg_lo = lg_hi = None; outside = 0.0; D = {}; fails = {}
-    for (m, d), b in blocks.items():
-        c = (b["pf"] or {}).get("checks")
-        if not c:
-            continue
-        A = max(A, c["A_determinism_max_abs_diff"]); B = max(B, c["B_alpha0_max_abs_diff"]); G = max(G, c["G_fp32_vs_model_logits"]["max_abs_diff"])
-        r = c["C_reach"]; cons_lo = r["consumer_max_abs_change"] if cons_lo is None else min(cons_lo, r["consumer_max_abs_change"]); cons_hi = r["consumer_max_abs_change"] if cons_hi is None else max(cons_hi, r["consumer_max_abs_change"])
-        lg_lo = r["answer_logit_max_abs_change"] if lg_lo is None else min(lg_lo, r["answer_logit_max_abs_change"]); lg_hi = r["answer_logit_max_abs_change"] if lg_hi is None else max(lg_hi, r["answer_logit_max_abs_change"])
-        outside = max(outside, r["locus_change_outside_consumed_tokens"])
-        D.setdefault(META[m][1], []).append(c["D_batch_vs_single"]["max_abs_candidate_logit_diff"])
-        el = b["elig"]
-        bad = "".join(t for t in TEMPLATES if el and not el.get(t, {}).get("eligible", True))
-        if bad:
-            fails.setdefault(NAMES[m], set()).add(bad)
-    d_all = [x for xs in D.values() for x in xs]
-    d_over = ", ".join(f"{f} ($\\leq${max(xs):.2f})" for f, xs in D.items() if max(xs) > 0.25)
-    e_txt = "; ".join(f"{k}: {'/'.join(sorted(v))}" for k, v in sorted(fails.items()))
-    rows = [("A", "Determinism", "identical answer logits on a repeated forward", f"max difference {A:g}"),
-            ("B", "Identity at $\\alpha=0$", "the armed hook with zero dose changes nothing", f"max difference {B:g}"),
-            ("C", "Reach", "the write changes the consumer input and the answer logits; no change outside consumed tokens",
-             f"consumer change {cons_lo:.2f}--{cons_hi:.2f}; answer logits {lg_lo:.2f}--{lg_hi:.2f}; outside consumed tokens {outside:g}"),
-            ("D", "Batch consistency", "single- vs batched-forward answer logits within 0.25", f"{min(d_all):.2f}--{max(d_all):.2f}; above tolerance (declared, neutralised by fixed batch composition): {d_over}"),
-            ("E", "Semantic mapping", "image-free ``present/absent'' statements map to the right answer token under each template", f"failing templates: {e_txt}"),
-            ("F", "Throughput", "rows per second recorded for scheduling", "3.8--35 rows/s"),
-            ("G", "fp32 answer logits", "fp32 logits recomputed from the final hidden state agree with the model's bf16 logits", f"max difference {G:.2f}")]
-    L = [r"\begin{table}[h]", r"\centering", r"\scriptsize", r"\setlength{\tabcolsep}{4pt}",
-         r"\caption{\textbf{Preflight gates.} Each block is scored only after the seven checks below run on 16 held-out rows at both loci; "
-         r"the right column gives the range observed over all completed blocks.}",
-         r"\label{tab:cf-gates}",
-         r"\begin{tabular}{clp{4.3cm}p{6.0cm}}", r"\toprule", r"Gate & Name & Criterion & Observed \\", r"\midrule"]
-    for g, name, crit, obs in rows:
-        L.append(f"{g} & {name} & {crit} & {obs} \\\\")
-    L += [r"\bottomrule", r"\end{tabular}", r"\end{table}"]
-    (OUT / "table_cf_gates.tex").write_text("\n".join(L) + "\n")
 
 
 # --------------------------------------------------------------------------------------------- coverage (manifest)
@@ -596,12 +583,10 @@ if __name__ == "__main__":
     table_controls(blocks)
     table_seed(blocks)
     table_seed_mass()
-    for ds, label in DATASETS:
-        table_ownership(blocks, ds, label, order)
+    table_ownership(blocks, order)
     table_contingency()
     for ds, _ in DATASETS:
         (OUT / f"table_cf_{ds}.tex").unlink(missing_ok=True)
     table_models(blocks, stats)
-    table_gates(blocks)
     table_coverage()
     print(f"{len(blocks)} blocks -> tables written to {OUT}")

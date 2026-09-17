@@ -2,7 +2,7 @@
 \centering
 \scriptsize
 \setlength{\tabcolsep}{4pt}
-\caption{\textbf{The grade on radiologist labels.} For every CheXpert block with the valid module, the complete grade is recomputed on 200 frontal films of the CheXpert validation set (one per patient, radiologist consensus labels, no patient shared with any campaign role) with the campaign rules: the steering reference against the random 95th percentile and the sham on those rows, and the $6\times5$ max-$T$ verdict over 2{,}000 unit-bootstrap draws. The test grade is the same computation on the 600 labeler-labelled test rows. Columns: concepts of six with the complete owned grade on the test rows and on the valid rows, concepts of six whose clinical-comparison verdict agrees across the two cohorts, concepts of six whose owned grade agrees across the two cohorts, and the median $|O_q(\text{valid})-O_q(\text{test})|$ (90th percentile over all cells 0.021). On the 76 cells with at least 10 positives and 10 negatives on both cohorts, readability agrees in 73 of 76 and answer capability in 60 of 76.}
+\caption{\textbf{The grade on radiologist labels, and what refitting on them changes.} For every CheXpert block with the valid module, the complete grade is recomputed on 200 frontal films of the CheXpert validation set (one per patient, radiologist consensus labels, no patient shared with any campaign role) with the campaign rules: the steering reference against the random 95th percentile and the sham on those rows, and the $6\times5$ max-$T$ verdict over 2{,}000 unit-bootstrap draws. The test grade is the same computation on the 600 labeler-labelled test rows. Columns: concepts of six with the complete owned grade on the test rows and on the valid rows, concepts of six whose clinical-comparison verdict agrees across the two cohorts, concepts of six whose owned grade agrees across the two cohorts, and the median $|O_q(\text{valid})-O_q(\text{test})|$ (90th percentile over all cells 0.021). On the 76 cells with at least 10 positives and 10 negatives on both cohorts, readability agrees in 73 of 76 and answer capability in 60 of 76. The lower panel refits the six directions on the radiologist labels themselves and separates the two things that change at once when the refit is compared with the shipped direction: which labels were used, and how many rows were available to fit them.}
 \label{tab:cf-valid}
 \begin{tabular}{lrrrrr}
 \toprule
@@ -29,6 +29,30 @@ LLaVA-1.5-13B & 0 & 0 & 5/6 & 6/6 & 0.000 \\
 LLaVA-Med 1.5 7B & 1 & 1 & 6/6 & 6/6 & 0.000 \\
 \midrule
 \textit{all} (19 blocks) & 19 & 17 & 97/114 & 112/114 & 0.003 \\
+\bottomrule
+\end{tabular}
+
+\medskip
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{llrrrrr}
+\toprule
+\multicolumn{7}{p{0.95\linewidth}}{\textit{The label source of a refitted direction against the number of rows it was fitted on. The expert-label refit is estimated on 200 radiologist-labelled films and the shipped direction on about 20{,}000 report-labelled rows, so comparing only those two confounds the two. Every arm keeps the block's own projection, its stored train-only scaler, the protocol's probe settings and the same 5-fold cross-fitting over patients, and is scored on the same films by a direction not fitted on them. The two training subsample arms redraw the fitting rows 20 times and report the median; the second draws enough rows to leave the concept with as many labelled rows as the expert refit has. Cosines are to the shipped direction. Medians over the 36 cells of 6 CheXpert blocks.}} \\
+\midrule
+ & & & \multicolumn{2}{c}{cross-fitted AUROC against} & \multicolumn{2}{c}{cosine to shipped} \\
+\cmidrule(lr){4-5}\cmidrule(lr){6-7}
+Labels & Fitted on & rows & radiologist & report & raw & whitened \\
+\midrule
+radiologist & 200 valid films & 160 & 0.69 & 0.71 & 0.12 & 0.56 \\
+report-derived & the same 200 valid films & 44 & 0.67 & 0.71 & 0.12 & 0.59 \\
+report-derived & 200 training rows & 42 & 0.66 & 0.70 & 0.12 & 0.58 \\
+report-derived & 200 labelled training rows & 160 & 0.70 & 0.74 & 0.22 & 0.69 \\
+report-derived & every training row & 5332 & 0.79 & 0.86 & 1.00 & 1.00 \\
+\midrule
+\multicolumn{7}{l}{\textit{What each contrast isolates, in AUROC against the radiologist labels}} \\
+\midrule
+\multicolumn{6}{l}{label source, both arms fitting the same number of rows} & -0.01 \\
+\multicolumn{6}{l}{sample size, both arms on report-derived labels} & 0.09 \\
+\multicolumn{6}{l}{the expert refit against the shipped direction, which mixes the two} & -0.11 \\
 \bottomrule
 \end{tabular}
 \end{table}

@@ -2,7 +2,7 @@
 \centering
 \scriptsize
 \setlength{\tabcolsep}{4pt}
-\caption{\textbf{Ownership under alternative scales, strata, refits, and loci.} Per dataset: cells with the complete owned grade on the probability scale (the paper's grade) and on the logit-margin scale (the steering reference recomputed on that scale and a positive percentile interval for $O^m_q$), with the cells owned on both; cells with $O_q>0$ (the sign alone) among owned and among not-owned cells when every cell is restricted to its unsaturated rows ($0.01<P(\mathrm{yes})<0.99$ on the clean pass); median $|O_q(\text{seed }k)-O_q(\text{seed }0)|$ over the two refit seeds and the owned cells that keep $O_q>0$ under both (the refits exist for NIH and COCO); median $|W_{q,q}|$ at the primary and connector loci and connector cells whose write beats the connector random family.}
+\caption{\textbf{Ownership under alternative scales, strata, refits, loci, and numerics.} Per dataset: cells with the complete owned grade on the probability scale (the paper's grade) and on the logit-margin scale (the steering reference recomputed on that scale and a positive percentile interval for $O^m_q$), with the cells owned on both; cells with $O_q>0$ (the sign alone) among owned and among not-owned cells when every cell is restricted to its unsaturated rows ($0.01<P(\mathrm{yes})<0.99$ on the clean pass); median $|O_q(\text{seed }k)-O_q(\text{seed }0)|$ over the two refit seeds and the owned cells that keep $O_q>0$ under both (the refits exist for NIH and COCO); median $|W_{q,q}|$ at the primary and connector loci and connector cells whose write beats the connector random family. The lower panel rescores the write grid on the first 200 test rows of each block with fp32 weights and forward pass, and in bf16 at batch size one, against the bf16 batched grid on the same rows: the largest change over the $6\times126$ written cells, $\max|\Delta W|$, and in a clinical contrast, $\max|\Delta C_{q,d}|$. Regraded under either setting, verdicts change in \cfPrecisionVerdictChanges{} and steering references in \cfPrecisionRefChanges{} of the \cfPrecisionGradeCells{} grades, and the two point verdicts change in \cfPrecisionPointVerdictChanges{}.}
 \label{tab:cf-scale}
 \begin{tabular}{lrrrrrrrrrr}
 \toprule
@@ -15,6 +15,28 @@ CheXpert Plus & 19/120 & 21/120 & 19 & 19/19 & 12/97 & 0.026 & 9/19 & 0.037 & 0.
 COCO & 101/120 & 102/120 & 100 & 93/94 & 9/19 & 0.023 & 95/101 & 0.238 & 0.008 & 87/120 \\
 \midrule
 \multicolumn{11}{p{0.9\linewidth}}{\textit{Batch effects at the gates (61 blocks): batched-vs-single candidate-logit difference 0.07--1.84 (median 0.36); margin sign agreement in 55 of 61 blocks; owned cells in disagreeing blocks: 0.}} \\
+\bottomrule
+\end{tabular}
+
+\medskip
+\setlength{\tabcolsep}{5pt}
+\begin{tabular}{llrrrr}
+\toprule
+\multicolumn{6}{l}{\textit{Numerics: the same grid rescored in fp32 and at batch size one}} \\
+\midrule
+ & & \multicolumn{2}{c}{fp32 weights and forward} & \multicolumn{2}{c}{bf16, batch size one} \\
+\cmidrule(lr){3-4}\cmidrule(lr){5-6}
+Checkpoint & Dataset & $\max|\Delta W|$ & $\max|\Delta C|$ & $\max|\Delta W|$ & $\max|\Delta C|$ \\
+\midrule
+Qwen2.5-VL-7B & NIH ChestX-ray14 & 0.0087 & 0.0063 & 0.0065 & 0.0049 \\
+Qwen2.5-VL-7B & COCO & 0.0060 & 0.0032 & 0.0028 & 0.0020 \\
+Qwen3-VL-8B & NIH ChestX-ray14 & 0.0177 & 0.0089 & 0.0204 & 0.0089 \\
+InternVL3.5-8B & NIH ChestX-ray14 & 0.0018 & 0.0014 & 0.0018 & 0.0014 \\
+Gemma 3 4B & NIH ChestX-ray14 & 0.0544 & 0.0493 & 0.0261 & 0.0377 \\
+Gemma 3 12B & NIH ChestX-ray14 & 0.0558 & 0.0359 & 0.0111 & 0.0109 \\
+Gemma 3 27B & NIH ChestX-ray14 & 0.0413 & 0.0186 & 0.0149 & 0.0053 \\
+MedGemma 4B & NIH ChestX-ray14 & 0.0125 & 0.0069 & 0.0056 & 0.0054 \\
+Lingshu 32B & NIH ChestX-ray14 & 0.0032 & 0.0023 & 0.0009 & 0.0007 \\
 \bottomrule
 \end{tabular}
 \end{table}
