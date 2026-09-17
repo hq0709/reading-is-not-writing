@@ -617,7 +617,8 @@ def attr():
     ch = P["chest"]
     groups = [(ds, NAMES[ds]) for ds in dss] + ([("chest", r"\textit{chest}")] if len(dss) > 1 else [])
     mm = ch["max_median_abs_cos_pair"] or {}
-    L = [r"\begin{table}[p]", r"\centering", r"\scriptsize", r"\setlength{\tabcolsep}{4pt}",
+    L = [r"\begingroup", r"\scriptsize", r"\setlength{\tabcolsep}{4pt}",
+         r"\begin{longtable}{llrrccc}",
          r"\caption{\textbf{Non-clinical attributes of the same radiographs.} Three attributes of each film---an anteroposterior "
          r"(portable) projection, female sex, and age at least 60---are read from the dataset's own metadata and fitted on the same "
          r"images, features, projection, and probe settings as the clinical probes. The three attribute directions and the six "
@@ -634,8 +635,12 @@ def attr():
          + _pair_label(mm.get("pair")) + r"). The last panel splits the same cells by how well the model already answers each "
          r"question, at the bin edges " + ", ".join(f2(e, 2) for e in r3.stratified()["bin_edges"][1:-1]) + r" fixed in the "
          r"released analysis code; the last bin is closed on the right and every cell falls in exactly one bin.}",
-         r"\label{tab:cf-attr}",
-         r"\begin{tabular}{llrrccc}", r"\toprule",
+         r"\label{tab:cf-attr}\\*[2pt]",
+         r"\endfirsthead",
+         r"\multicolumn{7}{l}{\textit{Table~\ref{tab:cf-attr}, continued}} \\", r"\toprule",
+         r"Checkpoint & Dataset & attributes owned & findings owned & " + " & ".join(ATTR_SHORT[a] for a in attrs) + r" \\",
+         r"\midrule", r"\endhead",
+         r"\toprule",
          r"Checkpoint & Dataset & attributes owned & findings owned & " + " & ".join(ATTR_SHORT[a] for a in attrs) + r" \\", r"\midrule"]
     for b in sorted(B["blocks"], key=lambda b: _ckpt_key(b["block"])):
         L.append(f"{CKPT.get(b['model'], b['model'])} & {NAMES[b['dataset']]} & {b['attr_owned']}/{b['attr_cells']} & {b['clin_owned']}/{b['clin_cells']} & "
@@ -665,19 +670,30 @@ def attr():
         c = cmp_[mode]
         L.append(f"{label} & {unit} & {c['attr_cells']} & {c['attr_owned']} & {c['clin_cells']} & {c['clin_owned']} & "
                  f"{f2(c['attr_owned_share'] - c['clin_owned_share'], 3)} \\\\")
+    L += [r"\bottomrule", r"\end{longtable}", r"\endgroup"]
+    (OUT / "table_cf_attr.tex").write_text("\n".join(L) + "\n")
+    print("table_cf_attr.tex", {g: P[g]["blocks"] for g, _ in groups})
+    # The stratification is its own table: with it appended, the float is taller than a page and its last rows fall off.
     S = r3.stratified(); A = S["attribute_vs_finding"]
-    L += [r"\midrule", r"\multicolumn{7}{l}{\textit{The same cells stratified on clean-answer AUROC, owned of cells}} \\",
-          r"Cells & " + " & ".join(b.replace(">=", r"$\geq$").replace("<", r"$<$").replace("-", "--")
-                                   for b in S["bin_labels"]) + r" & all cells \\", r"\midrule"]
+    edges = ", ".join(f2(e, 2) for e in S["bin_edges"][1:-1])
+    T = [r"\begin{table}[t]", r"\centering", r"\small", r"\setlength{\tabcolsep}{4pt}",
+         r"\caption{\textbf{Attributes and findings by how well the model answers the question.} The cells of "
+         r"Table~\ref{tab:cf-attr} split by the AUROC of the model's clean answer against the question's own label, at the bin "
+         r"edges " + edges + r" fixed in the released analysis code; the last bin is closed on the right and every cell falls in "
+         r"exactly one bin. Each entry is owned cells of cells in that bin.}",
+         r"\label{tab:cf-attr-strat}",
+         r"\begin{tabular}{l" + "r" * (len(S["bin_labels"]) + 1) + r"}", r"\toprule",
+         r"Cells & " + " & ".join(b.replace(">=", r"$\geq$").replace("<", r"$<$").replace("-", "--")
+                                  for b in S["bin_labels"]) + r" & all cells \\", r"\midrule"]
     for g, name in (("attribute_nih", "attributes, NIH ChestX-ray14"), ("attribute_chexpert", "attributes, CheXpert Plus"),
                     ("attribute_chest", r"\textit{attributes, chest}"), ("finding_nih", "findings, NIH ChestX-ray14"),
                     ("finding_chexpert", "findings, CheXpert Plus"), ("finding_chest", r"\textit{findings, chest}")):
         d = A["groups"][g]
-        L.append(name + " & " + " & ".join(f"{b['owned']}/{b['cells']}" for b in d["bins"])
+        T.append(name + " & " + " & ".join(f"{b['owned']}/{b['cells']}" for b in d["bins"])
                  + f" & {d['owned']}/{d['cells']} \\\\")
-    L += [r"\bottomrule", r"\end{tabular}", r"\end{table}"]
-    (OUT / "table_cf_attr.tex").write_text("\n".join(L) + "\n")
-    print("table_cf_attr.tex", {g: P[g]["blocks"] for g, _ in groups})
+    T += [r"\bottomrule", r"\end{tabular}", r"\end{table}"]
+    (OUT / "table_cf_attr_strat.tex").write_text("\n".join(T) + "\n")
+    print("table_cf_attr_strat.tex", len(A["groups"]), "groups")
 
 
 # --------------------------------------------------------------------------- the four crossed experiments of Section 5
@@ -876,7 +892,7 @@ def fgobj():
     difficulty-matched comparison of chest cells against natural-image cells (runs/robustness/round2.json fgobj section)."""
     F = r3.fgobj(ci.write_blocks(ci.load_runs()))
     P = F["pool"]
-    L = [r"\begin{table}[p]", r"\centering", r"\scriptsize", r"\setlength{\tabcolsep}{4pt}",
+    L = [r"\begin{table}[p]", r"\centering", r"\scriptsize", r"\setlength{\tabcolsep}{4pt}", r"\setlength{\abovecaptionskip}{2pt}", r"\setlength{\belowcaptionskip}{0pt}", r"\renewcommand{\arraystretch}{0.95}",
          r"\caption{\textbf{Small and fine-grained objects, and the difficulty-matched comparison.} The six categories---"
          + ", ".join(F["concepts"][:-1]) + ", and " + F["concepts"][-1] + r"---were fixed by a rule on the label counts and the mean "
          r"instance areas of the fixed cohorts alone, registered before any of them was scored, as were the two matching windows; "

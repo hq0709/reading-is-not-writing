@@ -1,6 +1,6 @@
 \PassOptionsToPackage{table}{xcolor}
 \documentclass{article}
-\usepackage{iclr2027_conference}
+\usepackage{preprint}
 \usepackage{newtxtext,newtxmath}
 \usepackage{microtype}
 \usepackage{graphicx}
@@ -26,7 +26,24 @@
 \title{Reading Is Not Writing:\\
 Semantic Competition for Probe Directions\\
 in Medical Vision-Language Models}
-\author{Anonymous Authors}
+
+\authorline{%
+Hanqi Jiang\aff{1,2,*} \quad
+Weihang You\aff{1,*} \quad
+Junhao Chen\aff{1}\\
+Yi Pan\aff{1} \quad
+Tianming Liu\aff{1,\dag} \quad
+Lei Xing\aff{2,\dag}}
+
+\affiliations{%
+\aff{1}School of Computing, University of Georgia\\
+\aff{2}School of Medicine, Stanford University}
+
+%% Contact emails go on the corresponding-author line below, e.g.
+%% \aff{\dag}Corresponding authors: \texttt{first@uga.edu}, \texttt{second@stanford.edu}.
+\titlenotes{%
+\aff{*}Equal contribution.\\
+\aff{\dag}Corresponding authors.}
 
 \begin{document}
 \maketitle
@@ -44,7 +61,7 @@ in Medical Vision-Language Models}
 \input{sections/7_conclusion}
 \input{sections/8_statements}
 \bibliography{refs}
-\bibliographystyle{iclr2027_conference}
+\bibliographystyle{plainnat}
 
 \clearpage
 \appendix

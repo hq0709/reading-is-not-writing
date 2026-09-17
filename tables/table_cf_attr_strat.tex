@@ -1,0 +1,19 @@
+\begin{table}[t]
+\centering
+\small
+\setlength{\tabcolsep}{4pt}
+\caption{\textbf{Attributes and findings by how well the model answers the question.} The cells of Table~\ref{tab:cf-attr} split by the AUROC of the model's clean answer against the question's own label, at the bin edges 0.50, 0.70, 0.80, 0.90 fixed in the released analysis code; the last bin is closed on the right and every cell falls in exactly one bin. Each entry is owned cells of cells in that bin.}
+\label{tab:cf-attr-strat}
+\begin{tabular}{lrrrrrr}
+\toprule
+Cells & $<$ 0.50 & 0.50--0.70 & 0.70--0.80 & 0.80--0.90 & $\geq$ 0.90 & all cells \\
+\midrule
+attributes, NIH ChestX-ray14 & 1/4 & 1/26 & 3/14 & 2/6 & 0/7 & 7/57 \\
+attributes, CheXpert Plus & 0/5 & 3/29 & 0/12 & 2/5 & 0/6 & 5/57 \\
+\textit{attributes, chest} & 1/9 & 4/55 & 3/26 & 4/11 & 0/13 & 12/114 \\
+findings, NIH ChestX-ray14 & 0/6 & 2/63 & 2/32 & 2/13 & 0/0 & 6/114 \\
+findings, CheXpert Plus & 0/13 & 4/47 & 2/9 & 5/21 & 6/24 & 17/114 \\
+\textit{findings, chest} & 0/19 & 6/110 & 4/41 & 7/34 & 6/24 & 23/228 \\
+\bottomrule
+\end{tabular}
+\end{table}

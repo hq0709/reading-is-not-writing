@@ -1,0 +1,75 @@
+%% preprint.sty -- plain preprint layout for this manuscript.
+%%
+%% Sets the page geometry and the title block, and nothing else: no running
+%% head, no margin line numbers, no venue or submission macros. Self-contained,
+%% so it needs no package beyond geometry and natbib (authblk is not required;
+%% the author block is built by hand).
+
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{preprint}[2026/09/17 v1.0 plain preprint layout]
+
+%% ---------------------------------------------------------------- page geometry
+%% Letter paper with a 5.5in x 9in text block, centred horizontally (1.5in side
+%% margins), so a figure drawn at 5.5in spans the text block without scaling.
+\RequirePackage[letterpaper,textwidth=5.5in,textheight=9in,top=1in,
+                footskip=0.45in]{geometry}
+
+%% Page number centred at the foot, nothing at the head, on every page.
+\pagestyle{plain}
+
+%% Float placement only: let a large table or figure share a page with a short
+%% run of text instead of being pushed onto a page of its own. This moves no
+%% text; it keeps a float-dense manuscript from opening white gaps.
+\renewcommand{\topfraction}{0.95}
+\renewcommand{\textfraction}{0.05}
+
+%% ---------------------------------------------------------- author-year citations
+\RequirePackage{natbib}
+\setcitestyle{authoryear,round,citesep={;},aysep={,},yysep={;}}
+
+%% ------------------------------------------------------------------- title block
+%% Filled from the document preamble:
+%%   \authorline{...}    the centred author line(s); mark affiliations with \aff
+%%   \affiliations{...}  one line per affiliation, separated by \\
+%%   \titlenotes{...}    footnote-style lines under the affiliations
+%%   \preprintline{...}  the discreet status line (default: Preprint)
+\def\@author{}
+\def\@authorline{}
+\def\@affiliations{}
+\def\@titlenotes{}
+\def\@preprintline{Preprint}
+\newcommand{\authorline}[1]{\gdef\@authorline{#1}}
+\newcommand{\affiliations}[1]{\gdef\@affiliations{#1}}
+\newcommand{\titlenotes}[1]{\gdef\@titlenotes{#1}}
+\newcommand{\preprintline}[1]{\gdef\@preprintline{#1}}
+
+%% Superscript affiliation / note marker.
+\newcommand{\aff}[1]{\textsuperscript{#1}}
+
+\renewcommand{\@maketitle}{%
+  \newpage
+  \null
+  \vskip 1em%
+  \begin{center}%
+    {\LARGE\bfseries\@title\par}%
+    \ifx\@authorline\@empty\else
+      \vskip 1.4em%
+      {\large\@authorline\par}%
+    \fi
+    \ifx\@affiliations\@empty\else
+      \vskip 0.9em%
+      {\normalsize\@affiliations\par}%
+    \fi
+    \ifx\@titlenotes\@empty\else
+      \vskip 0.9em%
+      {\small\@titlenotes\par}%
+    \fi
+    \ifx\@preprintline\@empty\else
+      \vskip 1.2em%
+      {\small\@preprintline\par}%
+    \fi
+  \end{center}%
+  \par
+  \vskip 1em}
+
+\endinput

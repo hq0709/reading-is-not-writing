@@ -514,8 +514,10 @@ def main():
         "finding_chexpert": rebin([c for c in ccells if c["dataset"] == "chexpert"]),
         "finding_chest": rebin(ccells)}
     STRAT_ROW = re.compile(r"^(.+?) & (\d+)/(\d+) & (\d+)/(\d+) & (\d+)/(\d+) & (\d+)/(\d+) & (\d+)/(\d+) & (\d+)/(\d+) \\\\$", re.M)
+    strat_src = fg + "".join((ROOT / "tables" / f"{t}.tex").read_text()
+                             for t in ("table_cf_attr", "table_cf_attr_strat"))   # the attribute stratification is its own table
     panel = {m.group(1): [(int(m.group(2 * i + 2)), int(m.group(2 * i + 3))) for i in range(6)]
-             for m in STRAT_ROW.finditer(fg + (ROOT / "tables" / "table_cf_attr.tex").read_text())}
+             for m in STRAT_ROW.finditer(strat_src)}
     print("stratified panels vs a recount of the raw cells:")
     for g, lab, G in (("nih", "NIH ChestX-ray14", "Nih"), ("chexpert", "CheXpert Plus", "Chex"),
                       ("chest", r"\textit{chest findings}", "Chest"),
@@ -687,7 +689,8 @@ def main():
     pdf = ROOT / "main.pdf"
     if pdf.exists() and shutil.which("pdftotext"):
         txt = subprocess.run(["pdftotext", "-layout", str(pdf), "-"], capture_output=True, text=True).stdout
-        txt = "\n".join(re.sub(r"^\s*\d{1,4}(?=\s{2,}|$)", "", ln) for ln in txt.splitlines())   # ICLR margin line numbers
+        # The preprint layout prints no margin line numbers, so nothing is stripped from the start of a
+        # line: a leading number there is a table value, not a line label.
         flat = re.sub(r"\s+", " ", txt)
         print("rendered PDF vs macros:")
         for phrase in (
