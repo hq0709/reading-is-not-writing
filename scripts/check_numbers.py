@@ -323,6 +323,19 @@ def main():
                       ("cfSwapOutside", "n_tensors_outside_tower")):
         expect(f"{name} in the caption", str(M[name]) in tw, True)
 
+    # The crossed arms' clean-answer ability has no table: Appendix A.8 carries it in prose, one native and one hybrid
+    # figure per crossed block, and the range the prose quotes is recomputed from those twelve macros.
+    TA = r3.towerswap_answer(wb)
+    pairs = [(f"cfSwapAnsNative{h}{d}", f"cfSwapAnsHybrid{h}{d}") for h in ("Gem", "Med") for d in ("Nih", "Chex", "Coco")]
+    expect("cfSwapAnsArms = the crossed blocks", M["cfSwapAnsArms"], len(TA["blocks"]))
+    expect("cfSwapAnsArms = cfSwapBlocks (one hybrid arm per crossed block)", M["cfSwapAnsArms"], M["cfSwapBlocks"])
+    expect("one native and one hybrid figure per crossed block", len(pairs), M["cfSwapAnsArms"])
+    drops = [round(float(M[n]) - float(M[y]), 3) for n, y in pairs]
+    expect("cfSwapAnsWorse = hybrid arms below the native arm of their block", sum(d > 0 for d in drops), M["cfSwapAnsWorse"])
+    expect("cfSwapAnsWorse covers every crossed arm", M["cfSwapAnsWorse"], M["cfSwapAnsArms"])
+    expect("cfSwapAnsDropMin/Max = the range of the twelve printed figures",
+           (M["cfSwapAnsDropMin"], M["cfSwapAnsDropMax"]), (f"{min(drops):.3f}", f"{max(drops):.3f}"))
+
     # The replay is a control that changes no grade, so it has no table: Section 5.5 and Appendix A.8 carry it in prose.
     # Every replay macro is therefore checked against the per-replay and per-pair records the module produces.
     R = r3.replay(wb)
@@ -621,21 +634,27 @@ def main():
            (M["cfAttrChestAttrOwned"], M["cfAttrChestAttrN"], M["cfAttrChestClinOwned"], M["cfAttrChestClinN"]))
     expect("cfAttrqBlocks = cfAttrBlocks (the phrasings are scored in every attribute block)", M["cfAttrqBlocks"], M["cfAttrBlocks"])
     expect("cfAttrRefBlocks = cfAttrBlocks (one steering reference in every block)", M["cfAttrRefBlocks"], M["cfAttrBlocks"])
-    # the abstract and the introduction state the reference decomposition in order, from macros (Section 5.1 carries the
-    # same numbers in the results): reference met, of how many cells, owned, stronger competitor, unresolved, and the
-    # share of stronger-competitor verdicts arising below the reference
-    print("abstract and introduction decomposition (macros, in order):")
-    order = ["cfChestRefMet", "cfChestCellsN", "cfChestOwned", "cfChestRefStrong", "cfChestRefUnres",
-             "cfChestCompetitor", "cfChestBelowStrong"]
-    # the introduction carries the full decomposition; the abstract carries the two counts that open it
+    # the abstract and the results section state the reference decomposition in order, from macros: reference met, of
+    # how many cells, owned, stronger competitor, unresolved, and the share of stronger-competitor verdicts arising
+    # below the reference. The decomposition is stated once, in the results; the abstract carries the two counts that
+    # open it, and the introduction no longer restates either.
+    print("abstract and results decomposition (macros, in order):")
+    order = ["cfChestCellsN", "cfChestRefMet", "cfChestOwned", "cfChestRefStrong", "cfChestRefUnres",
+             "cfChestBelowStrong", "cfChestCompetitor"]
     src = (ROOT / "sections" / "0_abstract.tex").read_text()
     expect("0_abstract: reference count and owned count present",
            [m for m in ("cfChestRefMet", "cfChestOwned") if not re.search(rf"\\{m}(?![A-Za-z])", src)], [])
-    for f in ("1_introduction",):
-        src = (ROOT / "sections" / f"{f}.tex").read_text()
-        at = [(lambda g: g.start() if g else -1)(re.search(rf"\\{m}(?![A-Za-z])", src)) for m in order]
-        expect(f"{f}: every decomposition macro present", [m for m, p in zip(order, at) if p < 0], [])
-        expect(f"{f}: reference before ownership before the below-reference share",
+    intro = (ROOT / "sections" / "1_introduction.tex").read_text()
+    expect("1_introduction: the decomposition is not restated before the method",
+           [m for m in ("cfChestRefMet", "cfChestRefStrong", "cfChestRefUnres", "cfChestBelowStrong")
+            if re.search(rf"\\{m}(?![A-Za-z])", intro)], [])
+    src = (ROOT / "sections" / "5_results.tex").read_text()
+    para = [p for p in src.split("\n\n") if re.search(r"\\cfChestRefMet(?![A-Za-z])", p)]
+    expect("5_results: the decomposition is stated in exactly one paragraph", len(para), 1)
+    if len(para) == 1:
+        at = [(lambda g: g.start() if g else -1)(re.search(rf"\\{m}(?![A-Za-z])", para[0])) for m in order]
+        expect("5_results: every decomposition macro present", [m for m, p in zip(order, at) if p < 0], [])
+        expect("5_results: cells before reference before ownership before the below-reference share",
                [p for p in at if p >= 0] == sorted(p for p in at if p >= 0), True)
     # ---- the reference-and-rule ledger (Table cf-ledger): the table's own rows against the macros the prose reads,
     #      and both against the ledger the artefacts produce, so a row cannot say one thing and the prose another

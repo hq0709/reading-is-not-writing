@@ -11,7 +11,7 @@ Every VLM in the grid passes an image through a vision tower and hands a specifi
 \hvec'_{it}=\hvec_{it}+\alpha\,\lVert\hvec_{it}\rVert_2\,\hat\wvec_c,
 \label{eq:intervention}
 \end{equation}
-so that the dose $\alpha$ is a fraction of each token's own norm and is comparable across families whose activation scales differ by orders of magnitude. Reading and writing therefore use the same representation and the same positions. Everything downstream of the primary locus---the connector and the language model---is the \emph{reader} of that representation; ownership is a property of the pair (representation, reader), and Section~\ref{sec:reader} separates the two.
+so that the dose $\alpha$ is a fraction of each token's own norm and is comparable across families whose activation scales differ by orders of magnitude. Reading and writing therefore use the same representation and the same positions. Everything downstream of the primary locus---the connector and the language model---is the \emph{reader} of that representation.
 
 \subsection{Directions, controls, and the reference family}
 \label{sec:directions}

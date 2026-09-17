@@ -3,6 +3,8 @@ consistency check so that a table and the macro beside it can never drift apart.
 
     towerswap(wb)   crossed tower and reader: the vision tower of one checkpoint behind the other's connector and
                     language model, against the two native arms, on the same rows.
+    towerswap_answer(wb)
+                    how well each crossed arm answers its questions with no write, on the rows the crossing grades.
     replay(wb)      identical-tensor replay: the consumed block's stored token tensors fed to both readers of a
                     shared-tower pair, so the input is identical bit for bit rather than equal up to rounding.
     semend(wb)      semantic endpoints: both direction families written at four endpoints no direction was fitted
@@ -153,6 +155,67 @@ def towerswap(wb: dict) -> dict:
             "n_rows": sorted({b["n_rows"] for b in blocks}), "alpha": sorted({b["alpha"] for b in blocks}),
             "draws": sorted({b["draws"] for b in blocks}),
             "crossover_blocks": [b for b in blocks if b["crossover"]]}
+
+
+def _auroc(y, s):
+    """AUROC of score s against binary label y, ties averaged; None when one class is missing."""
+    import numpy as np
+    y = np.asarray(y, dtype=int); s = np.asarray(s, dtype=float)
+    npos = int((y == 1).sum()); nneg = int((y == 0).sum())
+    if npos == 0 or nneg == 0:
+        return None
+    order = np.argsort(s, kind="mergesort")
+    srt = s[order]
+    r = np.empty(len(s), dtype=float)
+    i = 0
+    while i < len(s):
+        j = i
+        while j + 1 < len(s) and srt[j + 1] == srt[i]:
+            j += 1
+        r[i:j + 1] = (i + j) / 2.0 + 1.0
+        i = j + 1
+    ranks = np.empty(len(s), dtype=float)
+    ranks[order] = r
+    return float((ranks[y == 1].sum() - npos * (npos + 1) / 2.0) / (npos * nneg))
+
+
+def towerswap_answer(wb: dict) -> dict:
+    """How well each crossed arm answers its questions without any write, on the rows the crossing grades.
+
+    For every block carrying the crossed module, the unwritten rows of the hybrid arm and of the block's own native
+    arm give one AUROC of the yes probability against the dataset label per concept, on the same rows and the same
+    labelled subset; the block's figure is the median over its six concepts."""
+    import pandas as pd
+
+    blocks = []
+    for k in _blocks(wb, "TOWERSWAP", "towerswap"):
+        d = wb[k]["dir"]
+        meta = json.loads(sorted((d / "outcomes" / "TOWERSWAP").glob("meta-*.json"))[-1].read_text())
+        sw = meta["tower_swap"]
+        lab = pd.read_csv(d / "manifests" / "labels.csv", dtype={"row_id": str})
+        lab = lab[lab["label_known"].astype(str).str.lower() == "true"][["row_id", "concept", "label"]]
+
+        def arm(module, rows=None):
+            f = pd.read_parquet(d / "outcomes" / f"{module}.parquet",
+                                columns=["row_id", "concept", "direction_kind", "sample_status", "p_present"])
+            f = f[(f["direction_kind"] == "baseline") & (f["sample_status"] == "OK")]
+            f = f[["row_id", "concept", "p_present"]].merge(lab, on=["row_id", "concept"])
+            if rows is not None:
+                f = f[f["row_id"].isin(rows)]
+            per = {c: _auroc(g["label"].to_numpy(), g["p_present"].to_numpy()) for c, g in f.groupby("concept")}
+            return per, sorted(set(f["row_id"].tolist()))
+
+        hyb, rows = arm("TOWERSWAP")
+        nat, _ = arm("CORE", rows=set(rows))
+        if sorted(hyb) != sorted(nat):
+            raise RuntimeError(f"{k}: the crossed arms of a block score different concepts {sorted(hyb)} {sorted(nat)}")
+        blocks.append({"model": k[0], "dataset": k[1], "rows": len(rows), "concepts": sorted(hyb),
+                       "tower": sw["donor_model_key"], "reader": sw["host_model_key"],
+                       "native_per_concept": nat, "hybrid_per_concept": hyb,
+                       "native": _med(nat.values()), "hybrid": _med(hyb.values())})
+    for b in blocks:
+        b["drop"] = b["native"] - b["hybrid"]
+    return {"blocks": blocks, "arms": len(blocks), "worse": sum(b["hybrid"] < b["native"] for b in blocks)}
 
 
 # ------------------------------------------------------------------------------------------ identical-tensor replay

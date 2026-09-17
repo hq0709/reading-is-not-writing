@@ -1070,6 +1070,24 @@ def round3_macros(M: dict, rows: list[dict], wb: dict, warn: list) -> None:
                     f"only cost resolution)")
     if T["arms_disagreeing_across_hosts"]:
         warn.append(f"towerswap: arms graded in both host blocks disagree: {T['arms_disagreeing_across_hosts']}")
+    # how well each crossed arm answers with no write, on the crossing's own rows: the hybrid arms against the
+    # native arm of the same block, median over the block's six concepts
+    TA = r3.towerswap_answer(wb)
+    SHORT = {"gemma3-4": "Gem", "medgemma-4": "Med"}
+    drops = []
+    for b in TA["blocks"]:
+        nm = SHORT.get(b["model"])
+        if nm is None:
+            warn.append(f"towerswap: the crossed host {b['model']} has no macro name (Appendix A.8 names Gemma 3 4B and MedGemma 4B)")
+            continue
+        key = f"{nm}{DS_KEY[b['dataset']]}"
+        M[f"cfSwapAnsNative{key}"] = fx(b["native"], 3); M[f"cfSwapAnsHybrid{key}"] = fx(b["hybrid"], 3)
+        drops.append(round(float(M[f"cfSwapAnsNative{key}"]) - float(M[f"cfSwapAnsHybrid{key}"]), 3))
+    M["cfSwapAnsArms"] = TA["arms"]; M["cfSwapAnsWorse"] = TA["worse"]; M["cfSwapAnsRows"] = min(b["rows"] for b in TA["blocks"])
+    M["cfSwapAnsDropMin"] = fx(min(drops), 3); M["cfSwapAnsDropMax"] = fx(max(drops), 3)
+    if TA["worse"] != TA["arms"]:
+        warn.append(f"towerswap: {TA['arms'] - TA['worse']} hybrid arm(s) answer at least as well as the native arm of "
+                    f"the same block (Appendix A.8 says every hybrid arm answers worse)")
 
     # ---- REPLAY (Table cf-replay)
     R = r3.replay(wb)
