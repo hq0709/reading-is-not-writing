@@ -68,6 +68,9 @@ META = {
 ORDER = list(META)
 REV = {'q25-3': '6628554', 'q25-7': 'cc59489', 'q25-32': '7cfb30d', 'q25-72': '89c8620', 'q3-4': 'ebb281e', 'q3-8': '0c351dd', 'q3-32': '0cfaf48', 'iv35-8': '741a7d0', 'iv35-14': '226b96d', 'iv35-38': '7c830fc', 'gemma3-4': '093f9f3', 'gemma3-12': '96b6f1e', 'gemma3-27': '005ad34', 'medgemma-4': '290cda5', 'medgemma-27': '2d3e00e', 'llama32-11': '9eb2daa', 'llava15-7': 'b234b80', 'llava15-13': '5dda288', 'lingshu-7': 'b98aecd', 'lingshu-32': '36b9827', 'llavamed-7': '91bb16c'}   # Hugging Face revision (7-char) of every checkpoint
 FAMILY_ORDER = ["Qwen2.5-VL", "Qwen3-VL", "InternVL3.5", "Gemma 3", "MedGemma", "Lingshu", "LLaVA-1.5", "LLaVA-Med", "Llama 3.2 Vision"]
+FAMILY_CITE = {"Qwen2.5-VL": "bai2025qwen25vl", "Qwen3-VL": "qwen2025qwen3vl", "InternVL3.5": "wang2025internvl35",
+               "Gemma 3": "gemma2025gemma3", "MedGemma": "sellergren2025medgemma", "Lingshu": "lasa2025lingshu",
+               "LLaVA-1.5": "liu2024improved", "LLaVA-Med": "li2023llavamed", "Llama 3.2 Vision": "meta2024llama32vision"}   # release the checkpoints come from, cited on the family row of Table~\ref{tab:cf-models}
 NAMES = {k: v[0] for k, v in META.items()}
 
 # --------------------------------------------------------------------------------------------- colours
@@ -496,7 +499,8 @@ def table_models(blocks, stats):
         S, A, own_c, tot_c, own_q, tot_q = family_stats(blocks, stats, mks)
         oc = f"{shade_pos(own_c / tot_c if tot_c else 0, (0.01, 0.15, 0.35), 'cfSlate')}{own_c}/{tot_c}" if tot_c else r"\cellcolor{cfGrey}inel."
         oq = f"{shade_pos(own_q / tot_q if tot_q else 0, (0.01, 0.5, 0.9), 'cfSlate')}{own_q}/{tot_q}" if tot_q else "--"
-        label = r"\textbf{" + fam + "}" + (r" (medical)" if META[mks[0]][6] else "")
+        label = (r"\textbf{" + fam + "}" + (r" (medical)" if META[mks[0]][6] else "")
+                 + (r"~\citep{" + FAMILY_CITE[fam] + "}" if fam in FAMILY_CITE else ""))
         L += [r"\midrule", f"\\multicolumn{{6}}{{l}}{{{label}}} & {fmt(S, 3)} & {fmt(A, 3)} & {oc} & {oq} \\\\"]
         for m in mks:
             present = [(d, blocks[(m, d)]) for d, _ in DATASETS if (m, d) in blocks]
