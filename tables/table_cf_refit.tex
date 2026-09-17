@@ -2,7 +2,7 @@
 \centering
 \scriptsize
 \setlength{\tabcolsep}{3pt}
-\caption{\textbf{The full grade under refitted probes.} For every block with the refit module, the six probes are refitted on two resamples of the training patients (fit seeds 1 and 2) and the complete grade is recomputed with the campaign rules: the steering reference against the block's CORE random 95th percentile and sham on the same rows, and the $6\times5$ max-$T$ verdict over the shared unit-bootstrap draws (2{,}000 draws). Per dataset: cells whose seed-0 grade is owned, stronger competitor, unresolved, or fixed-family advantage without the reference, and how many keep that grade under both refits, under at least one, or under none; the last column regrades seed 0 with the same draws and counts agreement with the paper's grade.}
+\caption{\textbf{The full grade under refitted probes.} For every block with the refit module, the six probes are refitted on two resamples of the training patients (fit seeds 1 and 2) and the complete grade is recomputed with the campaign rules: the steering reference against the seed-0 random 95th percentile and the seed-0 sham of the same block, question and rows --- the permutation of the seed-0 normal, not of the refitted direction (Table~\ref{tab:cf-ledger}) --- and the $6\times5$ max-$T$ verdict over the shared unit-bootstrap draws (2{,}000 draws). Per dataset: cells whose seed-0 grade is owned, stronger competitor, unresolved, or fixed-family advantage without the reference, and how many keep that grade under both refits, under at least one, or under none; the last column regrades seed 0 with the same draws and counts agreement with the paper's grade.}
 \label{tab:cf-refit}
 \begin{tabular}{lrrrrrrrrrrrrrrr}
 \toprule

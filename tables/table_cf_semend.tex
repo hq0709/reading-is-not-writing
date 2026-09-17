@@ -2,7 +2,7 @@
 \centering
 \scriptsize
 \setlength{\tabcolsep}{3pt}
-\caption{\textbf{Four endpoints no direction was fitted against.} Both direction families of Section~\ref{sec:ansdir} are written at the primary dose into the same blocks and read at four endpoints: the negated form of the concept's yes/no question, a two-alternative forced choice against the concept's strongest competitor in each of the two presentation orders, and the log-probability of the finding word in a report continuation. Owned and reference-meeting counts use the campaign's rule with the endpoint's own sham and, where the endpoint scores it, its own random family. \emph{Opposite} counts concepts of six whose raw effect on the negated question has the sign opposite to its effect on the affirmative one. \emph{Order gap} is the mean absolute difference between the two presentation orders of the forced choice. The bottom panel regresses each endpoint effect on the write magnitude, the probe selectivity and the clean-answer AUROC with endpoint dummies, then adds the ownership contrast and its owned indicator; $\Delta R^2$ is what the ownership contrast adds, with a percentile interval over 2{,}000 patient-bootstrap draws.}
+\caption{\textbf{Four endpoints no direction was fitted against.} Both direction families of Section~\ref{sec:ansdir} are written at the primary dose into the same blocks and read at four endpoints: the negated form of the concept's yes/no question, a two-alternative forced choice against the concept's strongest competitor in each of the two presentation orders, and the log-probability of the finding word in a report continuation. Owned and reference-meeting counts use the endpoint's own clean baseline, a permutation sham of the direction under test, and the endpoint's own family of \cfSemLedgerRandom{} random directions read at its maximum rather than the campaign's 119 read at their 95th percentile (Table~\ref{tab:cf-ledger}); the verdict is the campaign's $6\times5$ max-$T$ verdict. \emph{Opposite} counts concepts of six whose raw effect on the negated question has the sign opposite to its effect on the affirmative one. \emph{Order gap} is the mean absolute difference between the two presentation orders of the forced choice. The bottom panel asks whether ownership carries information about endpoint behaviour beyond the write magnitude, the probe selectivity and the clean-answer AUROC, and answers it out of sample. Each endpoint effect is regressed on those three quantities with endpoint dummies, then on the same model plus the ownership contrast and its owned indicator. Both models are ridge regressions whose penalty and standardisation are fitted inside the training fold alone, and they are cross-validated twice: leaving out one concept at a time inside a block, and leaving out one block at a time over the pooled blocks. $\Delta R^2$ is the change in held-out $R^2$ when ownership is added, against a null that permutes ownership across the concepts of a block over 2{,}000 draws. Adding a predictor cannot lower a training $R^2$, so the in-sample increment is reported only as the reference it is.}
 \label{tab:cf-semend}
 \begin{tabular}{lllcccc}
 \toprule
@@ -32,15 +32,32 @@ Lingshu 32B & CheXpert Plus & 4/6 & 0.026 & 3/6 & 0/6 & 5/6 \\
 Qwen2.5-VL-7B & NIH ChestX-ray14 & 6/6 & 0.089 & 0/6 & 0/6 & 0/6 \\
 Qwen2.5-VL-7B & CheXpert Plus & 6/6 & 0.111 & 0/6 & 0/6 & 0/6 \\
 \midrule
-\multicolumn{7}{l}{\textit{What the ownership contrast adds over the write magnitude, the probe selectivity and the clean-answer AUROC}} \\
-Checkpoint & Dataset & Direction & base $R^2$ & with ownership & $\Delta R^2$ & 95\% interval \\
+\multicolumn{7}{l}{\textit{What ownership adds, held out: leaving out one concept at a time}} \\
+Checkpoint & Dataset & Direction & held-out $R^2$ & with ownership & $\Delta R^2$ & permutation $p$ \\
 \midrule
-Lingshu 32B & CheXpert Plus & label direction & 0.769 & 0.788 & 0.019 & [0.007, 0.039] \\
-Lingshu 32B & CheXpert Plus & answer direction & 0.368 & 0.423 & 0.055 & [0.040, 0.071] \\
-Qwen2.5-VL-7B & NIH ChestX-ray14 & label direction & 0.241 & 0.246 & 0.004 & [0.002, 0.008] \\
-Qwen2.5-VL-7B & NIH ChestX-ray14 & answer direction & 0.267 & 0.392 & 0.125 & [0.111, 0.138] \\
-Qwen2.5-VL-7B & CheXpert Plus & label direction & 0.175 & 0.250 & 0.074 & [0.061, 0.086] \\
-Qwen2.5-VL-7B & CheXpert Plus & answer direction & 0.473 & 0.509 & 0.036 & [0.026, 0.045] \\
+Lingshu 32B & CheXpert Plus & label direction & -0.034 & 0.147 & 0.181 & 0.39 \\
+Lingshu 32B & CheXpert Plus & answer direction & 0.069 & -0.223 & -0.291 & 0.70 \\
+Qwen2.5-VL-7B & CheXpert Plus & label direction & -0.139 & -0.149 & -0.010 & 0.55 \\
+Qwen2.5-VL-7B & CheXpert Plus & answer direction & -3.168 & -0.112 & 3.057 & 0.18 \\
+Qwen2.5-VL-7B & NIH ChestX-ray14 & label direction & -0.195 & -0.147 & 0.048 & 0.31 \\
+Qwen2.5-VL-7B & NIH ChestX-ray14 & answer direction & -1.310 & -0.176 & 1.134 & 0.50 \\
+\textit{pooled} & \textit{6 tests} & \textit{both} & -- & -- & 0.687 & 0.26 \\
+\midrule
+\multicolumn{7}{l}{\textit{The same, leaving out one block at a time}} \\
+\midrule
+\textit{all 3} & \textit{pooled} & label direction & -0.578 & -0.500 & 0.078 & 0.30 \\
+\textit{all 3} & \textit{pooled} & answer direction & -0.461 & -0.398 & 0.063 & 0.26 \\
+\textit{pooled} & \textit{2 tests} & \textit{both} & -- & -- & 0.070 & 0.26 \\
+\midrule
+\multicolumn{7}{l}{\textit{In-sample reference only, since adding a predictor cannot lower a training $R^2$}} \\
+Checkpoint & Dataset & Direction & training $R^2$ & with ownership & $\Delta R^2$ & \\
+\midrule
+Lingshu 32B & CheXpert Plus & label direction & 0.769 & 0.788 & 0.019 & \\
+Lingshu 32B & CheXpert Plus & answer direction & 0.368 & 0.423 & 0.055 & \\
+Qwen2.5-VL-7B & NIH ChestX-ray14 & label direction & 0.241 & 0.246 & 0.004 & \\
+Qwen2.5-VL-7B & NIH ChestX-ray14 & answer direction & 0.267 & 0.392 & 0.125 & \\
+Qwen2.5-VL-7B & CheXpert Plus & label direction & 0.175 & 0.250 & 0.074 & \\
+Qwen2.5-VL-7B & CheXpert Plus & answer direction & 0.473 & 0.509 & 0.036 & \\
 \bottomrule
 \end{tabular}
 \end{table}

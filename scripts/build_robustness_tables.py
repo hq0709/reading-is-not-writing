@@ -14,6 +14,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 import cf_inclusion as ci   # noqa: E402
+import cf_ledger as cl   # noqa: E402
 import cf_round3 as r3   # noqa: E402
 
 ROB = Path("/rodata/azradonc_dev/m253405/cf-transfer/runs/robustness")
@@ -104,7 +105,7 @@ def scale():
          r"that scale and a positive percentile interval for $O^m_q$), with the cells owned on both; cells with $O_q>0$ (the sign "
          r"alone) among owned and among not-owned cells when every cell is restricted to its "
          r"unsaturated rows ($0.01<P(\mathrm{yes})<0.99$ on the clean pass); median $|O_q(\text{seed }k)-O_q(\text{seed }0)|$ over the "
-         r"two refit seeds and the owned cells that keep $O_q>0$ under both (REFIT exists for NIH and COCO); median $|W_{q,q}|$ at the "
+         r"two refit seeds and the owned cells that keep $O_q>0$ under both (the refits exist for NIH and COCO); median $|W_{q,q}|$ at the "
          r"primary and connector loci and connector cells whose write beats the connector random family.}",
          r"\label{tab:cf-scale}",
          r"\begin{tabular}{lrrrrrrrrrr}", r"\toprule",
@@ -210,6 +211,55 @@ def valid():
           r"\bottomrule", r"\end{tabular}", r"\end{table}"]
     (OUT / "table_cf_valid.tex").write_text("\n".join(L) + "\n")
     print("table_cf_valid.tex", a["blocks"], "block(s)")
+
+
+ARM_ROW = (("expert_valid200", "radiologist", "200 valid films"),
+           ("report_valid200", "report-derived", "the same 200 valid films"),
+           ("report_train_sub", "report-derived", "200 training rows"),
+           ("report_train_sub_known", "report-derived", "200 labelled training rows"),
+           ("report_train_full", "report-derived", "every training row"))
+
+
+def validfit_arms():
+    """VALIDFIT arms: the label source of a direction separated from the number of rows it was estimated on
+    (runs/robustness/validfit.json, scripts/mayo/robustness_validfit.py)."""
+    V = r3.validfit_arms()
+    A = V["aggregate"]["per_arm"]
+    m = V["meta"]
+    b0 = V["blocks"][0]
+    L = [r"\begin{table}[h]", r"\centering", r"\scriptsize", r"\setlength{\tabcolsep}{4pt}",
+         r"\caption{\textbf{Label source against sample size for the refitted directions.} The expert-label refit is "
+         r"estimated on " + str(b0["n_valid_rows"]) + r" radiologist-labelled films and the shipped direction on about "
+         + f"{b0['n_train_rows']:,}".replace(",", "{,}") + r" report-labelled rows, so comparing only those two confounds "
+         r"which labels were used with how many rows were available. Every arm below keeps the block's own projection, its "
+         r"stored train-only scaler, the protocol's probe settings and the same " + str(m["folds"]) + r"-fold cross-fitting "
+         r"over patients, and every arm is scored on the same films: a film is always scored by a direction that was not "
+         r"fitted on it. The two training subsample arms redraw the fitting rows " + str(m["draws"]) + r" times and report "
+         r"the median; the second draws enough rows to leave the concept with as many labelled rows as the expert refit "
+         r"has. Cosines are to the shipped direction, in the raw model space and under the training covariance. Medians "
+         r"over the " + str(A["expert_valid200"]["cells"]) + r" cells of "
+         + str(m["n_blocks"]) + r" CheXpert blocks.}",
+         r"\label{tab:cf-validfit-arms}",
+         r"\begin{tabular}{llrrrrr}", r"\toprule",
+         r" & & & \multicolumn{2}{c}{cross-fitted AUROC against} & \multicolumn{2}{c}{cosine to shipped} \\",
+         r"\cmidrule(lr){4-5}\cmidrule(lr){6-7}",
+         r"Labels & Fitted on & rows & radiologist & report & raw & whitened \\", r"\midrule"]
+    for arm, lab, where in ARM_ROW:
+        d = A[arm]
+        L.append(f"{lab} & {where} & {d['median_fit_rows']:.0f} & {f2(d['auroc_expert_labels'], 2)} & "
+                 f"{f2(d['auroc_report_labels'], 2)} & {f2(d['cos_model'], 2)} & {f2(d['cos_whitened'], 2)} \\\\")
+    G = V["aggregate"]
+    L += [r"\midrule", r"\multicolumn{7}{l}{\textit{What each contrast isolates, in AUROC against the radiologist labels}} \\",
+          r"\midrule",
+          r"\multicolumn{6}{l}{label source, both arms fitting the same number of rows} & "
+          + f2(G["label_source_at_matched_size"]["delta_auroc_expert_labels"], 2) + r" \\",
+          r"\multicolumn{6}{l}{sample size, both arms on report-derived labels} & "
+          + f2(G["sample_size_at_one_label_source"]["delta_auroc_expert_labels"], 2) + r" \\",
+          r"\multicolumn{6}{l}{the expert refit against the shipped direction, which mixes the two} & "
+          + f2(G["expert_refit_against_the_shipped_direction"]["delta_auroc_expert_labels"], 2) + r" \\",
+          r"\bottomrule", r"\end{tabular}", r"\end{table}"]
+    (OUT / "table_cf_validfit_arms.tex").write_text("\n".join(L) + "\n")
+    print("table_cf_validfit_arms.tex", m["n_blocks"], "block(s),", m["draws"], "draws")
 
 
 
@@ -397,7 +447,10 @@ def answer_direction():
          r"the answer direction $a_q$, split into kept (both), rescued ($a_q$ only), and lost ($\hat w_q$ only); concepts whose $a_q$ "
          r"write beats the strongest logistic competitor; and medians of $W^a_{q,q}$, of the raw and whitened cosines between $a_q$ and "
          r"$\hat w_q$, and of the cross-validated $R^2$. Bottom: $a_q$ written under each held-out template, with the concepts owned and, "
-         r"in parentheses, the IY-owned concepts that stay owned, and the kept (concept, template) pairs.}",
+         r"in parentheses, the IY-owned concepts that stay owned, and the kept (concept, template) pairs. A held-out template scores no "
+         r"random family of its own, so a cell there meets the steering reference against the permutation sham of the $a_q$ under test "
+         r"and, where the additional-template module scored a random family under that template, against its 95th percentile as well "
+         r"(Table~\ref{tab:cf-ledger}); the verdict is the same $6\times5$ max-$T$ verdict.}",
          r"\label{tab:cf-ansdir}",
          r"\begin{tabular}{llrrrrrrrrrr}", r"\toprule",
          r" & & \multicolumn{5}{c}{owned concepts} & & \multicolumn{4}{c}{median} \\",
@@ -505,7 +558,8 @@ def refit():
     L = [r"\begin{table}[h]", r"\centering", r"\scriptsize", r"\setlength{\tabcolsep}{3pt}",
          r"\caption{\textbf{The full grade under refitted probes.} For every block with the refit module, the six probes are refitted on "
          r"two resamples of the training patients (fit seeds 1 and 2) and the complete grade is recomputed with the campaign rules: the "
-         r"steering reference against the block's CORE random 95th percentile and sham on the same rows, and the $6\times5$ max-$T$ "
+         r"steering reference against the seed-0 random 95th percentile and the seed-0 sham of the same block, question and rows --- the "
+         r"permutation of the seed-0 normal, not of the refitted direction (Table~\ref{tab:cf-ledger}) --- and the $6\times5$ max-$T$ "
          r"verdict over the shared unit-bootstrap draws (" + f"{m['draws']:,}".replace(",", "{,}") + r" draws). Per dataset: cells whose seed-0 "
          r"grade is owned, stronger competitor, unresolved, or fixed-family advantage without the reference, and how many keep that grade "
          r"under both refits, under at least one, or under none; the last column regrades seed 0 with the same draws and counts agreement "
@@ -614,7 +668,9 @@ def towerswap():
     """TOWERSWAP: the vision tower of one checkpoint loaded behind the other's connector and language model, against the two
     native arms, on the same rows. Top: owned concepts of six in each of the four (tower, reader) combinations, per host block
     and then per dataset with the two hosts' shared arms counted once. Bottom: the four crossover contrasts."""
-    T = r3.towerswap(ci.write_blocks(ci.load_runs()))
+    wb = ci.write_blocks(ci.load_runs())
+    T = r3.towerswap(wb)
+    X = r3.crossover(wb)
     rec, order = T["receipt"], ("nih", "chexpert", "coco")
     readers = sorted({b["reader"] for b in T["blocks"]}, key=lambda m: list(CKPT).index(m) if m in CKPT else 99)
     a, b_ = readers[0], readers[-1]
@@ -633,9 +689,15 @@ def towerswap():
          r"top two panels is tower/reader. A dash marks an arm that is not graded in that host block. The middle panel counts the "
          r"four combinations of each dataset once; an arm graded in both host blocks agrees in all " + str(twice)
          + r" cases where it appears twice. The bottom panel holds one factor and "
-         r"changes the other: the reader effect is the mean absolute change in the six own-question write magnitudes when the "
-         r"reader is replaced at a fixed tower, the tower effect the same with the roles exchanged, and the last two columns "
-         r"average each factor over its two levels. Concepts of six whose change is simultaneously nonzero are in brackets.}",
+         r"changes the other, and gives the paired effect on three quantities of the same six questions: the own write "
+         r"$W_{q,q}$, the ownership contrast $O_q=W_{q,q}-\max_{d\neq q}W_{q,d}$ over the five competing concept directions, "
+         r"and the margin $M_q$ of the own write over the strongest competitor in the whole reference family, "
+         r"$M_q=W_{q,q}-\max(\max_{d\neq q}W_{q,d},\,\text{random }p_{95},\,|\text{sham}|)$. Each entry is the mean over the "
+         r"six questions of the absolute paired change, with its 95\% percentile interval over the same "
+         + f"{X['meta']['draws']:,}".replace(",", "{,}") + r" draws of the "
+         r"rows and, in brackets, the number of questions of six whose change is simultaneously nonzero; the last two rows of "
+         r"each block average each factor over its two levels. The three quantities come from one pass over the packaged "
+         r"outcomes of the four arms, so the columns of a row are the same arms read three ways.}",
          r"\label{tab:cf-towerswap}",
          r"\begin{tabular}{llcccccc}", r"\toprule",
          r" & & \multicolumn{2}{c}{native} & \multicolumn{2}{c}{swapped} & & \\",
@@ -656,18 +718,34 @@ def towerswap():
         by = {(r["tower"], r["reader"]): r["n_owned"] for r in d["combinations"]}
         L.append(f"all four & {NAMES[ds]} & " + " & ".join("--" if by.get(c) is None else str(by[c]) for c in cols)
                  + f" & {d['n_concepts']} & {d['owned']}/{d['cells']}" + r" \\")
-    L += [r"\midrule", r"\multicolumn{8}{l}{\textit{Crossover: the effect of replacing one factor with the other held fixed}} \\",
-          r" & & \multicolumn{2}{c}{reader effect at} & \multicolumn{2}{c}{tower effect at} & & \\",
-          r"\cmidrule(lr){3-4}\cmidrule(lr){5-6}",
-          r"Host checkpoint & Dataset & own tower & partner tower & own reader & partner reader & mean reader & mean tower \\",
+    L += [r"\bottomrule", r"\end{tabular}",
+          r"\vspace{4pt}", r"\setlength{\tabcolsep}{2.5pt}", r"\begin{tabular}{llccc}", r"\toprule",
+          r"\multicolumn{5}{l}{\textit{Crossover: the effect of replacing one factor with the other held fixed}} \\",
+          r"\midrule",
+          r"Block & Changed, held & own write $W_{q,q}$ & ownership $O_q$ & family margin $M_q$ \\",
           r"\midrule"]
-    for b in T["crossover_blocks"]:
+    rows_ = [("reader_effect_at_own_tower", "reader, own tower"),
+             ("reader_effect_at_partner_tower", "reader, partner tower"),
+             ("tower_effect_at_own_reader", "tower, own reader"),
+             ("tower_effect_at_partner_reader", "tower, partner reader")]
+    short_ds = {"nih": "NIH", "chexpert": "CheXpert", "coco": "COCO"}
+    xb = sorted(X["blocks"], key=lambda b: (list(CKPT).index(b["model"]) if b["model"] in CKPT else 99,
+                                            order.index(b["dataset"])))
+    for i, b in enumerate(xb):
+        label = f"{CKPT.get(b['model'], b['model'])}, {short_ds[b['dataset']]}"
         cx = b["crossover"]
-        L.append(f"{CKPT.get(b['model'], b['model'])} & {NAMES[b['dataset']]} & " + " & ".join(
-            f"{f2(cx[n]['mean_abs_effect'], 3)} [{cx[n]['n_simultaneously_nonzero']}]"
-            for n in ("reader_effect_at_own_tower", "reader_effect_at_partner_tower",
-                      "tower_effect_at_own_reader", "tower_effect_at_partner_reader"))
-            + f" & {f2(cx['mean_abs_reader_effect'], 3)} & {f2(cx['mean_abs_tower_effect'], 3)} \\\\")
+        for j, (name, what) in enumerate(rows_):
+            L.append((label if j == 0 else "") + f" & {what} & " + " & ".join(
+                f"{f2(cx[name][q]['mean_abs_effect'], 3)} "
+                f"[{f2(cx[name][q]['mean_abs_effect_ci95'][0], 3)}, {f2(cx[name][q]['mean_abs_effect_ci95'][1], 3)}] "
+                f"({cx[name][q]['n_simultaneously_nonzero']})" for q in r3.CROSSOVER_QUANTITIES) + r" \\")
+        for factor in ("reader", "tower"):
+            L.append(f" & \\quad mean {factor} effect & " + " & ".join(
+                f"{f2(cx[f'mean_abs_{factor}_effect_{q}'], 3)} "
+                f"[{f2(cx[f'mean_abs_{factor}_effect_{q}_ci95'][0], 3)}, {f2(cx[f'mean_abs_{factor}_effect_{q}_ci95'][1], 3)}]"
+                for q in r3.CROSSOVER_QUANTITIES) + r" \\")
+        if i < len(xb) - 1:
+            L.append(r"\addlinespace")
     L += [r"\bottomrule", r"\end{tabular}", r"\end{table}"]
     (OUT / "table_cf_towerswap.tex").write_text("\n".join(L) + "\n")
     print("table_cf_towerswap.tex", len(T["blocks"]), "block(s),", len(T["crossover_blocks"]), "crossover(s)")
@@ -726,20 +804,29 @@ def semend():
     reference-meeting concepts of six per block and endpoint. Middle: the sign test on the negated question, the order gap of
     the counterbalanced forced choice, and the report continuation. Bottom: the incremental validity of the ownership contrast
     over the write magnitude, the probe selectivity and the clean-answer AUROC."""
-    S = r3.semend(ci.write_blocks(ci.load_runs()))
+    wb = ci.write_blocks(ci.load_runs())
+    S = r3.semend(wb)
+    CV = r3.semend_cv(wb)
     eps = [e for e in ("NY", "DA", "DB", "RF") if e in S["endpoints"]]
     L = [r"\begin{table}[p]", r"\centering", r"\scriptsize", r"\setlength{\tabcolsep}{3pt}",
          r"\caption{\textbf{Four endpoints no direction was fitted against.} Both direction families of Section~"
          r"\ref{sec:ansdir} are written at the primary dose into the same blocks and read at four endpoints: the negated form of "
          r"the concept's yes/no question, a two-alternative forced choice against the concept's strongest competitor in each of "
          r"the two presentation orders, and the log-probability of the finding word in a report continuation. Owned and "
-         r"reference-meeting counts use the campaign's rule with the endpoint's own sham and, where the endpoint scores it, its "
-         r"own random family. \emph{Opposite} counts concepts of six whose raw effect on the negated question has the sign "
+         r"reference-meeting counts use the endpoint's own clean baseline, a permutation sham of the direction under test, and the "
+         r"endpoint's own family of \cfSemLedgerRandom{} random directions read at its maximum rather than the campaign's 119 read at their 95th "
+         r"percentile (Table~\ref{tab:cf-ledger}); the verdict is the campaign's $6\times5$ max-$T$ verdict. \emph{Opposite} counts "
+         r"concepts of six whose raw effect on the negated question has the sign "
          r"opposite to its effect on the affirmative one. \emph{Order gap} is the mean absolute difference between the two "
-         r"presentation orders of the forced choice. The bottom panel regresses each endpoint effect on the write magnitude, the "
-         r"probe selectivity and the clean-answer AUROC with endpoint dummies, then adds the ownership contrast and its owned "
-         r"indicator; $\Delta R^2$ is what the ownership contrast adds, with a percentile interval over "
-         + f"{S['blocks'][0]['draws']:,}".replace(",", "{,}") + r" patient-bootstrap draws.}",
+         r"presentation orders of the forced choice. The bottom panel asks whether ownership carries information about endpoint "
+         r"behaviour beyond the write magnitude, the probe selectivity and the clean-answer AUROC, and answers it out of sample. "
+         r"Each endpoint effect is regressed on those three quantities with endpoint dummies, then on the same model plus the "
+         r"ownership contrast and its owned indicator. Both models are ridge regressions whose penalty and standardisation are "
+         r"fitted inside the training fold alone, and they are cross-validated twice: leaving out one concept at a time inside a "
+         r"block, and leaving out one block at a time over the pooled blocks. $\Delta R^2$ is the change in held-out $R^2$ when "
+         r"ownership is added, against a null that permutes ownership across the concepts of a block over "
+         + f"{CV['permutations']:,}".replace(",", "{,}") + r" draws. Adding a predictor cannot lower a training $R^2$, so the "
+         r"in-sample increment is reported only as the reference it is.}",
          r"\label{tab:cf-semend}",
          r"\begin{tabular}{lllcccc}", r"\toprule",
          r" & & & \multicolumn{2}{c}{label direction} & \multicolumn{2}{c}{answer direction} \\",
@@ -762,21 +849,41 @@ def semend():
         L.append(f"{CKPT.get(b['model'], b['model'])} & {NAMES[b['dataset']]} & {b['negation_opposite']}/{b['negation_n']} & "
                  f"{f2(b['forced_order_gap'], 3)} & {b['forced_both_owned']}/{b['negation_n']} & "
                  f"{b['report_owned']}/{b['report_cells']} & {len(b['owned_core'])}/{b['negation_n']} \\\\")
-    L += [r"\midrule", r"\multicolumn{7}{l}{\textit{What the ownership contrast adds over the write magnitude, the probe "
-          r"selectivity and the clean-answer AUROC}} \\",
-          r"Checkpoint & Dataset & Direction & base $R^2$ & with ownership & $\Delta R^2$ & 95\% interval \\", r"\midrule"]
+    L += [r"\midrule", r"\multicolumn{7}{l}{\textit{What ownership adds, held out: leaving out one concept at a time}} \\",
+          r"Checkpoint & Dataset & Direction & held-out $R^2$ & with ownership & $\Delta R^2$ & permutation $p$ \\", r"\midrule"]
+    for r in CV["leave_one_concept_out"]:
+        mk = r["block"].split("/")[0]
+        L.append(f"{CKPT.get(mk, mk)} & {NAMES[r['dataset']]} & {FAM_NAME[r['family']]} & "
+                 f"{f2(r['heldout_r2_base'], 3)} & {f2(r['heldout_r2_full'], 3)} & {f2(r['delta_heldout_r2'], 3)} & "
+                 f"{f2(r['permutation_p'], 2)} \\\\")
+    d = CV["pooled_leave_one_concept_out"]
+    L.append(f"\\textit{{pooled}} & \\textit{{{d['n_tests']} tests}} & \\textit{{both}} & -- & -- & "
+             f"{f2(d['mean_delta_heldout_r2'], 3)} & {f2(d['permutation_p'], 2)} \\\\")
+    L += [r"\midrule", r"\multicolumn{7}{l}{\textit{The same, leaving out one block at a time}} \\", r"\midrule"]
+    for r in CV["leave_one_block_out"]:
+        L.append(f"\\textit{{all {r['n_folds']}}} & \\textit{{pooled}} & {FAM_NAME[r['family']]} & "
+                 f"{f2(r['heldout_r2_base'], 3)} & {f2(r['heldout_r2_full'], 3)} & {f2(r['delta_heldout_r2'], 3)} & "
+                 f"{f2(r['permutation_p'], 2)} \\\\")
+    d = CV["pooled_leave_one_block_out"]
+    L.append(f"\\textit{{pooled}} & \\textit{{{d['n_tests']} tests}} & \\textit{{both}} & -- & -- & "
+             f"{f2(d['mean_delta_heldout_r2'], 3)} & {f2(d['permutation_p'], 2)} \\\\")
+    L += [r"\midrule", r"\multicolumn{7}{l}{\textit{In-sample reference only, since adding a predictor cannot lower a "
+          r"training $R^2$}} \\",
+          r"Checkpoint & Dataset & Direction & training $R^2$ & with ownership & $\Delta R^2$ & \\", r"\midrule"]
     for b in S["blocks"]:
         for fam in r3.FAMS:
             v = b["incremental_validity"][fam]
             L.append(f"{CKPT.get(b['model'], b['model'])} & {NAMES[b['dataset']]} & {FAM_NAME[fam]} & {f2(v['base_r2'], 3)} & "
-                     f"{f2(v['full_r2'], 3)} & {f2(v['delta_r2'], 3)} & "
-                     f"[{f2(v['delta_r2_ci95'][0], 3)}, {f2(v['delta_r2_ci95'][1], 3)}] \\\\")
+                     f"{f2(v['full_r2'], 3)} & {f2(v['delta_r2'], 3)} & \\\\")
     L += [r"\bottomrule", r"\end{tabular}", r"\end{table}"]
     (OUT / "table_cf_semend.tex").write_text("\n".join(L) + "\n")
     print("table_cf_semend.tex", S["n_blocks"], "block(s),", len(eps), "endpoint(s)")
 
 
-POOL_LABEL = {"chest": "chest findings", "coco_easy": "the six easy objects", "coco_fine": "the six fine-grained objects"}
+POOL_LABEL = {"chest": "chest findings", "coco_easy": "easy objects, every COCO block",
+              "coco_easy_same_blocks": "easy objects, these blocks",
+              "coco_fine": "fine-grained objects, these blocks"}
+POOL_ORDER = ("chest", "coco_easy", "coco_easy_same_blocks", "coco_fine")
 MATCH_LABEL = {"selectivity": "probe selectivity alone", "answer_auroc": "clean-answer AUROC alone",
                "both": "both variables", "both_easy_partners_only": "both variables, easy partners only"}
 
@@ -788,14 +895,24 @@ def fgobj():
     P = F["pool"]
     L = [r"\begin{table}[p]", r"\centering", r"\scriptsize", r"\setlength{\tabcolsep}{4pt}",
          r"\caption{\textbf{Small and fine-grained objects, and the difficulty-matched comparison.} The six categories---"
-         + ", ".join(F["concepts"][:-1]) + ", and " + F["concepts"][-1] + r"---were fixed by a rule written before the grid was "
-         r"built and before any outcome was known, as were the two matching windows. They are fitted, lifted, written and graded "
+         + ", ".join(F["concepts"][:-1]) + ", and " + F["concepts"][-1] + r"---were fixed by a rule on the label counts and the mean "
+         r"instance areas of the fixed cohorts alone, registered before any of them was scored, as were the two matching windows; "
+         r"Appendix~\ref{app:repro-protocol} states the rule in full. They are fitted, lifted, written and graded "
          r"exactly like the six easy objects, in the same blocks and rows, and their clean-answer AUROC is measured on the same "
-         r"calibration rows and by the same rule as every other cell. The bottom panel pairs each chest cell with every "
-         r"natural-image cell whose matching variables lie within "
-         + f2(F["window"], 2) + r" of it, and reports the ownership rate on each side of the surviving pairs, with a percentile "
-         r"interval over 5{,}000 draws of a cluster bootstrap whose unit is the model. Probe selectivity is the probe AUROC minus "
-         r"the mean of the twenty random-label control AUROCs on the calibration rows.}",
+         r"calibration rows and by the same rule as every other cell. The middle panel separates the easy objects of every COCO "
+         r"block, which is the grid-wide number, from the easy objects of the "
+         + str(len(F["blocks"])) + r" blocks the fine-grained cells come from, which is the pool the fine-grained rate is "
+         r"compared with. The bottom panel pairs each chest cell with every natural-image cell whose matching variables lie "
+         r"within " + f2(F["window"], 2) + r" of it and reports two estimators of the ownership difference, each with its own "
+         r"interval. The \emph{pooled} difference is the ownership rate among the matched chest cells minus the rate among the "
+         r"natural-image cells that served as a partner at least once: it is the difference of the two rates printed to its "
+         r"left. The \emph{matched} difference is the mean over matched chest cells of that cell's own ownership minus the "
+         r"ownership rate of its own partner set, so a chest cell with many partners and one with few count equally. The two "
+         r"answer different questions and neither can be obtained from the other. \emph{Chest cells} and \emph{partners} give "
+         r"the effective sample of both: matched chest cells of all chest cells, and distinct natural-image cells used as a "
+         r"partner of all of them. Both intervals are percentile intervals over 5{,}000 draws of a cluster bootstrap whose unit "
+         r"is the model. Probe selectivity is the probe AUROC minus the mean of the twenty random-label control AUROCs on the "
+         r"calibration rows.}",
          r"\label{tab:cf-fgobj}",
          r"\begin{tabular}{lrrrrrr}", r"\toprule",
          r" & \multicolumn{2}{c}{owned of six} & \multicolumn{2}{c}{median answer AUROC} & \multicolumn{2}{c}{median selectivity} \\",
@@ -805,31 +922,65 @@ def fgobj():
         L.append(f"{CKPT.get(b['model'], b['model'])} & {b['fine_owned']} & {b['easy_owned']} & "
                  f"{f2(b['median_answer_auroc_fine'], 3)} & {f2(b['median_answer_auroc_easy'], 3)} & "
                  f"{f2(b['median_selectivity_fine'], 3)} & {f2(b['median_selectivity_easy'], 3)} \\\\")
-    L += [r"\midrule", r"\multicolumn{7}{l}{\textit{The three pools of cells}} \\",
+    SB = F["same_block"]
+    L += [r"\midrule",
+          r"\multicolumn{7}{l}{\textit{Paired within these blocks:} fine-grained minus easy is "
+          + ", ".join(f"{p['difference']:+d}" for p in SB["per_block"]) + r" cells of six; fine higher in "
+          + str(SB["n_blocks_fine_higher"]) + r",} \\",
+          r"\multicolumn{7}{l}{easy higher in " + str(SB["n_blocks_easy_higher"]) + r", tied in " + str(SB["n_blocks_tied"])
+          + r"; exact two-sided sign test $p=" + f2(SB["sign_test_p"], 2) + r"$} \\"]
+    L += [r"\midrule", r"\multicolumn{7}{l}{\textit{The four pools of cells}} \\",
           r"Cells & blocks & owned & rate & median answer AUROC & median selectivity & readable \\", r"\midrule"]
-    for g in ("chest", "coco_easy", "coco_fine"):
+    for g in POOL_ORDER:
         d = P[g]
         L.append(f"{POOL_LABEL[g]} & {d['blocks']} & {d['owned']}/{d['cells']} & {f2(d['owned_rate'], 3)} & "
                  f"{f2(d['median_answer_auroc'], 3)} & {f2(d['median_selectivity'], 3)} & {d['readable']}/{d['cells']} \\\\")
-    L += [r"\midrule", r"\multicolumn{7}{l}{\textit{Chest cells matched to natural-image cells on difficulty}} \\",
+    L += [r"\midrule", r"\multicolumn{7}{l}{\textit{Chest cells matched to natural-image cells on difficulty, under both "
+          r"estimators}} \\",
           r"Matching & chest cells & partners & chest rate & natural rate & difference & 95\% interval \\", r"\midrule"]
-    for m in ("selectivity", "answer_auroc", "both"):
-        d = F["matched"][m]
+    for m in ("selectivity", "answer_auroc", "both", "both_easy_partners_only"):
+        d = F["matched_easy_only"] if m == "both_easy_partners_only" else F["matched"][m]
         L.append(f"{MATCH_LABEL[m]} & {d['n_matched_chest_cells']}/{d['n_chest_cells']} & "
                  f"{d['n_natural_cells_used']}/{d['n_natural_cells']} & {f2(d['chest_owned_rate_matched'], 3)} & "
-                 f"{f2(d['natural_owned_rate_used'], 3)} & {f2(d['matched_ownership_difference'], 3)} & "
-                 f"[{f2(d['matched_ownership_difference_ci95'][0], 3)}, {f2(d['matched_ownership_difference_ci95'][1], 3)}] \\\\")
-    d = F["matched_easy_only"]
-    L.append(f"{MATCH_LABEL['both_easy_partners_only']} & {d['n_matched_chest_cells']}/{d['n_chest_cells']} & "
-             f"{d['n_natural_cells_used']}/{d['n_natural_cells']} & {f2(d['chest_owned_rate_matched'], 3)} & "
-             f"{f2(d['natural_owned_rate_used'], 3)} & {f2(d['matched_ownership_difference'], 3)} & "
-             f"[{f2(d['matched_ownership_difference_ci95'][0], 3)}, {f2(d['matched_ownership_difference_ci95'][1], 3)}] \\\\")
+                 f"{f2(d['natural_owned_rate_used'], 3)} &  &  \\\\")
+        for est, key in (("pooled", "pooled_ownership_difference"), ("matched", "matched_ownership_difference")):
+            L.append(f"\\quad {est} &  &  &  &  & {f2(d[key], 3)} & "
+                     f"[{f2(d[key + '_ci95'][0], 3)}, {f2(d[key + '_ci95'][1], 3)}] \\\\")
     L += [r"\bottomrule", r"\end{tabular}", r"\end{table}"]
     (OUT / "table_cf_fgobj.tex").write_text("\n".join(L) + "\n")
     print("table_cf_fgobj.tex", len(F["blocks"]), "block(s)")
 
 
+def ledger():
+    """The reference-and-rule ledger: one row per graded analysis, populated from the packaged artefacts."""
+    rows = cl.ledger(ci.write_blocks(ci.load_runs()))
+    L = [r"\begin{table}[p]", r"\centering", r"\scriptsize", r"\setlength{\tabcolsep}{3pt}",
+         r"\caption{\textbf{What each analysis scores its writes against.} One row per graded analysis. "
+         r"\emph{Rows} is the cohort each analysis scores and its size. \emph{Reference} is the steering test the "
+         r"own write must pass: the 95th percentile of the 119-direction random family and the absolute sham, a "
+         r"smaller random family read at its maximum, or the sham alone. \emph{Rule} is what decides the verdict: "
+         r"simultaneous max-$T$ lower bounds on the fixed contrasts between the own write and each competitor, or a "
+         r"percentile interval on the ownership contrast with the maximum recomputed in every draw. \emph{Sham} names "
+         r"the direction the sham permutes: \emph{the direction written} means the coordinate-permutation sham of the "
+         r"very direction the analysis writes, and \emph{the seed-0 normal} means the permutation of the seed-0 "
+         r"logistic normal, which four analyses reuse for a direction they did not fit. \emph{Cells} counts the graded "
+         r"(question, arm) cells. The token-weighted writes compare against the uniformly written permutation of the "
+         r"normal they weight. Every entry is read from the packaged per-block statistics, and each declared "
+         r"reference and sham is checked against them.}",
+         r"\label{tab:cf-ledger}",
+         r"\begin{tabular}{>{\raggedright\arraybackslash}p{0.155\textwidth}>{\raggedright\arraybackslash}p{0.088\textwidth}"
+         r">{\raggedright\arraybackslash}p{0.215\textwidth}>{\raggedright\arraybackslash}p{0.175\textwidth}"
+         r">{\raggedright\arraybackslash}p{0.125\textwidth}r}", r"\toprule",
+         r"Analysis & Rows & Reference & Rule & Sham & Cells \\", r"\midrule"]
+    for r in rows:
+        L.append(" & ".join([r["analysis"], r["rows"], r["reference"], r["rule"], r["sham"], f"{r['cells']:,}".replace(",", "{,}")]) + r" \\")
+    L += [r"\bottomrule", r"\end{tabular}", r"\end{table}"]
+    (OUT / "table_cf_ledger.tex").write_text("\n".join(L) + "\n")
+    print("table_cf_ledger.tex", len(rows), "analyses,", sum(r["cells"] for r in rows), "cells")
+
+
 if __name__ == "__main__":
+    ledger()
     geometry()
     scale()
     pairs()
@@ -839,6 +990,7 @@ if __name__ == "__main__":
     validation()
     refit()
     valid()
+    validfit_arms()
     attr()
     towerswap()
     replay()

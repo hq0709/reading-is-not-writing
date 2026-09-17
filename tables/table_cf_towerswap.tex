@@ -2,7 +2,7 @@
 \centering
 \scriptsize
 \setlength{\tabcolsep}{4pt}
-\caption{\textbf{Crossing the tower and the reader.} The vision tower of one checkpoint is loaded behind the other's connector and language model. Of the 438 tensors of the host tower, 437 carry weights, and every one of them is replaced and verified bitwise equal to the donor's (417 million parameters); the remaining tensor is a buffer the module rebuilds. None of the 451 tensors outside the tower changes. The written directions travel with the tower, because they are fitted in the representation that tower produces; everything else---rows, dose, template, reference family, and decision rule---is the campaign's. G is Gemma~3 4B and M is MedGemma 4B, and each column of the top two panels is tower/reader. A dash marks an arm that is not graded in that host block. The middle panel counts the four combinations of each dataset once; an arm graded in both host blocks agrees in all 10 cases where it appears twice. The bottom panel holds one factor and changes the other: the reader effect is the mean absolute change in the six own-question write magnitudes when the reader is replaced at a fixed tower, the tower effect the same with the roles exchanged, and the last two columns average each factor over its two levels. Concepts of six whose change is simultaneously nonzero are in brackets.}
+\caption{\textbf{Crossing the tower and the reader.} The vision tower of one checkpoint is loaded behind the other's connector and language model. Of the 438 tensors of the host tower, 437 carry weights, and every one of them is replaced and verified bitwise equal to the donor's (417 million parameters); the remaining tensor is a buffer the module rebuilds. None of the 451 tensors outside the tower changes. The written directions travel with the tower, because they are fitted in the representation that tower produces; everything else---rows, dose, template, reference family, and decision rule---is the campaign's. G is Gemma~3 4B and M is MedGemma 4B, and each column of the top two panels is tower/reader. A dash marks an arm that is not graded in that host block. The middle panel counts the four combinations of each dataset once; an arm graded in both host blocks agrees in all 10 cases where it appears twice. The bottom panel holds one factor and changes the other, and gives the paired effect on three quantities of the same six questions: the own write $W_{q,q}$, the ownership contrast $O_q=W_{q,q}-\max_{d\neq q}W_{q,d}$ over the five competing concept directions, and the margin $M_q$ of the own write over the strongest competitor in the whole reference family, $M_q=W_{q,q}-\max(\max_{d\neq q}W_{q,d},\,\text{random }p_{95},\,|\text{sham}|)$. Each entry is the mean over the six questions of the absolute paired change, with its 95\% percentile interval over the same 2{,}000 draws of the rows and, in brackets, the number of questions of six whose change is simultaneously nonzero; the last two rows of each block average each factor over its two levels. The three quantities come from one pass over the packaged outcomes of the four arms, so the columns of a row are the same arms read three ways.}
 \label{tab:cf-towerswap}
 \begin{tabular}{llcccccc}
 \toprule
@@ -23,16 +23,43 @@ Combinations & Dataset & G/G & M/M & M/G & G/M & concepts & owned of cells \\
 all four & NIH ChestX-ray14 & 0 & 0 & 0 & 0 & 6 & 0/24 \\
 all four & CheXpert Plus & 0 & 0 & 0 & 0 & 6 & 0/24 \\
 all four & COCO & 5 & 5 & 0 & 4 & 6 & 14/24 \\
+\bottomrule
+\end{tabular}
+\vspace{4pt}
+\setlength{\tabcolsep}{2.5pt}
+\begin{tabular}{llccc}
+\toprule
+\multicolumn{5}{l}{\textit{Crossover: the effect of replacing one factor with the other held fixed}} \\
 \midrule
-\multicolumn{8}{l}{\textit{Crossover: the effect of replacing one factor with the other held fixed}} \\
- & & \multicolumn{2}{c}{reader effect at} & \multicolumn{2}{c}{tower effect at} & & \\
-\cmidrule(lr){3-4}\cmidrule(lr){5-6}
-Host checkpoint & Dataset & own tower & partner tower & own reader & partner reader & mean reader & mean tower \\
+Block & Changed, held & own write $W_{q,q}$ & ownership $O_q$ & family margin $M_q$ \\
 \midrule
-Gemma 3 4B & NIH ChestX-ray14 & 0.133 [1] & 0.240 [5] & 0.164 [4] & 0.160 [6] & 0.186 & 0.162 \\
-Gemma 3 4B & CheXpert Plus & 0.382 [5] & 0.125 [4] & 0.269 [5] & 0.183 [4] & 0.254 & 0.226 \\
-Gemma 3 4B & COCO & 0.072 [2] & 0.202 [3] & 0.295 [5] & 0.200 [4] & 0.137 & 0.248 \\
-MedGemma 4B & NIH ChestX-ray14 & 0.229 [3] & 0.133 [1] & 0.160 [6] & 0.164 [4] & 0.181 & 0.162 \\
+Gemma 3 4B, NIH & reader, own tower & 0.133 [0.106, 0.169] (1) & 0.158 [0.136, 0.187] (4) & 0.425 [0.393, 0.458] (5) \\
+ & reader, partner tower & 0.240 [0.221, 0.259] (5) & 0.210 [0.192, 0.233] (4) & 0.286 [0.268, 0.309] (6) \\
+ & tower, own reader & 0.164 [0.140, 0.189] (4) & 0.061 [0.046, 0.080] (1) & 0.137 [0.120, 0.164] (4) \\
+ & tower, partner reader & 0.160 [0.125, 0.193] (6) & 0.265 [0.239, 0.299] (5) & 0.496 [0.462, 0.525] (6) \\
+ & \quad mean reader effect & 0.186 [0.170, 0.207] & 0.184 [0.169, 0.203] & 0.356 [0.339, 0.376] \\
+ & \quad mean tower effect & 0.162 [0.140, 0.182] & 0.163 [0.149, 0.185] & 0.316 [0.299, 0.338] \\
+\addlinespace
+Gemma 3 4B, CheXpert & reader, own tower & 0.382 [0.353, 0.412] (5) & 0.303 [0.273, 0.332] (6) & 0.490 [0.465, 0.515] (5) \\
+ & reader, partner tower & 0.125 [0.102, 0.151] (4) & 0.214 [0.194, 0.240] (5) & 0.240 [0.214, 0.263] (6) \\
+ & tower, own reader & 0.269 [0.245, 0.293] (5) & 0.223 [0.205, 0.241] (6) & 0.372 [0.352, 0.390] (5) \\
+ & tower, partner reader & 0.183 [0.153, 0.217] (4) & 0.297 [0.267, 0.332] (5) & 0.517 [0.485, 0.553] (6) \\
+ & \quad mean reader effect & 0.254 [0.235, 0.274] & 0.259 [0.240, 0.280] & 0.365 [0.347, 0.383] \\
+ & \quad mean tower effect & 0.226 [0.208, 0.246] & 0.260 [0.243, 0.279] & 0.444 [0.425, 0.466] \\
+\addlinespace
+Gemma 3 4B, COCO & reader, own tower & 0.072 [0.049, 0.104] (2) & 0.229 [0.187, 0.271] (5) & 0.143 [0.114, 0.185] (3) \\
+ & reader, partner tower & 0.202 [0.170, 0.239] (3) & 0.425 [0.390, 0.459] (6) & 0.432 [0.398, 0.464] (6) \\
+ & tower, own reader & 0.295 [0.261, 0.337] (5) & 0.497 [0.453, 0.540] (6) & 0.408 [0.368, 0.450] (6) \\
+ & tower, partner reader & 0.200 [0.175, 0.227] (4) & 0.335 [0.307, 0.364] (5) & 0.298 [0.273, 0.326] (5) \\
+ & \quad mean reader effect & 0.137 [0.119, 0.161] & 0.327 [0.298, 0.354] & 0.288 [0.265, 0.315] \\
+ & \quad mean tower effect & 0.248 [0.228, 0.271] & 0.416 [0.392, 0.441] & 0.353 [0.331, 0.379] \\
+\addlinespace
+MedGemma 4B, NIH & reader, own tower & 0.240 [0.221, 0.259] (5) & 0.210 [0.192, 0.233] (4) & 0.286 [0.268, 0.309] (6) \\
+ & reader, partner tower & 0.133 [0.106, 0.169] (1) & 0.158 [0.136, 0.187] (4) & 0.425 [0.393, 0.458] (5) \\
+ & tower, own reader & 0.160 [0.125, 0.193] (6) & 0.265 [0.239, 0.299] (5) & 0.496 [0.462, 0.525] (6) \\
+ & tower, partner reader & 0.164 [0.140, 0.189] (4) & 0.061 [0.046, 0.080] (1) & 0.137 [0.120, 0.164] (4) \\
+ & \quad mean reader effect & 0.186 [0.170, 0.207] & 0.184 [0.169, 0.203] & 0.356 [0.339, 0.376] \\
+ & \quad mean tower effect & 0.162 [0.140, 0.182] & 0.163 [0.149, 0.185] & 0.316 [0.299, 0.338] \\
 \bottomrule
 \end{tabular}
 \end{table}

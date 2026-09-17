@@ -43,6 +43,7 @@ import numpy as np
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 import cf_inclusion as ci   # noqa: E402
+import cf_ledger as cl   # noqa: E402
 import cf_round3 as r3   # noqa: E402
 
 OUT = HERE.parent / "tables"
@@ -671,6 +672,46 @@ def validfit_macros(M: dict, wb: dict, warn: list) -> None:
     M["cfValidfitOwnedReport"] = sum(ci.owned(c) for _, _, _, c in cells)
     if M["cfValidfitOwnedExpert"] > M["cfValidfitOwnedReport"]:
         warn.append("validfit: the expert-label refits own more cells than the report-label directions (prose says fewer)")
+    validfit_arm_macros(M, warn)
+
+
+# the arms that separate the LABEL SOURCE of a direction from the NUMBER OF ROWS it was estimated on. The expert-label
+# refit uses 200 films and the shipped direction about 20,000, so the two differ in both at once; the size-matched arms
+# hold the label source fixed at 200 rows and hold the sample fixed at one label source.
+VALIDFIT_ARMS = (("expert_valid200", "Expert"), ("report_valid200", "ReportSameFilms"),
+                 ("report_train_sub", "ReportSubCohort"), ("report_train_sub_known", "ReportSub"),
+                 ("report_train_full", "ReportFull"))
+
+
+def validfit_arm_macros(M: dict, warn: list) -> None:
+    """Appendix A: five arms scored on the same radiologist-labelled films, each with its cross-fitted AUROC against
+    the radiologist labels, against the report-derived labels of those films, and its raw and whitened cosine to the
+    shipped direction (runs/robustness/validfit.json, scripts/mayo/robustness_validfit.py)."""
+    V = r3.validfit_arms()
+    A = V["aggregate"]["per_arm"]
+    M["cfVfArmBlocks"] = V["meta"]["n_blocks"]; M["cfVfArmDraws"] = V["meta"]["draws"]
+    M["cfVfArmFolds"] = V["meta"]["folds"]; M["cfVfArmRows"] = V["blocks"][0]["n_valid_rows"]
+    M["cfVfArmTrainRows"] = f"{V['blocks'][0]['n_train_rows']:,}".replace(",", "{,}")
+    for arm, K in VALIDFIT_ARMS:
+        d = A[arm]
+        M[f"cfVfArm{K}Auroc"] = fx(d["auroc_expert_labels"], 2)
+        M[f"cfVfArm{K}AurocReport"] = fx(d["auroc_report_labels"], 2)
+        M[f"cfVfArm{K}Cos"] = fx(d["cos_model"], 2)
+        M[f"cfVfArm{K}CosWhite"] = fx(d["cos_whitened"], 2)
+        M[f"cfVfArm{K}Rows"] = int(round(d["median_fit_rows"]))
+        M[f"cfVfArm{K}Cells"] = d["cells"]
+    for key, K in (("label_source_at_matched_size", "Label"), ("label_source_on_the_same_films", "SameFilms"),
+                   ("sample_size_at_one_label_source", "Size"),
+                   ("expert_refit_against_the_shipped_direction", "Mixed")):
+        M[f"cfVfArmDelta{K}"] = fx(V["aggregate"][key]["delta_auroc_expert_labels"], 2, signed=True)
+    lab = abs(V["aggregate"]["label_source_at_matched_size"]["delta_auroc_expert_labels"])
+    size = V["aggregate"]["sample_size_at_one_label_source"]["delta_auroc_expert_labels"]
+    if lab >= size:
+        warn.append(f"validfit arms: the label-source contrast at a matched sample ({lab:+.3f}) is at least as large as "
+                    f"the sample-size contrast ({size:+.3f}); Appendix A says the sample size carries the difference")
+    if not V["aggregate"]["size_match_exact"]:
+        warn.append(f"validfit arms: the size-matched arm fits {A['report_train_sub_known']['median_fit_rows']:.0f} rows "
+                    f"against {A['expert_valid200']['median_fit_rows']:.0f} for the expert refit; they must match")
 
 
 def dose_macros(M: dict, rows: list[dict]) -> None:
@@ -680,6 +721,121 @@ def dose_macros(M: dict, rows: list[dict]) -> None:
         done.setdefault((r["model_key"], r["dataset"]), (t(r["block_included"]), set(m for m in r["completed_modules"].split("|") if m)))
     for ds, D in DS_MACRO.items():
         M[f"cfDoseBlocks{D}"] = sum(inc and "DOSE" in mods for (mk, d), (inc, mods) in done.items() if d == ds)
+
+
+WORD = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve"]
+
+
+def thou(n) -> str:
+    """An integer with the paper's thousands separator, so 18212 prints as 18{,}212."""
+    return f"{int(n):,}".replace(",", "{,}")
+
+ROLE_MACRO = {"train": "Train", "preflight": "Preflight", "calibration": "Calibration", "test": "Test", "valid": "Valid"}
+
+
+def ledger_macros(M: dict, wb: dict, warn: list) -> None:
+    """Headline counts of the reference-and-rule ledger (Table cf-ledger), through scripts/cf_ledger.py, which checks
+    every declared reference and sham against the packaged per-block statistics before the row is written."""
+    rows = cl.ledger(wb)
+    L = cl.totals(rows)
+    M["cfLedgerAnalyses"] = L["n_analyses"]; M["cfLedgerCells"] = thou(L["cells"])
+    M["cfLedgerFullReference"] = L["n_full_reference"]
+    M["cfLedgerSeedSham"] = L["n_seed0_sham"]; M["cfLedgerSeedShamWord"] = WORD[L["n_seed0_sham"]]
+    M["cfLedgerOwnSham"] = L["n_own_sham"]; M["cfLedgerMaxT"] = L["n_max_t"]
+    M["cfLedgerSeedShamCells"] = thou(L["cells_seed0_sham"])
+    M["cfLedgerPercentile"] = L["n_percentile"]; M["cfLedgerPercentileCells"] = L["cells_percentile"]
+    M["cfAnsdirtRefPairs"] = L["ansdirt_random"]; M["cfAnsdirtShamPairs"] = L["ansdirt_sham"]
+    M["cfAnsdirtLedgerPairs"] = L["ansdirt_cells"]
+    M["cfSemLedgerCells"] = L["semend_cells"]; M["cfSemLedgerRandom"] = L["semend_random"]
+    if L["n_seed0_sham"] + L["n_percentile"] == 0:
+        warn.append("ledger: no analysis departs from the write matrix's reference and rule, so Appendix A.7's sentence "
+                    "about the exceptions has nothing to point at")
+
+
+def cohort_macros(M: dict, warn: list) -> None:
+    """Rows, independent units and role overlaps of the fixed cohort manifests (Section 4, Table cf-roles).
+
+    One cohort manifest per dataset is copied into every block; this reads them and refuses to go on if two blocks of a
+    dataset disagree, so the counts in the text are the counts the campaign actually scored."""
+    import csv, collections, hashlib
+    seen, counts = {}, {}
+    for d in sorted(ci.RUNS.glob("*/*/manifests/cohort.csv")):
+        ds = d.parent.parent.name
+        h = hashlib.sha256(d.read_bytes()).hexdigest()
+        if ds in seen and seen[ds] != h:
+            raise RuntimeError(f"{ds}: blocks carry different cohort manifests; the cohort counts are not one cohort")
+        if ds in seen:
+            continue
+        seen[ds] = h
+        by = collections.defaultdict(list)
+        for r in csv.DictReader(d.open()):
+            by[r["role"]].append(r["unit_id"])
+        counts[ds] = {role: collections.Counter(u) for role, u in by.items()}
+    for ds, D in DS_MACRO.items():
+        roles = counts[ds]
+        for role, R in ROLE_MACRO.items():
+            c = roles.get(role)
+            if not c:
+                continue
+            M[f"cfCohort{D}{R}Rows"] = thou(sum(c.values())); M[f"cfCohort{D}{R}Units"] = thou(len(c))
+            M[f"cfCohort{D}{R}Max"] = max(c.values())
+            M[f"cfCohort{D}{R}Multi"] = thou(sum(1 for v in c.values() if v > 1))
+        names = [r for r in ROLE_MACRO if r in roles]
+        overlap = 0
+        for i, ra in enumerate(names):
+            for rb in names[i + 1:]:
+                n = len(set(roles[ra]) & set(roles[rb]))
+                M[f"cfOverlap{D}{ROLE_MACRO[ra]}{ROLE_MACRO[rb]}"] = n
+                overlap = max(overlap, n)
+        M[f"cfCohort{D}MaxOverlap"] = overlap
+        M[f"cfCohort{D}Pairs"] = len(names) * (len(names) - 1) // 2
+        if overlap:
+            warn.append(f"cohorts: two roles of {ds} share {overlap} units (Appendix F.5 says the roles are disjoint)")
+    M["cfCohortMaxOverlap"] = max(M[f"cfCohort{D}MaxOverlap"] for D in DS_MACRO.values())
+    multi = [(ds, role) for ds in counts for role, c in counts[ds].items() if max(c.values()) > 1]
+    M["cfCohortMultiRoles"] = len(multi)
+    if multi != [("nih", "train")]:
+        warn.append(f"cohorts: the roles holding more than one row per unit are {multi}; Section 4 names the NIH "
+                    f"training role alone")
+
+
+COVERAGE_LEGEND = {"CORE": "C", "CALIBRATION": "Cal", "PROMPT": "P", "DOSE": "D", "REFIT": "R", "LOCUS": "L",
+                   "LOCUS_CALIBRATION": "Lc"}
+CHEX_FIRST_WAVE = ("CORE", "CALIBRATION")
+CHEX_ADDED = ("PROMPT", "DOSE", "REFIT", "LOCUS", "LOCUS_CALIBRATION")
+
+
+def coverage_macros(M: dict, rows: list[dict], warn: list) -> None:
+    """The planned, completed and later coverage of Table cf-coverage, so Section 4 and Appendix A.4 can state each once.
+
+    The seven modules of the planned campaign are CORE, CALIBRATION, PROMPT, DOSE, REFIT, LOCUS and LOCUS_CALIBRATION.
+    CheXpert blocks carried the first two in the first wave; amendment A2 added the other five."""
+    done = {}
+    for r in rows:
+        done.setdefault((r["model_key"], r["dataset"]),
+                        (t(r["block_included"]), {m for m in r["completed_modules"].split("|") if m}))
+    all_ = {k: mods for k, (i, mods) in done.items() if True}
+    planned = tuple(COVERAGE_LEGEND)
+    M["cfCoveragePlannedModules"] = len(planned)
+    M["cfCoveragePlannedWord"] = WORD[len(planned)]
+    if M.get("cfCoverageBlocksAllSeven") != sum(all(m in mods for m in planned) for mods in all_.values()):
+        warn.append("coverage: the seven planned modules of this helper are not the seven the coverage table counts")
+    for ds, D in DS_MACRO.items():
+        b = {k: v for k, v in all_.items() if k[1] == ds}
+        M[f"cfCoverage{D}Blocks"] = len(b)
+        M[f"cfCoverage{D}AllSeven"] = sum(all(m in mods for m in planned) for mods in b.values())
+    chex = {k: v for k, v in all_.items() if k[1] == "chexpert"}
+    M["cfCoverageChexFirstWave"] = sum(all(m in mods for m in CHEX_FIRST_WAVE) for mods in chex.values())
+    if M.get("cfCoverageChexFull") != sum(all(m in mods for m in CHEX_ADDED) for mods in chex.values()):
+        warn.append("coverage: the five modules CheXpert gained after the first wave are not the five the table counts")
+    M["cfCoverageChexAddedN"] = len(CHEX_ADDED)
+    M["cfCoverageChexAddedWord"] = WORD[len(CHEX_ADDED)]
+    M["cfCoverageChexPartial"] = len(chex) - M["cfCoverageChexFull"]
+    # the CheXpert blocks short of the five: the paper names the reason, so the reason has to be the same one every time
+    short = {k[0]: sorted(set(CHEX_ADDED) - mods) for k, mods in chex.items() if not set(CHEX_ADDED) <= mods}
+    if sorted({m for v in short.values() for m in v}) not in ([], ["PROMPT"]):
+        warn.append(f"coverage: the CheXpert blocks short of the five added modules are short of {short}, not of the "
+                    f"five additional templates alone, which is what Appendix A.4 says")
 
 
 def round2_macros(M: dict, rows: list[dict], wb: dict, warn: list) -> None:
@@ -850,13 +1006,28 @@ def round3_macros(M: dict, rows: list[dict], wb: dict, warn: list) -> None:
     if T["pooled"].get("chest", {}).get("owned"):
         warn.append(f"towerswap: {T['pooled']['chest']['owned']} chest cells are owned in some combination "
                     f"(Section 5.5 says no combination owns a finding)")
+    # the crossover's factor effects on three quantities of the same six questions, from one pass over the four arms'
+    # current outcomes (runs/robustness/crossover.json): the own write, the ownership contrast, and the margin over the
+    # strongest competitor in the whole reference family. The four arms of a dataset are the same four files whichever
+    # host block indexes them, so the two host blocks of a dataset must give the same crossover.
+    X = r3.crossover(wb)
+    QK = {"W_qq": "", "O_q": "O", "M_q": "M"}
     for ds, D in DS_KEY.items():
-        xs = [b["crossover"] for b in T["crossover_blocks"] if b["dataset"] == ds]
+        xs = [b["crossover"] for b in X["blocks"] if b["dataset"] == ds]
         if not xs:
             continue
-        for name, key in (("Reader", "mean_abs_reader_effect"), ("Tower", "mean_abs_tower_effect")):
-            M[f"cfSwap{name}{D}Min"] = fx(min(x[key] for x in xs), 3)
-            M[f"cfSwap{name}{D}Max"] = fx(max(x[key] for x in xs), 3)
+        for q, qk in QK.items():
+            for name, factor in (("Reader", "reader"), ("Tower", "tower")):
+                key = f"mean_abs_{factor}_effect_{q}"
+                M[f"cfSwap{name}{D}{qk}Min"] = fx(min(x[key] for x in xs), 3)
+                M[f"cfSwap{name}{D}{qk}Max"] = fx(max(x[key] for x in xs), 3)
+                lo = min(x[f"{key}_ci95"][0] for x in xs); hi = max(x[f"{key}_ci95"][1] for x in xs)
+                M[f"cfSwap{name}{D}{qk}Lo"] = fx(lo, 3); M[f"cfSwap{name}{D}{qk}Hi"] = fx(hi, 3)
+        if len({fx(x["mean_abs_reader_effect_O_q"], 3) for x in xs}) != 1:
+            warn.append(f"crossover: the {ds} host blocks disagree on the reader effect on the ownership contrast")
+    if X["stale_packaged"]:
+        warn.append(f"crossover: the packaged crossover of {X['stale_packaged']} predates a rescored arm; the tables and "
+                    f"macros use the recomputation in runs/robustness/crossover.json")
     # the native arms are this block's own grade recomputed on the crossover's rows: the point estimates must track the
     # published grade, and a cell may only lose the owned grade to the smaller cohort's resolution, never to a competitor
     nv = T["native"]
@@ -913,9 +1084,31 @@ def round3_macros(M: dict, rows: list[dict], wb: dict, warn: list) -> None:
         M[f"cfSemIV{F}BaseMin"] = fx(d["base_min"], 3); M[f"cfSemIV{F}BaseMax"] = fx(d["base_max"], 3)
     M["cfSemIVBaseMin"] = fx(min(S["iv_per_family"][f]["base_min"] for f in r3.FAMS), 3)
     M["cfSemIVBaseMax"] = fx(max(S["iv_per_family"][f]["base_max"] for f in r3.FAMS), 3)
-    if S["iv_excludes_zero"] != S["iv_n"]:
-        warn.append(f"semend: the added-variance interval excludes zero in {S['iv_excludes_zero']} of {S['iv_n']} "
-                    f"block-and-family combinations (Section 5.6 says in every one)")
+    # ---- the same question out of sample (Table cf-semend, bottom panel). An in-sample increment is not evidence,
+    # so no macro above may be quoted as one; these are the macros the prose reads.
+    CV = r3.semend_cv(wb)
+    M["cfSemCvPerms"] = f"{CV['permutations']:,}".replace(",", "{,}")
+    M["cfSemCvTests"] = CV["pooled_leave_one_concept_out"]["n_tests"]
+    M["cfSemCvBlocks"] = CV["n_blocks"]
+    for key, K in (("pooled_leave_one_concept_out", "Loco"), ("pooled_leave_one_block_out", "Lobo")):
+        d = CV[key]
+        M[f"cfSemCv{K}Delta"] = fx(d["mean_delta_heldout_r2"], 3, signed=True)
+        M[f"cfSemCv{K}DeltaMin"] = fx(d["delta_min"], 3, signed=True)
+        M[f"cfSemCv{K}DeltaMax"] = fx(d["delta_max"], 3, signed=True)
+        M[f"cfSemCv{K}P"] = fx(d["permutation_p"], 2)
+        M[f"cfSemCv{K}Positive"] = d["n_tests_delta_positive"]; M[f"cfSemCv{K}Tests"] = d["n_tests"]
+        M[f"cfSemCv{K}MinP"] = fx(d["min_permutation_p"], 2)
+    M["cfSemCvLocoFolds"] = min(r["n_folds"] for r in CV["leave_one_concept_out"])
+    M["cfSemCvLoboFolds"] = min(r["n_folds"] for r in CV["leave_one_block_out"])
+    if S["iv_delta_min"] < 0:
+        warn.append(f"semend: an in-sample increment is negative ({S['iv_delta_min']:.4f}); adding predictors cannot "
+                    f"lower a training R^2, so the regression is not the one Table cf-semend describes")
+    if CV["ownership_adds_out_of_sample"]:
+        warn.append("semend: ownership now adds predictive value out of sample; Section 5.6 states that it does not, "
+                    "so the sentence and this guard both have to change")
+    if min(CV["pooled_leave_one_concept_out"]["min_permutation_p"],
+           CV["pooled_leave_one_block_out"]["min_permutation_p"]) < 0.05:
+        warn.append("semend: one held-out test reaches p < 0.05 under the permutation null; Section 5.6 says none does")
     if S["owned"]["label"] >= S["owned"]["answer"]:
         warn.append(f"semend: the label direction is owned in {S['owned']['label']} endpoint cells against "
                     f"{S['owned']['answer']} for the answer direction (Section 5.6 says fewer)")
@@ -924,20 +1117,56 @@ def round3_macros(M: dict, rows: list[dict], wb: dict, warn: list) -> None:
     F = r3.fgobj(wb)
     P = F["pool"]
     M["cfFgBlocks"] = len(F["blocks"]); M["cfFgConcepts"] = len(F["concepts"]); M["cfFgWindow"] = fx(F["window"], 2)
-    for g, G in (("chest", "Chest"), ("coco_easy", "Easy"), ("coco_fine", "Fine")):
+    # Easy / EasySame are two different pools and the prose may never swap them: `Easy` is the grid-wide COCO number
+    # over every COCO block, `EasySame` is the easy objects of the SIX blocks the fine-grained cells come from, which
+    # is the only pool the fine-grained rate may be compared with.
+    for g, G in (("chest", "Chest"), ("coco_easy", "Easy"), ("coco_fine", "Fine"), ("coco_easy_same_blocks", "EasySame")):
         d = P[g]
         M[f"cfFg{G}Owned"] = d["owned"]; M[f"cfFg{G}Cells"] = d["cells"]; M[f"cfFg{G}Rate"] = fx(d["owned_rate"], 3)
         M[f"cfFg{G}Auroc"] = fx(d["median_answer_auroc"], 3); M[f"cfFg{G}Sel"] = fx(d["median_selectivity"], 3)
+        M[f"cfFg{G}Blocks"] = d["blocks"]
+    SB = F["same_block"]
+    M["cfFgSameBlocks"] = SB["n_blocks"]
+    M["cfFgSameDiffMin"] = SB["paired_difference_min"]; M["cfFgSameDiffMax"] = SB["paired_difference_max"]
+    M["cfFgSameSignP"] = fx(SB["sign_test_p"], 2)
+    M["cfFgSameFineHigher"] = SB["n_blocks_fine_higher"]; M["cfFgSameEasyHigher"] = SB["n_blocks_easy_higher"]
+    M["cfFgSameTied"] = SB["n_blocks_tied"]
+    if (SB["fine_owned"], SB["fine_cells"]) != (P["coco_fine"]["owned"], P["coco_fine"]["cells"]) or \
+            (SB["easy_owned"], SB["easy_cells"]) != (P["coco_easy_same_blocks"]["owned"], P["coco_easy_same_blocks"]["cells"]):
+        warn.append("fgobj: the same-block comparison and the same-block pool disagree; rerun robustness_round2.py")
+    if P["coco_easy_same_blocks"]["blocks"] != len(F["blocks"]):
+        warn.append(f"fgobj: the same-block easy pool spans {P['coco_easy_same_blocks']['blocks']} blocks against "
+                    f"{len(F['blocks'])} FGOBJ blocks; they must be the same checkpoints")
+    # the grid-wide easy pool IS the COCO number of Section 5.1; it belongs there and not in the fine-grained comparison
+    if (P["coco_easy"]["owned"], P["coco_easy"]["cells"]) != (M["cfCocoOwned"], M["cfCocoOwnedN"]):
+        warn.append(f"fgobj: the grid-wide easy pool is {P['coco_easy']['owned']}/{P['coco_easy']['cells']} against "
+                    f"{M['cfCocoOwned']}/{M['cfCocoOwnedN']} COCO cells in the manifest; they are the same cells")
     for m, Mk in (("selectivity", "Sel"), ("answer_auroc", "Ans"), ("both", "Both")):
         d = F["matched"][m]
         M[f"cfFgMatch{Mk}N"] = d["n_matched_chest_cells"]; M[f"cfFgMatch{Mk}Cells"] = d["n_chest_cells"]
+        M[f"cfFgMatch{Mk}Partners"] = d["n_natural_cells_used"]; M[f"cfFgMatch{Mk}PartnersN"] = d["n_natural_cells"]
         M[f"cfFgMatch{Mk}Chest"] = fx(d["chest_owned_rate_matched"], 3); M[f"cfFgMatch{Mk}Nat"] = fx(d["natural_owned_rate_used"], 3)
         M[f"cfFgMatch{Mk}Diff"] = fx(d["matched_ownership_difference"], 3, signed=True)
         M[f"cfFgMatch{Mk}Lo"] = fx(d["matched_ownership_difference_ci95"][0], 3, signed=True)
         M[f"cfFgMatch{Mk}Hi"] = fx(d["matched_ownership_difference_ci95"][1], 3, signed=True)
-    if abs(P["coco_fine"]["owned_rate"] - P["coco_easy"]["owned_rate"]) > 0.05:
-        warn.append(f"fgobj: the fine-grained ownership rate {P['coco_fine']['owned_rate']:.3f} differs from the easy rate "
-                    f"{P['coco_easy']['owned_rate']:.3f} (Section 5.4 says they are the same)")
+        M[f"cfFgMatch{Mk}Pooled"] = fx(d["pooled_ownership_difference"], 3, signed=True)
+        M[f"cfFgMatch{Mk}PooledLo"] = fx(d["pooled_ownership_difference_ci95"][0], 3, signed=True)
+        M[f"cfFgMatch{Mk}PooledHi"] = fx(d["pooled_ownership_difference_ci95"][1], 3, signed=True)
+        # the pooled estimator is the difference of the two rates; the matched one is a different quantity and the
+        # two are never reported as one. Both guards fire on any regression of that.
+        if not d["pooled_equals_rate_difference"]:
+            warn.append(f"fgobj {m}: the pooled difference is not the difference of the two reported rates")
+        if abs(d["matched_ownership_difference"] - d["rate_difference"]) < 5e-4:
+            warn.append(f"fgobj {m}: the matched and pooled differences round to the same number, so the table must "
+                        f"still label them (matched {d['matched_ownership_difference']:.4f}, "
+                        f"pooled {d['rate_difference']:.4f})")
+    if abs(P["coco_fine"]["owned_rate"] - P["coco_easy_same_blocks"]["owned_rate"]) > 0.15:
+        warn.append(f"fgobj: the fine-grained ownership rate {P['coco_fine']['owned_rate']:.3f} differs from the "
+                    f"same-block easy rate {P['coco_easy_same_blocks']['owned_rate']:.3f} by more than the paired "
+                    f"per-block spread supports (Section 5.4 says fine-grainedness does not reduce ownership)")
+    if SB["sign_test_p"] is not None and SB["sign_test_p"] < 0.05:
+        warn.append(f"fgobj: the paired sign test over the {SB['n_blocks']} FGOBJ blocks gives p = {SB['sign_test_p']:.3f}, "
+                    f"so the same-block difference is not null (Section 5.4 says fine-grainedness does not reduce ownership)")
     if F["matched"]["selectivity"]["n_matched_chest_cells"] != P["chest"]["cells"]:
         warn.append("fgobj: matching on probe selectivity alone leaves chest cells unmatched (Section 5.4 says every one matches)")
 
@@ -1063,6 +1292,9 @@ def main() -> Path:
     answer_direction_macros(M, wb, warn)
     validfit_macros(M, wb, warn)
     dose_macros(M, rows)
+    ledger_macros(M, wb, warn)
+    cohort_macros(M, warn)
+    coverage_macros(M, rows, warn)
     for w in warn:
         print("  WARNING:", w)
     # write

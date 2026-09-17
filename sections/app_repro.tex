@@ -53,23 +53,39 @@ Projecting the token-mean read vector $\hvec_i$ gives features $R^{\top}\hvec_i$
 \subsection{Cohort roles}
 \label{app:repro-cohorts}
 
-Table~\ref{tab:cf-roles} lists each role's size and use. The roles are disjoint by patient on the chest sets and by image on COCO. We use the calibration role only to determine readability and answer capability. We neither fit probes nor score writes on it. Every write uses the test role.
+Table~\ref{tab:cf-roles} lists each role's size, its independent units, and its use. One role holds more than one row per unit: the NIH training role, which takes every study of each training patient. Every other role of every dataset holds one row per unit, and no unit appears in two roles of a dataset. We use the calibration role only to determine readability and answer capability. We neither fit probes nor score writes on it. Every write uses the test role.
 
 \begin{table}[h]
 \centering
 \scriptsize
-\setlength{\tabcolsep}{5pt}
-\caption{\textbf{Cohort roles.} Rows per role with independent units in parentheses, and the role's use. The units are patients on the chest sets and images on COCO.}
+\setlength{\tabcolsep}{3.5pt}
+\caption{\textbf{Cohort roles.} Rows per role with independent units in parentheses, the largest number of rows one unit contributes, and the role's use. The units are patients on the chest sets and images on COCO. The bottom panel counts the units two roles of a dataset share, over every pair of roles.}
 \label{tab:cf-roles}
-\begin{tabular}{llll>{\raggedright\arraybackslash}p{0.42\textwidth}}
+\begin{tabular}{>{\raggedright\arraybackslash}p{0.115\textwidth}lll>{\raggedright\arraybackslash}p{0.335\textwidth}}
 \toprule
 Role & NIH ChestX-ray14 & CheXpert Plus & COCO & Use \\
 \midrule
-train & 18{,}212 (5{,}783) & 20{,}000 (20{,}000) & 20{,}000 (20{,}000) & Scaler, six concept probes, twenty control probes, the two nuisance probes of the chest sets, and the answer-direction ridge. No row of this role is scored. \\
-preflight & 16 (16) & 16 (16) & 16 (16) & The seven acceptance gates, at both loci. \\
-calibration & 400 (400) & 400 (400) & 400 (400) & Clean pass at $\alpha=0$: probe readability and answer capability. \\
-test & 600 (600) & 600 (600) & 600 (600) & Every write matrix, dose, refit, template, locus, and addendum module. \\
-valid & -- & \cfValidRows{} (\cfValidRows{}) & -- & The regrade on radiologist consensus labels (Table~\ref{tab:cf-valid}). \\
+train & \cfCohortNihTrainRows{} (\cfCohortNihTrainUnits{}) & \cfCohortChexTrainRows{} (\cfCohortChexTrainUnits{}) & \cfCohortCocoTrainRows{} (\cfCohortCocoTrainUnits{}) & Scaler, six concept probes, twenty control probes, the two nuisance probes of the chest sets, and the answer-direction ridge. No row of this role is scored. \\
+preflight & \cfCohortNihPreflightRows{} (\cfCohortNihPreflightUnits{}) & \cfCohortChexPreflightRows{} (\cfCohortChexPreflightUnits{}) & \cfCohortCocoPreflightRows{} (\cfCohortCocoPreflightUnits{}) & The seven acceptance gates, at both loci. \\
+calibration & \cfCohortNihCalibrationRows{} (\cfCohortNihCalibrationUnits{}) & \cfCohortChexCalibrationRows{} (\cfCohortChexCalibrationUnits{}) & \cfCohortCocoCalibrationRows{} (\cfCohortCocoCalibrationUnits{}) & Clean pass at $\alpha=0$: probe readability and answer capability. \\
+test & \cfCohortNihTestRows{} (\cfCohortNihTestUnits{}) & \cfCohortChexTestRows{} (\cfCohortChexTestUnits{}) & \cfCohortCocoTestRows{} (\cfCohortCocoTestUnits{}) & Every write matrix, dose, refit, template, locus, and addendum module. \\
+valid & -- & \cfCohortChexValidRows{} (\cfCohortChexValidUnits{}) & -- & The regrade on radiologist consensus labels (Table~\ref{tab:cf-valid}). \\
+\midrule
+\multicolumn{5}{l}{\textit{Largest number of rows one unit contributes, and units contributing more than one}} \\
+train & \cfCohortNihTrainMax{} (\cfCohortNihTrainMulti{} units) & \cfCohortChexTrainMax{} (\cfCohortChexTrainMulti{}) & \cfCohortCocoTrainMax{} (\cfCohortCocoTrainMulti{}) & The NIH training role is the campaign's only role with several rows per unit. \\
+every other role & \cfCohortNihTestMax{} (\cfCohortNihTestMulti{}) & \cfCohortChexTestMax{} (\cfCohortChexTestMulti{}) & \cfCohortCocoTestMax{} (\cfCohortCocoTestMulti{}) & One row per unit in each of these roles. \\
+\midrule
+\multicolumn{5}{l}{\textit{Units shared by two roles of the same dataset, over every pair of roles}} \\
+train, preflight & \cfOverlapNihTrainPreflight{} & \cfOverlapChexTrainPreflight{} & \cfOverlapCocoTrainPreflight{} & \\
+train, calibration & \cfOverlapNihTrainCalibration{} & \cfOverlapChexTrainCalibration{} & \cfOverlapCocoTrainCalibration{} & \\
+train, test & \cfOverlapNihTrainTest{} & \cfOverlapChexTrainTest{} & \cfOverlapCocoTrainTest{} & \\
+train, valid & -- & \cfOverlapChexTrainValid{} & -- & \\
+preflight, calibration & \cfOverlapNihPreflightCalibration{} & \cfOverlapChexPreflightCalibration{} & \cfOverlapCocoPreflightCalibration{} & \\
+preflight, test & \cfOverlapNihPreflightTest{} & \cfOverlapChexPreflightTest{} & \cfOverlapCocoPreflightTest{} & \\
+preflight, valid & -- & \cfOverlapChexPreflightValid{} & -- & \\
+calibration, test & \cfOverlapNihCalibrationTest{} & \cfOverlapChexCalibrationTest{} & \cfOverlapCocoCalibrationTest{} & \\
+calibration, valid & -- & \cfOverlapChexCalibrationValid{} & -- & \\
+test, valid & -- & \cfOverlapChexTestValid{} & -- & \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -80,31 +96,42 @@ valid & -- & \cfValidRows{} (\cfValidRows{}) & -- & The regrade on radiologist c
 
 Each block writes a run record containing the protocol identifier \texttt{cf-transfer-v1}, a run identifier naming the checkpoint and dataset, the evaluation code version that produced the block, the pinned checkpoint and processor revisions, the library versions, the numeric precisions, and the resolved processing settings, including the rendered chat template. All \cfBlocks{} blocks carry the protocol identifier \texttt{cf-transfer-v1}. The protocol file registers the code version it was frozen against.
 
-Table~\ref{tab:cf-amendments} lists each addition to the protocol file after the first wave and its date. The six planned modules and the connector calibration derived from them have no amendment date. The robustness tables in Appendix~\ref{app:cf-robustness} identify the blocks containing each amendment module.
+Table~\ref{tab:cf-amendments} lists every addition to the protocol file after the first wave, what it fixes, and the date the file records for it. Every analysis the paper reports that is not one of the planned modules appears here, with the date the file gives it. The \cfCoveragePlannedWord{} planned modules have no amendment date. Each amendment entry names its own rows, references, and decision rule before it names a result, and the robustness tables in Appendix~\ref{app:cf-robustness} identify the blocks that carry each one.
 
 \begin{table}[h]
 \centering
 \scriptsize
 \setlength{\tabcolsep}{5pt}
-\caption{\textbf{Protocol amendments.} Each entry carries the date the registered protocol file records for it; the first two carry the identifiers of the execution log.}
+\caption{\textbf{Protocol amendments.} Every addition to the registered protocol file after the first wave, with the date the file records for it. Each date precedes the first outcome shard of the module it registers. A1 and A2 also carry the identifiers of the execution log.}
 \label{tab:cf-amendments}
-\begin{tabular}{ll>{\raggedright\arraybackslash}p{0.58\textwidth}}
+\begin{tabular}{ll>{\raggedright\arraybackslash}p{0.62\textwidth}}
 \toprule
-Amendment & Date & Change \\
+Amendment & Date & What it adds and what it fixes \\
 \midrule
-A1 & 2026-09-14 & Per-block primary template: the single-template modules score the first eligible template in the order (IY, IB), so a checkpoint whose yes/no template fails the image-free mapping gate is graded on its B-positive template. Llama~3.2 Vision 11B re-ran on all three datasets. \\
-A2 & 2026-09-14 & CheXpert gains DOSE, REFIT, LOCUS, LOCUS\_CALIBRATION and PROMPT, with Effusion and Edema as its PROMPT concepts. \\
-ALTDIR (A3) & 2026-09-14 & Four alternative direction constructions per concept: difference of class means, Haufe pattern, orthogonalised normal, and residualised normal. \\
-EXTCOMP & 2026-09-14 & Extra clinical directions for every additional dataset label with at least 100 known positives and negatives, added to the competitor family. \\
-TOKENW & 2026-09-14 & Softmax-weighted and top-quarter token weights for the six logistic directions. \\
-PRECISION & 2026-09-14 & The write grid rescored with fp32 weights and forward pass, and in bf16 at batch size one. \\
-ANSDIR & 2026-09-14 & The answer direction: a ridge regression of the clean answer margin on the same projected, train-scaled features. \\
-ALTDIRD & 2026-09-15 & The difference-of-means and pattern vectors lifted as displacements through the minimum-norm preimage. \\
-ATTR & 2026-09-15 & Three non-clinical attribute directions written with the six clinical directions as one nine-direction family. \\
-ANSDIRT & 2026-09-15 & The IY-fitted answer directions written under the five held-out templates. \\
-VALID & 2026-09-15 & The write grid regraded on the CheXpert validation split with radiologist consensus labels. \\
+A1 & 2026-09-14 & Per-block primary template: the single-template modules score the first eligible template in the order (IY, IB), so a checkpoint whose yes/no template fails the image-free mapping gate is graded on its B-positive template instead of losing its grade. Llama~3.2 Vision 11B re-ran on all three datasets. \\
+A2 & 2026-09-14 & CheXpert gains the dose sweep, the two probe refits, the connector locus, the connector-locus calibration, and the five additional templates, with Effusion and Edema as its two template concepts, so the second chest set carries the same modules as the first. \\
+A3 & 2026-09-14 & Four alternative direction constructions per concept: difference of class means, Haufe pattern, orthogonalised normal, and residualised normal. Fixes the reading that the deficit belongs to the logistic normal. \\
+A4 & 2026-09-14 & Extra clinical directions for every additional dataset label with at least 100 known positives and negatives, added to the competitor family. Fixes the reading that the six protocol concepts are too narrow a competitor set. \\
+A5 & 2026-09-14 & Softmax-weighted and top-quarter token weights for the six logistic directions. Fixes the reading that a uniform write dilutes the concept over tokens that do not carry it. \\
+A6 & 2026-09-14 & The write grid rescored with fp32 weights and forward pass, and in bf16 at batch size one. Fixes the reading that the grades are a numerical artefact. \\
+A7 & 2026-09-14 & The answer direction: a ridge regression of the clean answer margin on the same projected, train-scaled features. Fixes the reading that nothing in the consumed representation moves the answer. \\
+A8 & 2026-09-15 & The difference-of-means and pattern vectors lifted as displacements through the minimum-norm preimage. Fixes the reading that the coefficient lift is what fails. \\
+A9 & 2026-09-15 & Three non-clinical attribute directions written with the six clinical directions as one nine-direction family. Fixes the reading that the deficit follows from something about radiographs rather than from the concepts. \\
+A10 & 2026-09-15 & The answer directions fitted on the primary template written under the five held-out templates. Fixes the reading that the answer direction is a property of one prompt. \\
+A11 & 2026-09-15 & The write grid regraded on the CheXpert validation split with radiologist consensus labels. Fixes the reading that report-derived labels are the source of the deficit. \\
+A12 & 2026-09-16 & The crossed tower and reader: one checkpoint's vision tower loaded behind the other's connector and language model, and all four combinations of tower and reader graded on the same rows. Fixes the reading that ownership is a property of the representation alone or of the reader alone. \\
+A13 & 2026-09-16 & The identical-tensor replay: the consumed block's stored token tensors fed to every reader of a shared-tower group. Fixes the reading that two readers of one tower differ because their inputs differ by bf16 rounding. \\
+A14 & 2026-09-16 & The four semantic endpoints: the negated question, the counterbalanced two-finding forced choice, and the finding word's log-probability in a report continuation, each with its own clean baseline, sham, and random family, together with the incremental-validity test of the ownership contrast. Fixes the reading that ownership is validated only against the model's answers under the six templates. \\
+A15 & 2026-09-16 & The fine-grained object family: six further COCO categories chosen by the rule stated below, fitted, written, and graded as their own six-direction family in the same blocks and rows. Fixes the reading that the chest-to-COCO contrast is a contrast in task difficulty. \\
+A16 & 2026-09-16 & The clean pass of the fine-grained categories on the calibration rows, so their clean-answer AUROC is measured on the same rows and by the same rule as every other cell and the difficulty matching compares like with like. \\
+A17 & 2026-09-16 & The matched attribute reference: the protocol's own 119-direction random family written against the three attribute questions. Fixes the attribute-versus-finding comparison, which until then referenced attribute cells against their sham alone and clinical cells against the random 95th percentile as well. \\
+A18 & 2026-09-16 & Three phrasings of each attribute question scored clean on the calibration rows, with the selection rule and its reason recorded per cell. Fixes the reading that an attribute cell is unowned because the model cannot answer the phrasing that was written. \\
+A19 & 2026-09-16 & The expert-label refits: the six concept probes refitted on the radiologist-labelled films, cross-fitted over patients, and written on the test rows. Fixes the reading that the label source, not the concept, decides ownership. \\
+A20 & 2026-09-16 & Projection seeds 1 and 2: the probes, the random family, and the sham redrawn in two further random projections and regraded against that projection's own references. Fixes the reading that the grades depend on the seed-0 projection. \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 \FloatBarrier
+
+\paragraph{The fine-grained category selection rule.} The rule that picks the six fine-grained COCO categories of amendment A15 is stated in the protocol file in full, and it reads on the labels alone. A category is eligible when its training positives are at least as many as the weakest of the six existing concepts, when it has at least ten positives among the 400 calibration rows and at least ten among the 600 test rows, and when its mean relative instance area is below the median of the six existing concepts. Eligible categories are ranked by calibration positives in descending order, ties by mean relative instance area in ascending order, and remaining ties by category identifier; the first six are taken. The rule uses the label counts and the instance areas of the fixed cohorts and nothing else: no probe, no answer, and no write enters it. The protocol file carries the rule under the date of amendment A15, and the module's first outcome shard is later than that date, so the six categories and the two matching windows were fixed before any of them was scored.

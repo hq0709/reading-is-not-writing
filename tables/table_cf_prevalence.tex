@@ -2,7 +2,7 @@
 \centering
 \scriptsize
 \setlength{\tabcolsep}{4pt}
-\caption{\textbf{Label counts per cohort and concept.} Positive / negative / unknown rows of the three scored cohorts of the fixed manifests: the training cohort, which fits the scaler, the six probes, the control probes, and the answer direction; the 400-row calibration cohort, on which the readable and answerable grades and their ten-positive / ten-negative support rule are evaluated; and the 600-row test cohort, which carries every write. Unknown = CheXpert labeler uncertain or blank; unknown rows are excluded from probe fitting, selectivity, and answer AUROC, and are scored like every other row under every write.}
+\caption{\textbf{Label counts per cohort and concept.} Positive / negative / unknown rows of the three scored cohorts of the fixed manifests: the training cohort, which fits the scaler, the six probes, the control probes, and the answer direction; the 400-row calibration cohort, on which the readable and answerable grades and their ten-positive / ten-negative support rule are evaluated; and the 600-row test cohort, which carries every write. The NIH training cohort's \cfCohortNihTrainRows{} rows come from \cfCohortNihTrainUnits{} patients; every other cohort of every dataset holds one row per patient or image, and no unit appears in two of them (Table~\ref{tab:cf-roles}). Unknown = CheXpert labeler uncertain or blank; unknown rows are excluded from probe fitting, selectivity, and answer AUROC, and are scored like every other row under every write.}
 \label{tab:cf-prevalence}
 \begin{tabular}{llrrrrrrrrr}
 \toprule

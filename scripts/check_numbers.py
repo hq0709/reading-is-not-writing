@@ -23,6 +23,8 @@ from build_numbers import counts, pct   # noqa: E402
 
 ROOT = HERE.parent
 DS = ("nih", "chexpert", "coco")
+MATCHINGS_IN_TABLE = ("probe selectivity alone", "clean-answer AUROC alone", "both variables",
+                      "both variables, easy partners only")
 bad = 0
 
 
@@ -297,16 +299,26 @@ def main():
     expect("Table cf-towerswap swapped columns are M/G then G/M", tw_head.groups()[2:], ("M/G", "G/M"))
     expect("cfSwapCocoMedTowerCross/GemmaTowerCross = those two columns of the COCO row",
            (M["cfSwapCocoMedTowerCross"], M["cfSwapCocoGemmaTowerCross"]), (int(coco[0][4]), int(coco[0][5])))
-    cx_rows = re.findall(r"^(.+?) & (NIH ChestX-ray14|CheXpert Plus|COCO) & [\d.]+ \[\d\] & [\d.]+ \[\d\] & [\d.]+ \[\d\] & "
-                         r"[\d.]+ \[\d\] & ([\d.]+) & ([\d.]+) \\\\$", tw, flags=re.M)
-    expect("Table cf-towerswap crossover rows = cfSwapCrossovers", len(cx_rows), M["cfSwapCrossovers"])
-    for ds, D in (("NIH ChestX-ray14", "Nih"), ("CheXpert Plus", "Chex"), ("COCO", "Coco")):
-        xs = [r for r in cx_rows if r[1] == ds]
-        if not xs:
-            continue
-        for i, name in ((2, "Reader"), (3, "Tower")):
-            expect(f"cfSwap{name}{D}Min/Max = the {ds} crossover rows",
-                   (M[f"cfSwap{name}{D}Min"], M[f"cfSwap{name}{D}Max"]), (min(r[i] for r in xs), max(r[i] for r in xs)))
+    # the crossover panel: one block per "reader, own tower" row, each followed by its two mean-effect rows; every
+    # printed mean is checked against the macro of its own dataset and quantity
+    cx_blocks = re.findall(r"^(.+?), (NIH|CheXpert|COCO) & reader, own tower & ", tw, flags=re.M)
+    expect("Table cf-towerswap crossover blocks = cfSwapCrossovers", len(cx_blocks), M["cfSwapCrossovers"])
+    ds_of = {"NIH": "Nih", "CheXpert": "Chex", "COCO": "Coco"}
+    cur, printed = None, {}
+    for ln in tw.splitlines():
+        m = re.match(r"^(.+?), (NIH|CheXpert|COCO) & reader, own tower & ", ln)
+        if m:
+            cur = ds_of[m.group(2)]
+        m = re.match(r"^ & \\quad mean (reader|tower) effect &(.+?)\\\\$", ln)
+        if m and cur:
+            printed.setdefault((cur, m.group(1)), []).append([c.strip().split(" ")[0] for c in m.group(2).split("&")])
+    expect("Table cf-towerswap mean-effect rows", sorted({k[0] for k in printed}), sorted(ds_of.values()))
+    for (D, factor), rows_ in printed.items():
+        F = factor.capitalize()
+        for qi, qk in enumerate(("", "O", "M")):
+            expect(f"cfSwap{F}{D}{qk}Min/Max = the {D} mean {factor} effect",
+                   (M[f"cfSwap{F}{D}{qk}Min"], M[f"cfSwap{F}{D}{qk}Max"]),
+                   (min(r[qi] for r in rows_), max(r[qi] for r in rows_)))
     for name, key in (("cfSwapTensors", "n_tensors_replaced"), ("cfSwapTowerTensors", "n_tower_tensors"),
                       ("cfSwapOutside", "n_tensors_outside_tower")):
         expect(f"{name} in the caption", str(M[name]) in tw, True)
@@ -365,43 +377,134 @@ def main():
            (min(r[3] for r in t_rows), max(r[3] for r in t_rows)))
     expect("cfSemReportOwned/Cells = the report column", (M["cfSemReportOwned"], M["cfSemReportCells"]),
            (sum(int(r[6]) for r in t_rows), sum(int(r[7]) for r in t_rows)))
-    iv_rows = re.findall(r"^(.+?) & (?:NIH ChestX-ray14|CheXpert Plus) & (label|answer) direction & ([\d.]+) & ([\d.]+) & "
-                         r"([\d.]+) & \[(-?[\d.]+), (-?[\d.]+)\] \\\\$", se, flags=re.M)
-    expect("Table cf-semend regression rows = cfSemIVN", len(iv_rows), M["cfSemIVN"])
-    expect("cfSemIVMin/Max = the added-variance column", (M["cfSemIVMin"], M["cfSemIVMax"]),
+    # the in-sample panel is a reference only: it carries no interval column and the prose may not quote it as evidence
+    iv_rows = re.findall(r"^(.+?) & (?:NIH ChestX-ray14|CheXpert Plus) & (label|answer) direction & (-?[\d.]+) & "
+                         r"(-?[\d.]+) & (-?[\d.]+) & \\\\$", se, flags=re.M)
+    expect("Table cf-semend in-sample rows = cfSemIVN", len(iv_rows), M["cfSemIVN"])
+    expect("cfSemIVMin/Max = the in-sample added-variance column", (M["cfSemIVMin"], M["cfSemIVMax"]),
            (min(r[4] for r in iv_rows), max(r[4] for r in iv_rows)))
-    expect("cfSemIVBaseMin/Max = the base column", (M["cfSemIVBaseMin"], M["cfSemIVBaseMax"]),
+    expect("cfSemIVBaseMin/Max = the in-sample base column", (M["cfSemIVBaseMin"], M["cfSemIVBaseMax"]),
            (min(r[2] for r in iv_rows), max(r[2] for r in iv_rows)))
-    expect("cfSemIVExcl = regression rows whose interval excludes zero", M["cfSemIVExcl"],
-           sum(float(r[5]) > 0 and float(r[6]) > 0 for r in iv_rows))
     for fam, F in (("label", "Label"), ("answer", "Answer")):
         xs = [r for r in iv_rows if r[1] == fam]
         expect(f"cfSemIV{F}Min/Max", (M[f"cfSemIV{F}Min"], M[f"cfSemIV{F}Max"]), (min(r[4] for r in xs), max(r[4] for r in xs)))
+    # the held-out panel: the two splits, their pooled rows, and the macros the prose actually quotes
+    cv_rows = re.findall(r"^(.+?) & (?:NIH ChestX-ray14|CheXpert Plus) & (label|answer) direction & (-?[\d.]+) & "
+                         r"(-?[\d.]+) & (-?[\d.]+) & ([\d.]+) \\\\$", se, flags=re.M)
+    lb_rows = re.findall(r"^\\textit\{all (\d+)\} & \\textit\{pooled\} & (label|answer) direction & (-?[\d.]+) & "
+                         r"(-?[\d.]+) & (-?[\d.]+) & ([\d.]+) \\\\$", se, flags=re.M)
+    expect("Table cf-semend held-out concept rows = cfSemCvLocoTests", len(cv_rows), M["cfSemCvLocoTests"])
+    expect("Table cf-semend held-out block rows = cfSemCvLoboTests", len(lb_rows), M["cfSemCvLoboTests"])
+    expect("cfSemCvLoboFolds = cfSemCvBlocks (the block split has one fold per block)",
+           M["cfSemCvLoboFolds"], M["cfSemCvBlocks"])
+    expect("the block split pools every block", {int(r[0]) for r in lb_rows}, {M["cfSemCvBlocks"]})
+    pooled = [m.groups() for m in re.finditer(
+        r"^\\textit\{pooled\} & \\textit\{(\d+) tests\} & \\textit\{both\} & -- & -- & (-?[\d.]+) & ([\d.]+) \\\\$",
+        se, flags=re.M)]
+    expect("Table cf-semend carries a pooled row for each split", len(pooled), 2)
+    for row, K in zip(pooled, ("Loco", "Lobo")):
+        signed = lambda x: ("+" + x) if not x.startswith("-") else x
+        expect(f"cfSemCv{K}Delta/P/Tests = the pooled row of that split",
+               (M[f"cfSemCv{K}Delta"], M[f"cfSemCv{K}P"], M[f"cfSemCv{K}Tests"]),
+               (signed(row[1]), row[2], int(row[0])))
+    per_p = [float(r[5]) for r in cv_rows] + [float(r[5]) for r in lb_rows]
+    expect("every held-out test clears the permutation null (Section 5.6 says none reaches p < 0.05)",
+           [p for p in per_p if p < 0.05], [])
 
     fg = (ROOT / "tables" / "table_cf_fgobj.tex").read_text()
     F = r3.fgobj(wb)
     fg_rows = re.findall(r"^(.+?) & (\d) & (\d) & ([\d.]+) & ([\d.]+) & ([\d.]+) & ([\d.]+) \\\\$", fg, flags=re.M)
     expect("Table cf-fgobj block rows = cfFgBlocks", len(fg_rows), M["cfFgBlocks"])
     expect("cfFgFineOwned = the per-block fine column", M["cfFgFineOwned"], sum(int(r[1]) for r in fg_rows))
+    expect("cfFgEasySameOwned = the per-block easy column of the same blocks", M["cfFgEasySameOwned"],
+           sum(int(r[2]) for r in fg_rows))
     pool = {m.group(1): m.groups() for m in re.finditer(
-        r"^(chest findings|the six easy objects|the six fine-grained objects) & (\d+) & (\d+)/(\d+) & ([\d.]+) & ([\d.]+) & "
+        r"^(chest findings|easy objects, every COCO block|easy objects, these blocks|"
+        r"fine-grained objects, these blocks) & (\d+) & (\d+)/(\d+) & ([\d.]+) & ([\d.]+) & "
         r"([\d.]+) & (\d+)/(\d+) \\\\$", fg, flags=re.M)}
-    for g, G in (("chest findings", "Chest"), ("the six easy objects", "Easy"), ("the six fine-grained objects", "Fine")):
+    for g, G in (("chest findings", "Chest"), ("easy objects, every COCO block", "Easy"),
+                 ("easy objects, these blocks", "EasySame"),
+                 ("fine-grained objects, these blocks", "Fine")):
         row = pool[g]
-        expect(f"cfFg{G} owned/cells/rate/AUROC/selectivity",
-               (M[f"cfFg{G}Owned"], M[f"cfFg{G}Cells"], M[f"cfFg{G}Rate"], M[f"cfFg{G}Auroc"], M[f"cfFg{G}Sel"]),
-               (int(row[2]), int(row[3]), row[4], row[5], row[6]))
-    mt = {m.group(1): m.groups() for m in re.finditer(
-        r"^(probe selectivity alone|clean-answer AUROC alone|both variables|both variables, easy partners only) & "
-        r"(\d+)/(\d+) & (\d+)/(\d+) & ([\d.]+) & ([\d.]+) & (-?[\d.]+) & \[(-?[\d.]+), (-?[\d.]+)\] \\\\$", fg, flags=re.M)}
+        expect(f"cfFg{G} blocks/owned/cells/rate/AUROC/selectivity",
+               (M[f"cfFg{G}Blocks"], M[f"cfFg{G}Owned"], M[f"cfFg{G}Cells"], M[f"cfFg{G}Rate"], M[f"cfFg{G}Auroc"], M[f"cfFg{G}Sel"]),
+               (int(row[1]), int(row[2]), int(row[3]), row[4], row[5], row[6]))
+    expect("cfFgEasySameBlocks = cfFgBlocks (the same checkpoints as the fine-grained cells)",
+           M["cfFgEasySameBlocks"], M["cfFgBlocks"])
+    expect("cfFgSameSignP present in the paired line of Table cf-fgobj",
+           bool(re.search(r"sign test \$p=" + re.escape(str(M["cfFgSameSignP"])) + r"\$", fg)), True)
+    # the matched panel carries TWO labelled estimators per matching, each with its own interval
+    mt = {}
+    for m in re.finditer(
+            r"^(probe selectivity alone|clean-answer AUROC alone|both variables|both variables, easy partners only) & "
+            r"(\d+)/(\d+) & (\d+)/(\d+) & ([\d.]+) & ([\d.]+) &  &  \\\\\n"
+            r"\\quad pooled &  &  &  &  & (-?[\d.]+) & \[(-?[\d.]+), (-?[\d.]+)\] \\\\\n"
+            r"\\quad matched &  &  &  &  & (-?[\d.]+) & \[(-?[\d.]+), (-?[\d.]+)\] \\\\$", fg, flags=re.M):
+        mt[m.group(1)] = m.groups()
+    expect("Table cf-fgobj reports both estimators for every matching", sorted(mt), sorted(MATCHINGS_IN_TABLE))
     for lab, K in (("probe selectivity alone", "Sel"), ("clean-answer AUROC alone", "Ans"), ("both variables", "Both")):
         row = mt[lab]
         signed = lambda x: ("+" + x) if not x.startswith("-") else x
-        expect(f"cfFgMatch{K} N/cells/chest/natural/difference/interval",
-               (M[f"cfFgMatch{K}N"], M[f"cfFgMatch{K}Cells"], M[f"cfFgMatch{K}Chest"], M[f"cfFgMatch{K}Nat"],
-                M[f"cfFgMatch{K}Diff"], M[f"cfFgMatch{K}Lo"], M[f"cfFgMatch{K}Hi"]),
-               (int(row[1]), int(row[2]), row[5], row[6], signed(row[7]), signed(row[8]), signed(row[9])))
+        expect(f"cfFgMatch{K} chest cells / partners / the two rates",
+               (M[f"cfFgMatch{K}N"], M[f"cfFgMatch{K}Cells"], M[f"cfFgMatch{K}Partners"], M[f"cfFgMatch{K}PartnersN"],
+                M[f"cfFgMatch{K}Chest"], M[f"cfFgMatch{K}Nat"]),
+               (int(row[1]), int(row[2]), int(row[3]), int(row[4]), row[5], row[6]))
+        expect(f"cfFgMatch{K} pooled difference and interval",
+               (M[f"cfFgMatch{K}Pooled"], M[f"cfFgMatch{K}PooledLo"], M[f"cfFgMatch{K}PooledHi"]),
+               (signed(row[7]), signed(row[8]), signed(row[9])))
+        expect(f"cfFgMatch{K} matched difference and interval",
+               (M[f"cfFgMatch{K}Diff"], M[f"cfFgMatch{K}Lo"], M[f"cfFgMatch{K}Hi"]),
+               (signed(row[10]), signed(row[11]), signed(row[12])))
+        # the pooled estimand IS the difference of the two printed rates; round2.json guarantees that exactly
+        # (cf_round3.fgobj refuses to build otherwise), so the table only has to agree to the last printed place
+        expect(f"cfFgMatch{K}Pooled = chest rate minus natural rate, to the last printed place",
+               abs(round(float(M[f"cfFgMatch{K}Pooled"]) - float(row[5]) + float(row[6]), 6)) <= 0.001, True)
     expect("cfFgMatchSelN = every chest cell (the prose says all of them match)", M["cfFgMatchSelN"], M["cfFgChestCells"])
+
+    # Table cf-validfit-arms: the label source separated from the sample size
+    va = (ROOT / "tables" / "table_cf_validfit_arms.tex").read_text()
+    arm_rows = {m.group(1) + "|" + m.group(2): m.groups() for m in re.finditer(
+        r"^(radiologist|report-derived) & (200 valid films|the same 200 valid films|200 training rows|"
+        r"200 labelled training rows|every training row) & (\d+) & ([\d.]+) & ([\d.]+) & (-?[\d.]+) & (-?[\d.]+) \\\\$",
+        va, flags=re.M)}
+    expect("Table cf-validfit-arms has five arms", len(arm_rows), 5)
+    for key, K in (("radiologist|200 valid films", "Expert"),
+                   ("report-derived|the same 200 valid films", "ReportSameFilms"),
+                   ("report-derived|200 training rows", "ReportSubCohort"),
+                   ("report-derived|200 labelled training rows", "ReportSub"),
+                   ("report-derived|every training row", "ReportFull")):
+        row = arm_rows[key]
+        expect(f"cfVfArm{K} rows / AUROC against both label sets / the two cosines",
+               (M[f"cfVfArm{K}Rows"], M[f"cfVfArm{K}Auroc"], M[f"cfVfArm{K}AurocReport"],
+                M[f"cfVfArm{K}Cos"], M[f"cfVfArm{K}CosWhite"]),
+               (int(row[2]), row[3], row[4], row[5], row[6]))
+    expect("cfVfArmReportSubRows = cfVfArmExpertRows (the size-matched arm fits as many rows as the expert refit)",
+           M["cfVfArmReportSubRows"], M["cfVfArmExpertRows"])
+    # the arms script recomputes the campaign's own two arms from the block fits; they must land on the numbers the
+    # summaries already carry, or the added arms are not measuring the same thing
+    expect("cfVfArmExpert* = cfValidfit* (the recomputed expert arm reproduces the shipped one)",
+           (M["cfVfArmExpertAuroc"], M["cfVfArmExpertCos"], M["cfVfArmExpertCosWhite"], M["cfVfArmExpertCells"]),
+           (M["cfValidfitAurocExpert"], M["cfValidfitCosRaw"], M["cfValidfitCosWhitened"], M["cfValidfitCells"]))
+    expect("cfVfArmReportFullAuroc = cfValidfitAurocReportDir (the shipped direction, both ways)",
+           M["cfVfArmReportFullAuroc"], M["cfValidfitAurocReportDir"])
+    expect("cfVfArmRows = cfValidfitFitRows and cfVfArmFolds = cfValidfitFolds",
+           (M["cfVfArmRows"], M["cfVfArmFolds"]), (M["cfValidfitFitRows"], M["cfValidfitFolds"]))
+
+    # GUARD: the grid-wide easy-object pool and the same-block pool answer different questions, so no sentence may
+    # quote a grid-wide easy macro beside a fine-grained one as if the two were the same comparison.
+    grid_wide = ("cfFgEasyOwned", "cfFgEasyCells", "cfFgEasyRate", "cfFgEasyAuroc", "cfFgEasySel", "cfFgEasyBlocks")
+    fine = ("cfFgFineOwned", "cfFgFineCells", "cfFgFineRate", "cfFgFineAuroc", "cfFgFineSel")
+    same = tuple(n.replace("cfFgEasy", "cfFgEasySame") for n in grid_wide)
+    clashes = []
+    for path in sorted((ROOT / "sections").glob("*.tex")):
+        src = path.read_text()
+        for sent in re.split(r"(?<=[.;:])\s", src):
+            has = lambda names: any(re.search(rf"\\{n}(?![A-Za-z])", sent) for n in names)
+            if has(grid_wide) and has(fine):
+                clashes.append(f"{path.name}: a grid-wide easy macro beside a fine-grained one")
+            if has(grid_wide) and has(same):
+                clashes.append(f"{path.name}: the grid-wide and the same-block easy macros in one sentence")
+    expect("no sentence mixes the grid-wide easy-object pool with the fine-grained comparison", clashes, [])
 
     # the attribute comparison read three ways, in the bottom panel of Table cf-attr
     am = {m.group(1): m.groups() for m in re.finditer(
@@ -433,6 +536,33 @@ def main():
         expect(f"{f}: every decomposition macro present", [m for m, p in zip(order, at) if p < 0], [])
         expect(f"{f}: reference before ownership before the below-reference share",
                [p for p in at if p >= 0] == sorted(p for p in at if p >= 0), True)
+    # ---- the reference-and-rule ledger (Table cf-ledger): the table's own rows against the macros the prose reads,
+    #      and both against the ledger the artefacts produce, so a row cannot say one thing and the prose another
+    led = (ROOT / "tables" / "table_cf_ledger.tex").read_text()
+    body = led.split(r"\midrule", 1)[1].split(r"\bottomrule", 1)[0]
+    lrows = [ln for ln in body.splitlines() if ln.strip().endswith(r"\\")]
+    print("ledger table vs macros:")
+    expect("ledger: rows", len(lrows), int(M["cfLedgerAnalyses"]))
+    cells = [int(ln.rstrip("\\ ").rsplit("&", 1)[1].strip().replace("{,}", "")) for ln in lrows]
+    expect("ledger: cells", sum(cells), int(str(M["cfLedgerCells"]).replace("{,}", "")))
+    expect("ledger: analyses with the seed-0 sham", sum("the seed-0 normal" in ln for ln in lrows), int(M["cfLedgerSeedSham"]))
+    expect("ledger: cells graded against the seed-0 sham",
+           sum(c for c, ln in zip(cells, lrows) if "the seed-0 normal" in ln), int(str(M["cfLedgerSeedShamCells"]).replace("{,}", "")))
+    expect("ledger: analyses decided by a percentile interval",
+           sum("percentile interval on" in ln for ln in lrows), int(M["cfLedgerPercentile"]))
+    expect("ledger: analyses decided by simultaneous bounds",
+           sum("simultaneous max-$T$," in ln for ln in lrows), int(M["cfLedgerMaxT"]))
+    expect("ledger: analyses with a permutation sham",
+           sum("the direction written" in ln for ln in lrows), int(M["cfLedgerOwnSham"]))
+    expect("ledger: the held-out-template split",
+           f"{M['cfAnsdirtRefPairs']} pairs" in led and f"in {M['cfAnsdirtShamPairs']}" in led, True)
+
+    # ---- the two host blocks of a dataset index the same four arms, so their crossovers must agree
+    print("crossover, the two host blocks of a dataset:")
+    expect("crossover: the two host blocks of a dataset give the same crossover",
+           [(F, D, qk) for F in ("Reader", "Tower") for D in ("Nih", "Chex", "Coco") for qk in ("", "O", "M")
+            if M[f"cfSwap{F}{D}{qk}Min"] != M[f"cfSwap{F}{D}{qk}Max"]], [])
+
     # rendered prose
     pdf = ROOT / "main.pdf"
     if pdf.exists() and shutil.which("pdftotext"):

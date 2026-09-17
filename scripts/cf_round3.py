@@ -6,8 +6,11 @@ consistency check so that a table and the macro beside it can never drift apart.
     replay(wb)      identical-tensor replay: the consumed block's stored token tensors fed to both readers of a
                     shared-tower pair, so the input is identical bit for bit rather than equal up to rounding.
     semend(wb)      semantic endpoints: both direction families written at four endpoints no direction was fitted
-                    against, with the incremental-validity test of the ownership contrast.
+                    against, with the in-sample regression fit of the ownership contrast.
+    semend_cv(wb)   the same question answered OUT OF SAMPLE: leave-one-concept-out and leave-one-block-out
+                    cross-validation with a concept-level permutation null (runs/robustness/round2.json).
     fgobj(wb)       fine-grained object family and the difficulty-matched comparison (runs/robustness/round2.json).
+    validfit_arms() label source against sample size for the expert-label refits (runs/robustness/validfit.json).
     attrq(wb)       phrasing selection for the three non-clinical attributes.
 
 Every function takes the block table of cf_inclusion.write_blocks and raises when the set of blocks carrying the
@@ -283,11 +286,49 @@ def fgobj(wb: dict) -> dict:
     if got != set(keys):
         raise RuntimeError(f"round2.json fgobj blocks differ from the included blocks with FGOBJ by "
                            f"{sorted(got ^ set(keys))}; rerun scripts/mayo/robustness_round2.py")
+    for m in MATCHINGS + ("both_easy_partners_only",):
+        d = F["matched"][m]
+        if d.get("pooled_ownership_difference") is not None and not d.get("pooled_equals_rate_difference"):
+            raise RuntimeError(f"round2.json fgobj {m}: the pooled difference is not the difference of the two reported "
+                               f"rates; rerun scripts/mayo/robustness_round2.py")
+    if "coco_easy_same_blocks" not in F["pool"] or "same_block_comparison" not in F:
+        raise RuntimeError("round2.json fgobj carries no same-block easy pool; rerun scripts/mayo/robustness_round2.py")
     return {"concepts": list(F["concepts"]), "blocks": F["blocks"], "pool": F["pool"],
             "matched": {m: F["matched"][m] for m in MATCHINGS},
             "matched_easy_only": F["matched"]["both_easy_partners_only"],
+            "same_block": F["same_block_comparison"],
             "prespecification": F["prespecification"], "matching_variables": F["matching_variables"],
             "window": F["matched"]["both"]["window_answer_auroc"]}
+
+
+# ------------------------------------------------------------------------ held-out incremental validity of ownership
+
+def semend_cv(wb: dict) -> dict:
+    """The out-of-sample test of Section 5.6: does ownership add anything about endpoint behaviour beyond write
+    magnitude, probe selectivity and clean-answer AUROC once the fit never sees the fold it predicts?
+    (runs/robustness/round2.json semend section). The block set is checked against the included blocks with SEMEND."""
+    S = json.loads((ROB / "round2.json").read_text()).get("semend")
+    if not S or not S.get("leave_one_concept_out"):
+        raise RuntimeError("round2.json carries no semend held-out section; rerun scripts/mayo/robustness_round2.py")
+    keys = _blocks(wb, "SEMEND", "semend")
+    got = {tuple(b.split("/")) for b in S["blocks"]}
+    if got != set(keys):
+        raise RuntimeError(f"round2.json semend blocks differ from the included blocks with SEMEND by "
+                           f"{sorted(got ^ set(keys))}; rerun scripts/mayo/robustness_round2.py")
+    return S
+
+
+def validfit_arms() -> dict:
+    """The label-source-against-sample-size arms of Appendix A (runs/robustness/validfit.json,
+    scripts/mayo/robustness_validfit.py). Every arm is scored on the same radiologist-labelled films with the same
+    projection, the same stored train-only scaler, the same probe settings and the same cross-fitting."""
+    path = ROB / "validfit.json"
+    if not path.exists():
+        raise RuntimeError(f"{path} is missing; run scripts/mayo/robustness_validfit.py (CPU, minutes)")
+    V = json.loads(path.read_text())
+    if not V.get("blocks"):
+        raise RuntimeError("runs/robustness/validfit.json carries no blocks; rerun scripts/mayo/robustness_validfit.py")
+    return V
 
 
 # ------------------------------------------------------------------------------------------------ phrasing selection
@@ -334,3 +375,29 @@ def attr_modes(wb: dict) -> dict:
             "attribute_random_reference": bool(ch["attribute_random_reference"]),
             "clinical_random_reference": bool(ch["clinical_random_reference"]),
             "per_dataset": {ds: A["per_dataset"][ds]["comparison"] for ds in CHEST if A["per_dataset"][ds]["blocks"]}}
+
+
+# ------------------------------------------------------- crossed tower and reader: the factor effects on ownership
+
+CROSSOVER_QUANTITIES = ("W_qq", "O_q", "M_q")
+CROSSOVER_CONTRASTS = ("reader_effect_at_own_tower", "reader_effect_at_partner_tower",
+                       "tower_effect_at_own_reader", "tower_effect_at_partner_reader")
+
+
+def crossover(wb: dict) -> dict:
+    """The four crossover contrasts of the tower-and-reader experiment on three quantities, from
+    runs/robustness/crossover.json: the own-question write magnitude, the ownership contrast, and the margin over the
+    strongest competitor in the full reference family. One pass over the current outcomes computes all three, so the
+    columns of one row cannot come from different states of the same arm. The block set is checked against the blocks
+    whose packaged crossover is complete."""
+    C = json.loads((ROB / "crossover.json").read_text())
+    got = {b["block"] for b in C["blocks"]}
+    want = {f"{k[0]}/{k[1]}" for k in _blocks(wb, "TOWERSWAP", "towerswap")
+            if (wb[k]["s"]["towerswap"] or {}).get("crossover_complete")}
+    if got != want:
+        raise RuntimeError(f"crossover.json covers {sorted(got)}, the summaries say the crossover is complete for "
+                           f"{sorted(want)}; rerun scripts/mayo/robustness_crossover.py")
+    return {"meta": C["meta"], "blocks": C["blocks"], "n_blocks": len(C["blocks"]),
+            "quantities": list(CROSSOVER_QUANTITIES), "contrasts": list(CROSSOVER_CONTRASTS),
+            "by_block": {b["block"]: b for b in C["blocks"]},
+            "stale_packaged": list(C["meta"]["blocks_whose_packaged_W_qq_crossover_predates_the_current_outcomes"])}

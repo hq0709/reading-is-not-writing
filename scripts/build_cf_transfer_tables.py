@@ -524,8 +524,15 @@ def table_gates(blocks):
 
 
 # --------------------------------------------------------------------------------------------- coverage (manifest)
+# the module's registered key, the letter the table prints, and the name the caption's legend gives it: the paper
+# names a module by what it scores, never by the key the run records carry
 MODULE_ABBR = [("CORE", "C"), ("CALIBRATION", "Cal"), ("PROMPT", "P"), ("DOSE", "D"), ("REFIT", "R"), ("LOCUS", "L"),
                ("LOCUS_CALIBRATION", "Lc"), ("ALTDIR", "A"), ("ALTDIRD", "Ad"), ("ANSDIR", "An"), ("EXTCOMP", "E"), ("TOKENW", "T"), ("PRECISION", "Pr")]
+MODULE_NAME = {"CORE": "write matrix", "CALIBRATION": "calibration pass", "PROMPT": "five additional templates",
+               "DOSE": "dose sweep", "REFIT": "two probe refits", "LOCUS": "connector locus",
+               "LOCUS_CALIBRATION": "connector-locus calibration", "ALTDIR": "alternative direction constructions",
+               "ALTDIRD": "displacement lifts", "ANSDIR": "answer direction", "EXTCOMP": "extended competitor family",
+               "TOKENW": "token-weighted writes", "PRECISION": "fp32 and batch-size-one rescoring"}
 PLANNED = ("CORE", "CALIBRATION", "PROMPT", "DOSE", "REFIT", "LOCUS", "LOCUS_CALIBRATION")
 CHEX_EXTENSION = ("PROMPT", "DOSE", "REFIT", "LOCUS", "LOCUS_CALIBRATION")
 
@@ -557,12 +564,16 @@ def table_coverage():
         return txt
     n_seven = sum(all(m in b["completed"] for m in PLANNED) for b in blocks.values())
     n_chex = sum(ds == "chexpert" and all(m in b["completed"] for m in CHEX_EXTENSION) for (mk, ds), b in blocks.items())
-    legend = ", ".join(f"{a} = {m.replace('_', chr(92) + '_')}" for m, a in MODULE_ABBR if any(m in b["completed"] or m in b["ineligible"] for b in blocks.values()))
+    legend = ", ".join(f"{a} = {MODULE_NAME[m]}" for m, a in MODULE_ABBR if any(m in b["completed"] or m in b["ineligible"] for b in blocks.values()))
     L = [r"\begin{table}[h]", r"\centering", r"\scriptsize", r"\setlength{\tabcolsep}{4pt}",
          r"\caption{\textbf{Coverage.} Modules completed per block at packaging (from the campaign manifest), with the modules whose "
          r"template is ineligible (inel.) and the primary template when it is not the \emph{is}/yes-no template; ``--'' = block not run; "
-         r"modules still in progress are not listed. \cfCoverageBlocksAllSeven{} blocks carry all seven modules of the planned campaign, "
-         r"and the five modules added to CheXpert after the first wave are complete on \cfCoverageChexFull{} of the CheXpert blocks.}",
+         r"modules still in progress are not listed. The planned campaign is \cfCoveragePlannedWord{} modules on every block, and "
+         r"\cfCoverageBlocksAllSeven{} of the \cfBlocks{} blocks carry all \cfCoveragePlannedWord{}: \cfCoverageNihAllSeven{} of "
+         r"\cfCoverageNihBlocks{} on NIH, \cfCoverageChexAllSeven{} of \cfCoverageChexBlocks{} on CheXpert and "
+         r"\cfCoverageCocoAllSeven{} of \cfCoverageCocoBlocks{} on COCO. The CheXpert blocks carried the write matrix and the "
+         r"calibration pass in the first wave; the \cfCoverageChexAddedWord{} modules amendment A2 added to them are complete on "
+         r"\cfCoverageChexFull{} of the \cfCoverageChexBlocks{} CheXpert blocks.}",
          r"\label{tab:cf-coverage}",
          r"\begin{tabular}{llll}", r"\toprule", r"Checkpoint & NIH ChestX-ray14 & CheXpert Plus & COCO \\", r"\midrule"]
     for m in ORDER:
