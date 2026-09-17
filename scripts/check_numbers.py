@@ -442,7 +442,7 @@ def main():
                        f"Yet only {M['cfChestOwned']} cells ({M['cfChestOwnedPct']}%) are owned",
                        f"In {M['cfChestCompetitor']} cells ({M['cfChestCompetitorPct']}%), the verdict",
                        f"owns {M['cfCocoOwnedPct']}% of cells on COCO",
-                       f"Objects are owned in {M['cfCocoOwned']} of {M['cfCocoOwnedN']} cells ({M['cfCocoOwnedPct']}%)",
+                       f"{M['cfCocoOwned']} of {M['cfCocoOwnedN']} cells ({M['cfCocoOwnedPct']}%)",
                        ):
             found = phrase in flat or phrase.replace("–", "-") in flat
             expect(f"prose: {phrase[:60]}...", found, True)
