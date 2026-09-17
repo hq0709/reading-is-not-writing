@@ -59,7 +59,7 @@ Table~\ref{tab:cf-roles} lists each role's size, its independent units, and its 
 \centering
 \scriptsize
 \setlength{\tabcolsep}{3.5pt}
-\caption{\textbf{Cohort roles.} Rows per role with independent units in parentheses, the largest number of rows one unit contributes, and the role's use. The units are patients on the chest sets and images on COCO. The bottom panel counts the units two roles of a dataset share, over every pair of roles.}
+\caption{\textbf{Cohort roles.} Rows per role with independent units in parentheses, the largest number of rows one unit contributes, and the role's use; units are patients on the chest sets and images on COCO. The bottom panel counts the units two roles of a dataset share.}
 \label{tab:cf-roles}
 \begin{tabular}{>{\raggedright\arraybackslash}p{0.115\textwidth}lll>{\raggedright\arraybackslash}p{0.335\textwidth}}
 \toprule
@@ -96,13 +96,13 @@ test, valid & -- & \cfOverlapChexTestValid{} & -- & \\
 
 Each block writes a run record containing the protocol identifier \texttt{cf-transfer-v1}, a run identifier naming the checkpoint and dataset, the evaluation code version that produced the block, the pinned checkpoint and processor revisions, the library versions, the numeric precisions, and the resolved processing settings, including the rendered chat template. All \cfBlocks{} blocks carry the protocol identifier \texttt{cf-transfer-v1}. The protocol file registers the code version it was frozen against.
 
-Table~\ref{tab:cf-amendments} lists every addition to the protocol file after the first wave, what it fixes, and the date the file records for it. Every analysis the paper reports that is not one of the planned modules appears here, with the date the file gives it. The \cfCoveragePlannedWord{} planned modules have no amendment date. Each amendment entry names its own rows, references, and decision rule before it names a result, and the robustness tables in Appendix~\ref{app:cf-robustness} identify the blocks that carry each one.
+Table~\ref{tab:cf-amendments} lists every addition to the protocol file after the first wave, what it fixes, and the date the file records for it. Every analysis the paper reports that is not one of the planned modules appears here, with the date the file gives it. The \cfCoveragePlannedWord{} planned modules have no amendment date. Each amendment entry names its own rows, references, and decision rule before it names a result, and the robustness tables in Appendix~\ref{app:cf-robustness} identify the blocks that carry each one. A1 and A2 also carry the identifiers of the execution log.
 
 \begin{table}[h]
 \centering
 \scriptsize
 \setlength{\tabcolsep}{5pt}
-\caption{\textbf{Protocol amendments.} Every addition to the registered protocol file after the first wave, with the date the file records for it. Each date precedes the first outcome shard of the module it registers. A1 and A2 also carry the identifiers of the execution log.}
+\caption{\textbf{Protocol amendments.} Every addition to the registered protocol file after the first wave, with the date the file records for it. Each date precedes the first outcome shard of the module it registers.}
 \label{tab:cf-amendments}
 \begin{tabular}{ll>{\raggedright\arraybackslash}p{0.62\textwidth}}
 \toprule

@@ -180,17 +180,10 @@ def table_main(blocks):
     models.sort(key=lambda m: (-chest_rate(m)[0], -(coco_rate(m)[0] or -1), ORDER.index(m)))
     L = [r"\begin{table}[t]", r"\centering", r"\scriptsize", r"\setlength{\tabcolsep}{2pt}", r"\renewcommand{\arraystretch}{1.08}",
          r"\input{tables/cf_colors}",
-         r"\caption{\textbf{Reading, answering, and writing per checkpoint.} For each dataset: \textsc{Read} = mean probe selectivity "
-         r"$S$ over the six concepts, with the number of readable concepts (of six; selectivity lower bound $>0$) as superscript; "
-         r"\textsc{Ans} = mean clean-answer AUROC, with the number of answer-capable concepts (lower bound $>0.5$); "
-         r"\textsc{Own} = mean ownership $O_q$, with the number of owned concepts (steering reference met and all simultaneous "
-         r"lower bounds $>0$). The three right columns give the owned share of clinical cells (NIH + CheXpert), of COCO cells, "
-         r"and their ratio. A block enters the \textsc{Ans} and \textsc{Own} counts only if both its write matrix and its "
-         r"calibration module completed; the \textsc{Read} count in the last row is over every probe-graded cell (calibration "
-         r"completed, including blocks whose write matrix is ineligible or incomplete), and the \textsc{Ans}/\textsc{Own} counts "
-         r"over the cells with a scored write matrix. Cells are shaded by value: sage for \textsc{Read}/\textsc{Ans} (darker = higher), slate for positive and "
-         r"terracotta for negative mean ownership (darker = larger magnitude); grey ``inel.'' = ineligible yes/no template, "
-         r"grey ``inc.'' = write matrix incomplete at packaging; ``--'' = block not run. Checkpoints are sorted by clinical owned share, descending.}",
+         r"\caption{\textbf{Reading, answering, and writing per checkpoint.} Per dataset: mean probe selectivity "
+         r"(\textsc{Read}), clean-answer AUROC (\textsc{Ans}), and ownership (\textsc{Own}), superscripted with the graded "
+         r"concepts of six, then the owned share of clinical and COCO cells and their ratio. Grey marks an ineligible template "
+         r"(inel.), an incomplete write matrix (inc.); ``--'' is a block not run.}",
          r"\label{tab:cf-main}",
          r"\begin{tabular}{l@{\hspace{3pt}}ccc@{\hspace{4pt}}ccc@{\hspace{4pt}}ccc@{\hspace{4pt}}ccc}", r"\toprule",
          r"& \multicolumn{3}{c}{NIH ChestX-ray14} & \multicolumn{3}{c}{CheXpert Plus} & \multicolumn{3}{c}{COCO (control)} & \multicolumn{3}{c}{Owned share} \\",
@@ -282,11 +275,9 @@ def table_controls(blocks):
             ("$|$Wording contrast$|$ (IY$-$WY)", lambda b: [abs(v["estimate"]) for k, v in b["t3"].items() if k.endswith("wording_IY_minus_WY_O") and isinstance(v, dict) and v.get("estimate") is not None]),
             ("$|$Mapping contrast$|$ (IA$-$IB)", lambda b: [abs(v["estimate"]) for k, v in b["t3"].items() if k.endswith("mapping_IA_minus_IB_O") and isinstance(v, dict) and v.get("estimate") is not None])]
     L = [r"\begin{table}[h]", r"\centering", r"\scriptsize", r"\setlength{\tabcolsep}{4pt}",
-         r"\caption{\textbf{Reference family and controls.} Median and interquartile range over all cells (first four rows) or over all "
-         r"blocks with the corresponding module (next six rows), per dataset. The last three rows count the concept cells whose write "
-         r"meets the steering reference (above the random p95 and the sham), the owned cells, and the reference-meeting cells that miss "
-         r"the complete owned grade: their simultaneous advantage over the five clinical competitors is not positive. "
-         r"Table~\ref{tab:cf-contingency} splits these cells into stronger-competitor and unresolved cells.}",
+         r"\caption{\textbf{Reference family and controls.} Median and interquartile range per dataset: over all cells in the "
+         r"first four rows, over all blocks with the module in the next six. The last three rows count reference-meeting cells, "
+         r"owned cells, and reference-meeting cells without the simultaneous advantage.}",
          r"\label{tab:cf-controls}",
          r"\begin{tabular}{lrrrrrr}", r"\toprule",
          r"& \multicolumn{2}{c}{NIH ChestX-ray14} & \multicolumn{2}{c}{CheXpert Plus} & \multicolumn{2}{c}{COCO (control)} \\",
@@ -325,10 +316,9 @@ def table_controls(blocks):
 def table_seed(blocks):
     b = blocks[("q25-7", "nih")]
     L = [r"\begin{table}[t]", r"\centering", r"\scriptsize", r"\setlength{\tabcolsep}{4pt}", r"\input{tables/cf_colors}",
-         r"\caption{\textbf{Seed replication: Qwen2.5-VL-7B on NIH ChestX-ray14, 600 new patients.} Per concept: probe selectivity $S$, "
-         r"clean-answer AUROC, concept write $W_{qq}$, the random-family 95th percentile and the absolute sham at the same dose, the "
-         r"rank of $W_{qq}$ among the 120 compared effects, the ownership contrast $O_q$ with its 95\% percentile interval, the "
-         r"strongest competing direction, and the max-$T$ verdict. Negative ownership is shaded terracotta.}",
+         r"\caption{\textbf{Seed replication: Qwen2.5-VL-7B on NIH ChestX-ray14, 600 new patients.} One row per concept, "
+         r"with the concept write $W_{qq}$ against the random 95th percentile (p95), the absolute sham, and the 120 compared "
+         r"effects it is ranked among.}",
          r"\label{tab:cf-seed}",
          r"\begin{tabular}{lrrrrrrrll}", r"\toprule",
          r"Concept & $S$ & AUROC & $W_{qq}$ & p95 & $|$sham$|$ & rank & $O_q$ [95\% CI] & Competitor & Verdict \\", r"\midrule"]
@@ -362,10 +352,9 @@ def table_seed_mass():
     disc = _registered_rows("table_encoding_mass.tex", 6)
     conf = _registered_rows("table_mass_confirmation.tex", 5)
     L = [r"\begin{table}[H]", r"\centering", r"\scriptsize", r"\setlength{\tabcolsep}{5pt}",
-         r"\caption{\textbf{Mass clinical competition across prompts.} Clinical margin: the Mass effect minus the largest of the five other "
-         r"clinical effects, in finding-present logit units at $\alpha=+0.25$. Top: the discovery crossover (pointwise 95\% interval; "
-         r"largest of 20 random effects). Bottom: the registered confirmation on new patients (smallest simultaneous lower bound of the "
-         r"cell's five contrasts; largest of 119 random effects).}",
+         r"\caption{\textbf{Mass clinical competition across prompts.} Clinical margin per prompt: the Mass effect minus the "
+         r"largest of the five other clinical effects, in finding-present logit units. Top, the discovery crossover; bottom, "
+         r"the registered confirmation on new patients.}",
          r"\label{tab:seed-mass}",
          r"\begin{tabular}{lrrrrr}", r"\toprule",
          r"Prompt & Clinical margin & 95\% CI & Mass effect & Random max & $|$Sham$|$ \\", r"\midrule"]
@@ -393,12 +382,9 @@ def table_contingency():
               ("Chest, readable and answerable", [r for r in rows if r["dataset"] in ("nih", "chexpert") and t(r["readable"]) and t(r["answer_capable"])]),
               ("COCO, all cells", [r for r in rows if r["dataset"] == "coco"])]
     L = [r"\begin{table}[t]", r"\centering", r"\small", r"\setlength{\tabcolsep}{4pt}",
-         r"\caption{\textbf{Steering reference against verdict.} Primary write-matrix cells of the included blocks, split by whether the "
-         r"concept write meets the steering reference ($W_{q,q}>0$, above the 95th percentile of the 119 random writes, and above the "
-         r"absolute sham) and by the simultaneous-bound verdict of the comparison with the five other clinical directions: advantage "
-         r"(every lower bound of $W_{q,q}-W_{q,d}$ positive), stronger competitor (some upper bound below zero), or unresolved. Owned "
-         r"cells are the reference-meeting cells with the advantage verdict. The middle rows restrict the chest cells to those that "
-         r"are both readable and answerable.}", r"\label{tab:cf-contingency}",
+         r"\caption{\textbf{Steering reference against verdict.} Primary write-matrix cells of the included blocks, "
+         r"cross-classified by the steering reference and by the simultaneous-bound verdict against the five other clinical "
+         r"directions.}", r"\label{tab:cf-contingency}",
          r"\begin{tabular}{llrrrr}", r"\toprule", r"Cells & Steering reference & advantage & stronger competitor & unresolved & total \\", r"\midrule"]
     for name, sel in groups:
         c = counts(sel)
@@ -454,14 +440,8 @@ def table_ownership(blocks, order):
          r"\setlength{\LTcapwidth}{\textwidth}",
          r"\begin{longtable}{lrrrrrr}",
          r"\caption{\textbf{Ownership of every concept.} One panel per dataset. Each cell is the ownership contrast "
-         r"$O_q$ of the concept's own write against its strongest clinical competitor at $\alpha=+0.25$. Cells are "
-         r"shaded slate for positive and terracotta for negative values (darker = larger magnitude, thresholds "
-         r"$0.02$, $0.10$, $0.25$). Bold marks owned cells (steering reference met and all simultaneous lower bounds "
-         r"$>0$). A dagger marks cells whose write meets the steering reference but has a stronger competitor; a "
-         r"double dagger marks reference-meeting cells whose comparison is unresolved. Grey ``inel.'' marks "
-         r"checkpoints whose yes/no template is ineligible and grey ``inc.'' a write matrix incomplete at packaging "
-         r"(neither enters any count). The last row of a panel counts that concept's owned cells. Checkpoints are in "
-         r"the order of Table~\ref{tab:cf-main}.}" + "\n" + r"\label{tab:cf-own} \\", r"\toprule", r"\endfirsthead",
+         r"$O_q$ at $\alpha=+0.25$: bold is owned, a dagger marks a stronger competitor, a double dagger an unresolved "
+         r"verdict, and the last row counts the concept's owned cells.}" + "\n" + r"\label{tab:cf-own} \\", r"\toprule", r"\endfirsthead",
          r"\multicolumn{7}{l}{\textit{Ownership of every concept (continued).}} \\*", r"\toprule", r"\endhead",
          r"\bottomrule", r"\endlastfoot"]
     # The three panels do not fit one page. The table starts on a fresh page and breaks between the second and the
@@ -484,10 +464,9 @@ def table_models(blocks, stats):
     clean-answer AUROC over clinical cells, owned clinical and COCO cells), and the checkpoint rows under it carry the
     checkpoint sheet (vision tower, consumed tokens, image size, eligible templates, pinned revision)."""
     L = [r"\begin{table}[h]", r"\centering", r"\scriptsize", r"\setlength{\tabcolsep}{3pt}", r"\input{tables/cf_colors}",
-         r"\caption{\textbf{Checkpoints and families.} Per checkpoint: vision tower, consumed visual tokens per image at the primary "
-         r"locus, input image size, templates eligible after the image-free mapping gate (I/W: \emph{is}/\emph{show} wording; Y: yes/no; "
-         r"A/B: letter mappings), and the pinned Hugging Face revision. Per family (bold rows): mean probe selectivity $\bar S$ and "
-         r"clean-answer AUROC over clinical cells, and owned clinical and COCO cells, shaded slate (darker = larger share).}",
+         r"\caption{\textbf{Checkpoints and families.} Per checkpoint: vision tower, consumed visual tokens per image at the "
+         r"primary locus, input image size, eligible templates, and the pinned Hugging Face revision. Bold rows give each "
+         r"family's mean selectivity and clean-answer AUROC over clinical cells and its owned clinical and COCO cells.}",
          r"\label{tab:cf-models}",
          r"\begin{tabular}{llllll@{\hspace{8pt}}rrrr}", r"\toprule",
          r" & & & & & & & & \multicolumn{2}{c}{owned cells} \\", r"\cmidrule(lr){9-10}",
@@ -557,14 +536,9 @@ def table_coverage():
     n_chex = sum(ds == "chexpert" and all(m in b["completed"] for m in CHEX_EXTENSION) for (mk, ds), b in blocks.items())
     legend = ", ".join(f"{a} = {MODULE_NAME[m]}" for m, a in MODULE_ABBR if any(m in b["completed"] or m in b["ineligible"] for b in blocks.values()))
     L = [r"\begin{table}[h]", r"\centering", r"\scriptsize", r"\setlength{\tabcolsep}{4pt}",
-         r"\caption{\textbf{Coverage.} Modules completed per block at packaging (from the campaign manifest), with the modules whose "
-         r"template is ineligible (inel.) and the primary template when it is not the \emph{is}/yes-no template; ``--'' = block not run; "
-         r"modules still in progress are not listed. The planned campaign is \cfCoveragePlannedWord{} modules on every block, and "
-         r"\cfCoverageBlocksAllSeven{} of the \cfBlocks{} blocks carry all \cfCoveragePlannedWord{}: \cfCoverageNihAllSeven{} of "
-         r"\cfCoverageNihBlocks{} on NIH, \cfCoverageChexAllSeven{} of \cfCoverageChexBlocks{} on CheXpert and "
-         r"\cfCoverageCocoAllSeven{} of \cfCoverageCocoBlocks{} on COCO. The CheXpert blocks carried the write matrix and the "
-         r"calibration pass in the first wave; the \cfCoverageChexAddedWord{} modules amendment A2 added to them are complete on "
-         r"\cfCoverageChexFull{} of the \cfCoverageChexBlocks{} CheXpert blocks.}",
+         r"\caption{\textbf{Coverage.} Modules completed per block at packaging, from the campaign manifest. A module whose "
+         r"template is ineligible reads inel., a block not run reads ``--'', and the primary template is named when it is not "
+         r"the \emph{is}/yes-no template.}",
          r"\label{tab:cf-coverage}",
          r"\begin{tabular}{llll}", r"\toprule", r"Checkpoint & NIH ChestX-ray14 & CheXpert Plus & COCO \\", r"\midrule"]
     for m in ORDER:

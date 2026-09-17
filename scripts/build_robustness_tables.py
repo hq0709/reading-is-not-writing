@@ -85,10 +85,8 @@ def geometry():
             ("cells with $O_q>0$ without the strongest competitor", count("O_loo_positive")),
             ("cells with at least two competitors above the own write", count("n_above_ge2"))])]
     L = [r"\begin{table}[h]", r"\centering", r"\scriptsize", r"\setlength{\tabcolsep}{5pt}",
-         r"\caption{\textbf{Direction and label geometry against off-diagonal dominance.} Per dataset and pooled over the two chest "
-         r"sets (``--'': defined per dataset only); Appendix~\ref{app:cf-robustness} defines each row. The random reference is a mean "
-         r"absolute cosine, so the row above it gives the directions' mean absolute cosine as well as their signed mean. The last "
-         r"three rows count the sign of $O_q$, not the owned grade.}",
+         r"\caption{\textbf{Direction and label geometry against off-diagonal dominance.} One column per dataset, with the two "
+         r"chest sets pooled in the third. A ``--'' marks a row that is defined per dataset only.}",
          r"\label{tab:cf-geometry}",
          r"\begin{tabular}{lrrrr}", r"\toprule",
          r" & NIH ChestX-ray14 & CheXpert Plus & both chest sets & COCO \\"]
@@ -105,18 +103,9 @@ def scale():
     d = json.loads((ROB / "scale.json").read_text())
     m, st, rf, cn, bt = d["item1_margin_scale"], d["item2_ceiling"]["strata"], d["item3_refit"]["per_dataset"], d["item4_connector"]["per_dataset"], d["item5_batch"]
     L = [r"\begin{table}[h]", r"\centering", r"\scriptsize", r"\setlength{\tabcolsep}{4pt}",
-         r"\caption{\textbf{Ownership under alternative scales, strata, refits, loci, and numerics.} Per dataset: cells with the complete owned "
-         r"grade on the probability scale (the paper's grade) and on the logit-margin scale (the steering reference recomputed on "
-         r"that scale and a positive percentile interval for $O^m_q$), with the cells owned on both; cells with $O_q>0$ (the sign "
-         r"alone) among owned and among not-owned cells when every cell is restricted to its "
-         r"unsaturated rows ($0.01<P(\mathrm{yes})<0.99$ on the clean pass); median $|O_q(\text{seed }k)-O_q(\text{seed }0)|$ over the "
-         r"two refit seeds and the owned cells that keep $O_q>0$ under both (the refits exist for NIH and COCO); median $|W_{q,q}|$ at the "
-         r"primary and connector loci and connector cells whose write beats the connector random family. The lower panel rescores the "
-         r"write grid on the first 200 test rows of each block with fp32 weights and forward pass, and in bf16 at batch size one, against "
-         r"the bf16 batched grid on the same rows: the largest change over the $6\times126$ written cells, $\max|\Delta W|$, and in a "
-         r"clinical contrast, $\max|\Delta C_{q,d}|$. Regraded under either setting, verdicts change in \cfPrecisionVerdictChanges{} and "
-         r"steering references in \cfPrecisionRefChanges{} of the \cfPrecisionGradeCells{} grades, and the two point verdicts change in "
-         r"\cfPrecisionPointVerdictChanges{}.}",
+         r"\caption{\textbf{Ownership under alternative scales, strata, refits, loci, and numerics.} Per dataset, cells with the "
+         r"complete owned grade under each alternative, beside the paper's grade on the probability ($p$) and logit-margin ($m$) "
+         r"scales. The lower panel rescores the write grid in fp32 and at batch size one.}",
          r"\label{tab:cf-scale}",
          r"\begin{tabular}{lrrrrrrrrrr}", r"\toprule",
          r" & \multicolumn{3}{c}{owned cells} & \multicolumn{2}{c}{unsaturated, $O_q>0$} & \multicolumn{2}{c}{refits} & "
@@ -145,10 +134,9 @@ def pairs():
     d = json.loads((ROB / "pairs.json").read_text())
     L = [r"\begin{table}[h]", r"\centering", r"\scriptsize", r"\setlength{\tabcolsep}{4pt}",
          r"\caption{\textbf{Same write, different reader: paired differences.} For every pair of checkpoints that share a vision "
-         r"tower (identical features and write vectors, or equal to one bf16 rounding step), the difference in ownership "
-         r"$\Delta O_q=O_q(\text{larger})-O_q(\text{smaller})$ on the same 600 test rows, with a paired patient-bootstrap 95\% "
-         r"interval (2{,}000 shared draws, strongest competitor recomputed in every draw): concepts whose interval excludes zero, "
-         r"the median and maximum $|\Delta O_q|$, and their ratio to the mean refit standard deviation of the two blocks.}",
+         r"tower, the difference in ownership $\Delta O_q=O_q(\text{larger})-O_q(\text{smaller})$ on the same 600 test rows, with "
+         r"a paired patient-bootstrap 95\% interval. The last two columns divide $|\Delta O_q|$ by the two blocks' mean refit "
+         r"standard deviation.}",
          r"\label{tab:cf-pairs}",
          r"\begin{tabular}{llcrrrrr}", r"\toprule",
          r" & & & $\Delta O_q$ CI & \multicolumn{2}{c}{$|\Delta O_q|$} & \multicolumn{2}{c}{ratio to refit SD} \\",
@@ -201,18 +189,9 @@ def valid():
     V = _r2()["valid"]; a = V["aggregate"]
     rows_txt = "/".join(str(n) for n in a["valid_rows"])
     L = [r"\begin{table}[h]", r"\centering", r"\scriptsize", r"\setlength{\tabcolsep}{4pt}",
-         r"\caption{\textbf{The grade on radiologist labels, and what refitting on them changes.} For every CheXpert block with the valid module, the complete grade is "
-         r"recomputed on " + rows_txt + r" frontal films of the CheXpert validation set (one per patient, radiologist consensus labels, no "
-         r"patient shared with any campaign role) with the campaign rules: the steering reference against the random 95th percentile and "
-         r"the sham on those rows, and the $6\times5$ max-$T$ verdict over 2{,}000 unit-bootstrap draws. The test grade is the same "
-         r"computation on the 600 labeler-labelled test rows. Columns: concepts of six with the complete owned grade on the test rows and "
-         r"on the valid rows, concepts of six whose clinical-comparison verdict agrees across the two cohorts, concepts of six whose "
-         r"owned grade agrees across the two cohorts, and the median $|O_q(\text{valid})-O_q(\text{test})|$ (90th percentile over all cells " + f2(a["p90_abs_dO_q"], 3)
-         + r"). On the " + str(a["supported_cells"]) + r" cells with at least 10 positives and 10 negatives on both cohorts, readability agrees in "
-         + f"{a['readable_agree_supported']} of {a['readable_compared_supported']}" + r" and answer capability in "
-         + f"{a['answer_capable_agree_supported']} of {a['answer_capable_compared_supported']}" + r". The lower panel refits the six "
-         r"directions on the radiologist labels themselves and separates the two things that change at once when the refit is compared "
-         r"with the shipped direction: which labels were used, and how many rows were available to fit them.}",
+         r"\caption{\textbf{The grade on radiologist labels, and what refitting on them changes.} Top, per CheXpert block with "
+         r"the valid module: the complete grade recomputed on " + rows_txt + r" radiologist-labelled films, against the same "
+         r"grade on the 600 labeler-labelled test rows. Bottom: the six directions refitted on the radiologist labels.}",
          r"\label{tab:cf-valid}",
          r"\begin{tabular}{lrrrrr}", r"\toprule",
          r"Checkpoint & owned (test) & owned (valid) & verdict agrees & owned grade agrees & median $|\Delta O_q|$ \\", r"\midrule"]
@@ -375,9 +354,9 @@ def constructions():
             ("six clinical directions", "coefficient", cells(p4["six"])),
             ("with every extra dataset label", "coefficient", cells(p4["ext"]))])]
     L = [r"\begin{table}[h]", r"\centering", r"\scriptsize", r"\setlength{\tabcolsep}{4pt}",
-         r"\caption{\textbf{Ownership under alternative directions, lifts, token weights, and competitor families.} Cells owned under "
-         r"the paper's rule within each family, and the median $O_q$, per dataset; each panel repeats the reference write on its own "
-         r"blocks. Appendix~\ref{app:cf-robustness} defines every construction.}",
+         r"\caption{\textbf{Ownership under alternative directions, lifts, token weights, and competitor families.} Cells owned "
+         r"under the paper's rule within each family, and the median $O_q$, per dataset. Each panel repeats the reference write "
+         r"on its own blocks.}",
          r"\label{tab:cf-altdir}",
          r"\begin{tabular}{llrrrrrr}", r"\toprule",
          r" & & \multicolumn{2}{c}{NIH ChestX-ray14} & \multicolumn{2}{c}{CheXpert Plus} & \multicolumn{2}{c}{COCO} \\",
@@ -457,14 +436,10 @@ def answer_direction():
                       + " & ".join(f"{d['per_template'][t]['owned']} ({d['per_template'][t]['kept_of_iy']})" for t in tpl)
                       + f" & {d['kept_pairs']}/{d['pairs']} \\\\")
     L = [r"\begin{table}[h]", r"\centering", r"\scriptsize", r"\setlength{\tabcolsep}{3.5pt}",
-         r"\caption{\textbf{The answer direction.} Top, on the primary template: concepts owned by the label direction $\hat w_q$ and by "
-         r"the answer direction $a_q$, split into kept (both), rescued ($a_q$ only), and lost ($\hat w_q$ only); concepts whose $a_q$ "
-         r"write beats the strongest logistic competitor; and medians of $W^a_{q,q}$, of the raw and whitened cosines between $a_q$ and "
-         r"$\hat w_q$, and of the cross-validated $R^2$. Bottom: $a_q$ written under each held-out template, with the concepts owned and, "
-         r"in parentheses, the IY-owned concepts that stay owned, and the kept (concept, template) pairs. A held-out template scores no "
-         r"random family of its own, so a cell there meets the steering reference against the permutation sham of the $a_q$ under test "
-         r"and, where the additional-template module scored a random family under that template, against its 95th percentile as well "
-         r"(Table~\ref{tab:cf-ledger}); the verdict is the same $6\times5$ max-$T$ verdict.}",
+         r"\caption{\textbf{The answer direction.} Top, on the primary template: concepts owned by the label direction $\hat w_q$ "
+         r"and by the answer direction $a_q$, split into kept, rescued, and lost, then medians over the six questions. Bottom: "
+         r"$a_q$ under each held-out template, with the concepts owned, in parentheses those already owned under IY, and the kept "
+         r"(concept, template) pairs.}",
          r"\label{tab:cf-ansdir}",
          r"\begin{tabular}{llrrrrrrrrrr}", r"\toprule",
          r" & & \multicolumn{5}{c}{owned concepts} & & \multicolumn{4}{c}{median} \\",
@@ -513,21 +488,10 @@ def validation():
     names = {"q25-7": "Qwen2.5-VL-7B", "lingshu-32": "Lingshu 32B", "gemma3-12": "Gemma 3 12B"}
     order = list(names)
     L = [r"\begin{table}[h]", r"\centering", r"\scriptsize", r"\setlength{\tabcolsep}{4pt}",
-         r"\caption{\textbf{What the answer direction reads, and how selective the columns of $W$ are.} Top: for every block with the "
-         r"answer-direction module, the median over the six questions of the AUROC of the answer direction $a_q$ and of the probe normal "
-         r"$\hat w_q$ against the test label (known-label rows), of the AUROC of both scores against the model's own clean answer, of the "
-         r"Pearson correlation between the two scores over the 600 test rows, and of their cosine in two metrics: raw, between the "
-         r"lifted vectors in model space (cos raw), and whitened, between the coefficient vectors in the projected, train-scaled space "
-         r"under the covariance $\Sigma$ of the training features ($\cos_\Sigma=a^{\top}\Sigma w/\sqrt{a^{\top}\Sigma a\,w^{\top}\Sigma w}$). "
-         r"The alignment row pools the answer-direction cells and reports $\cos_\Sigma$ per cell and its median over cells. Bottom, per "
-         r"dataset over every block with a write matrix: the signed column-selectivity index $S_d=W_{d,d}/\sum_q|W_{q,d}|$ of each "
-         r"direction in each block, as the median over cells and the number of cells with $S_d\geq0.5$. $S_d$ keeps the sign of the "
-         r"direction's effect on its own question, counts negative changes in the denominator, and weights every cell equally. It "
-         r"differs from the write-flow share of Figure~\ref{fig:cf-w-structure}, which keeps only positive changes, weights each "
-         r"write by the size of its effect, and pools all checkpoints and directions into one ratio per dataset. The remaining columns give the median number of rows whose label for $q$ is known and ownership recomputed on those rows: cells whose $O_q$ keeps its sign and owned "
-         r"cells (paper verdict) that stay owned under the full grade on those rows---the steering reference recomputed there and the "
-         r"simultaneous max-$T$ advantage over the same six-direction family. NIH and COCO have every test label known, so "
-         r"their known-row numbers reproduce the all-row numbers.}",
+         r"\caption{\textbf{The answer direction and column selectivity.} Top, per block with the answer-direction module: "
+         r"medians over the six questions of the AUROCs, the Pearson correlation, and the raw and whitened cosines between $a_q$ "
+         r"and $\hat w_q$. Bottom, per dataset: the column-selectivity index $S_d=W_{d,d}/\sum_q|W_{q,d}|$, and ownership "
+         r"recomputed on the rows whose label for $q$ is known.}",
          r"\label{tab:cf-validation}",
          r"\begin{tabular}{llrrrrrrr}", r"\toprule",
          r" & & \multicolumn{2}{c}{AUROC, label} & \multicolumn{2}{c}{AUROC, clean answer} & & \multicolumn{2}{c}{cosine} \\",
@@ -567,14 +531,9 @@ def refit():
     """Full ownership grade under the refit seeds (runs/robustness/refit.json): survival of the seed-0 grade per dataset."""
     d = json.loads((ROB / "refit.json").read_text()); m = d["meta"]
     L = [r"\begin{table}[h]", r"\centering", r"\scriptsize", r"\setlength{\tabcolsep}{3pt}",
-         r"\caption{\textbf{The full grade under refitted probes.} For every block with the refit module, the six probes are refitted on "
-         r"two resamples of the training patients (fit seeds 1 and 2) and the complete grade is recomputed with the campaign rules: the "
-         r"steering reference against the seed-0 random 95th percentile and the seed-0 sham of the same block, question and rows --- the "
-         r"permutation of the seed-0 normal, not of the refitted direction (Table~\ref{tab:cf-ledger}) --- and the $6\times5$ max-$T$ "
-         r"verdict over the shared unit-bootstrap draws (" + f"{m['draws']:,}".replace(",", "{,}") + r" draws). Per dataset: cells whose seed-0 "
-         r"grade is owned, stronger competitor, unresolved, or fixed-family advantage without the reference, and how many keep that grade "
-         r"under both refits, under at least one, or under none; the last column regrades seed 0 with the same draws and counts agreement "
-         r"with the paper's grade.}",
+         r"\caption{\textbf{The full grade under refitted probes.} Per dataset: cells whose seed-0 grade is owned, a stronger "
+         r"competitor, unresolved, or a fixed-family advantage without the reference, and how many keep that grade under both "
+         r"refits, under at least one, or under none.}",
          r"\label{tab:cf-refit}",
          r"\begin{tabular}{lrr" + "rrrr" + "rrr" + "rrr" + "rr" + r"r}", r"\toprule",
          r"Dataset & blocks & cells & \multicolumn{4}{c}{owned} & \multicolumn{3}{c}{stronger competitor} & \multicolumn{3}{c}{unresolved} & \multicolumn{2}{c}{adv.\ no ref.} & seed 0 \\",
@@ -619,22 +578,10 @@ def attr():
     mm = ch["max_median_abs_cos_pair"] or {}
     L = [r"\begingroup", r"\scriptsize", r"\setlength{\tabcolsep}{4pt}",
          r"\begin{longtable}{llrrccc}",
-         r"\caption{\textbf{Non-clinical attributes of the same radiographs.} Three attributes of each film---an anteroposterior "
-         r"(portable) projection, female sex, and age at least 60---are read from the dataset's own metadata and fitted on the same "
-         r"images, features, projection, and probe settings as the clinical probes. The three attribute directions and the six "
-         r"clinical directions are lifted and written together as one nine-direction family at the primary dose and template, and "
-         r"graded with the paper's rule ($9\times8$ max-$T$ verdict over 2{,}000 shared unit-bootstrap draws). Attribute and clinical "
-         r"questions carry the same steering reference in every block of this table: the 119-direction random family at the same dose "
-         r"and the coordinate-permutation sham. Top: per checkpoint and dataset, owned attribute cells and owned clinical cells inside the same family, and "
-         r"which attributes are owned. Bottom: per attribute and dataset, medians over blocks of the probe AUROC against the "
-         r"attribute label, the probe selectivity against the stratum controls, the AUROC of the probe score against the model's own "
-         r"clean answer, and the absolute raw model-space cosine between the attribute direction and the six clinical normals "
-         r"(median over blocks and the six normals); the last column counts the blocks where the attribute is owned. Taken per "
-         r"attribute--finding pair as the median over blocks, the largest absolute raw model-space cosine over the "
-         + f"{len(ch['per_pair_median_abs_cos'])}" + r" pairs is " + f2(mm.get("median_abs_cos")) + r" ("
-         + _pair_label(mm.get("pair")) + r"). The last panel splits the same cells by how well the model already answers each "
-         r"question, at the bin edges " + ", ".join(f2(e, 2) for e in r3.stratified()["bin_edges"][1:-1]) + r" fixed in the "
-         r"released analysis code; the last bin is closed on the right and every cell falls in exactly one bin.}",
+         r"\caption{\textbf{Non-clinical attributes of the same radiographs.} Top: per checkpoint and dataset, owned attribute "
+         r"and owned clinical cells inside the same nine-direction family, and which attributes are owned. Bottom: per attribute "
+         r"and dataset, medians over blocks of the probe AUROC, selectivity, clean-answer AUROC, and cosine to the clinical "
+         r"normals.}",
          r"\label{tab:cf-attr}\\*[2pt]",
          r"\endfirsthead",
          r"\multicolumn{7}{l}{\textit{Table~\ref{tab:cf-attr}, continued}} \\", r"\toprule",
@@ -677,10 +624,8 @@ def attr():
     S = r3.stratified(); A = S["attribute_vs_finding"]
     edges = ", ".join(f2(e, 2) for e in S["bin_edges"][1:-1])
     T = [r"\begin{table}[t]", r"\centering", r"\small", r"\setlength{\tabcolsep}{4pt}",
-         r"\caption{\textbf{Attributes and findings by how well the model answers the question.} The cells of "
-         r"Table~\ref{tab:cf-attr} split by the AUROC of the model's clean answer against the question's own label, at the bin "
-         r"edges " + edges + r" fixed in the released analysis code; the last bin is closed on the right and every cell falls in "
-         r"exactly one bin. Each entry is owned cells of cells in that bin.}",
+         r"\caption{\textbf{Attributes and findings by clean-answer AUROC.} The nine-direction family's cells binned by the "
+         r"clean answer's AUROC against the question's own label; each entry is owned cells of cells in the bin.}",
          r"\label{tab:cf-attr-strat}",
          r"\begin{tabular}{l" + "r" * (len(S["bin_labels"]) + 1) + r"}", r"\toprule",
          r"Cells & " + " & ".join(b.replace(">=", r"$\geq$").replace("<", r"$<$").replace("-", "--")
@@ -710,33 +655,16 @@ def towerswap():
     wb = ci.write_blocks(ci.load_runs())
     T = r3.towerswap(wb)
     X = r3.crossover(wb)
-    rec, order = T["receipt"], ("nih", "chexpert", "coco")
+    order = ("nih", "chexpert", "coco")
     readers = sorted({b["reader"] for b in T["blocks"]}, key=lambda m: list(CKPT).index(m) if m in CKPT else 99)
     a, b_ = readers[0], readers[-1]
     cols = [(a, a), (b_, b_), (b_, a), (a, b_)]      # native, native, swapped, swapped
     heads = [f"{_short(t)}/{_short(r)}" for t, r in cols]
-    twice = sum(1 for d in T["per_dataset"].values() for r in d["combinations"] if r["n_blocks"] > 1)
     L = [r"\begin{table}[p]", r"\centering", r"\scriptsize", r"\setlength{\tabcolsep}{4pt}",
-         r"\caption{\textbf{Crossing the tower and the reader.} The vision tower of one checkpoint is loaded behind the other's "
-         r"connector and language model. Of the " + str(rec["n_tower_tensors"][0]) + r" tensors of the host tower, "
-         + str(rec["n_tensors_replaced"][0]) + r" carry weights, and every one of them is replaced and verified bitwise equal to "
-         r"the donor's (" + f"{rec['n_params_replaced'][0] / 1e6:.0f}" + r" million parameters); the remaining tensor is a buffer "
-         r"the module rebuilds. None of the " + str(rec["n_tensors_outside_tower"][0]) + r" tensors outside the tower changes. The "
-         r"written directions travel with the tower, because they are fitted in the representation that tower produces; everything "
-         r"else---rows, dose, template, reference family, and decision rule---is the campaign's. " + _short(a) + r" is "
-         + CKPT.get(a, a).replace(" 3 ", "~3 ") + r" and " + _short(b_) + r" is " + CKPT.get(b_, b_) + r", and each column of the "
-         r"top two panels is tower/reader. A dash marks an arm that is not graded in that host block. The middle panel counts the "
-         r"four combinations of each dataset once; an arm graded in both host blocks agrees in all " + str(twice)
-         + r" cases where it appears twice. The bottom panel holds one factor and "
-         r"changes the other, and gives the paired effect on three quantities of the same six questions: the own write "
-         r"$W_{q,q}$, the ownership contrast $O_q=W_{q,q}-\max_{d\neq q}W_{q,d}$ over the five competing concept directions, "
-         r"and the margin $M_q$ of the own write over the strongest competitor in the whole reference family, "
-         r"$M_q=W_{q,q}-\max(\max_{d\neq q}W_{q,d},\,\text{random }p_{95},\,|\text{sham}|)$. Each entry is the mean over the "
-         r"six questions of the absolute paired change, with its 95\% percentile interval over the same "
-         + f"{X['meta']['draws']:,}".replace(",", "{,}") + r" draws of the "
-         r"rows and, in brackets, the number of questions of six whose change is simultaneously nonzero; the last two rows of "
-         r"each block average each factor over its two levels. The three quantities come from one pass over the packaged "
-         r"outcomes of the four arms, so the columns of a row are the same arms read three ways.}",
+         r"\caption{\textbf{Crossing the tower and the reader.} The vision tower of one checkpoint runs behind the other's "
+         r"connector and language model; " + _short(a) + r" is " + CKPT.get(a, a).replace(" 3 ", "~3 ") + r", " + _short(b_)
+         + r" is " + CKPT.get(b_, b_) + r", and each column of the top two panels is tower/reader. The bottom panel holds one "
+         r"factor, changes the other, and gives the mean absolute paired change over the six questions.}",
          r"\label{tab:cf-towerswap}",
          r"\begin{tabular}{llcccccc}", r"\toprule",
          r" & & \multicolumn{2}{c}{native} & \multicolumn{2}{c}{swapped} & & \\",
@@ -806,23 +734,9 @@ def semend():
     eps = [e for e in ("NY", "DA", "DB", "RF") if e in S["endpoints"]]
     L = [r"\begin{table}[p]", r"\centering", r"\scriptsize", r"\setlength{\tabcolsep}{3pt}",
          r"\caption{\textbf{Four endpoints no direction was fitted against.} Both direction families of Section~"
-         r"\ref{sec:ansdir} are written at the primary dose into the same blocks and read at four endpoints: the negated form of "
-         r"the concept's yes/no question, a two-alternative forced choice against the concept's strongest competitor in each of "
-         r"the two presentation orders, and the log-probability of the finding word in a report continuation. Owned and "
-         r"reference-meeting counts use the endpoint's own clean baseline, a permutation sham of the direction under test, and the "
-         r"endpoint's own family of \cfSemLedgerRandom{} random directions read at its maximum rather than the campaign's 119 read at their 95th "
-         r"percentile (Table~\ref{tab:cf-ledger}); the verdict is the campaign's $6\times5$ max-$T$ verdict. \emph{Opposite} counts "
-         r"concepts of six whose raw effect on the negated question has the sign "
-         r"opposite to its effect on the affirmative one. \emph{Order gap} is the mean absolute difference between the two "
-         r"presentation orders of the forced choice. The bottom panel asks whether ownership carries information about endpoint "
-         r"behaviour beyond the write magnitude, the probe selectivity and the clean-answer AUROC, and answers it out of sample. "
-         r"Each endpoint effect is regressed on those three quantities with endpoint dummies, then on the same model plus the "
-         r"ownership contrast and its owned indicator. Both models are ridge regressions whose penalty and standardisation are "
-         r"fitted inside the training fold alone, and they are cross-validated twice: leaving out one concept at a time inside a "
-         r"block, and leaving out one block at a time over the pooled blocks. $\Delta R^2$ is the change in held-out $R^2$ when "
-         r"ownership is added, against a null that permutes ownership across the concepts of a block over "
-         + f"{CV['permutations']:,}".replace(",", "{,}") + r" draws. Adding a predictor cannot lower a training $R^2$, so the "
-         r"in-sample increment is reported only as the reference it is.}",
+         r"\ref{sec:ansdir} written at the primary dose and read at the negated question, the two presentation orders of a "
+         r"forced choice, and a report continuation. The bottom panels add the ownership contrast to a regression of the "
+         r"endpoint effect and cross-validate it by concept and by block.}",
          r"\label{tab:cf-semend}",
          r"\begin{tabular}{lllcccc}", r"\toprule",
          r" & & & \multicolumn{2}{c}{label direction} & \multicolumn{2}{c}{answer direction} \\",
@@ -893,29 +807,10 @@ def fgobj():
     F = r3.fgobj(ci.write_blocks(ci.load_runs()))
     P = F["pool"]
     L = [r"\begin{table}[p]", r"\centering", r"\scriptsize", r"\setlength{\tabcolsep}{4pt}", r"\setlength{\abovecaptionskip}{2pt}", r"\setlength{\belowcaptionskip}{0pt}", r"\renewcommand{\arraystretch}{0.95}",
-         r"\caption{\textbf{Small and fine-grained objects, and the difficulty-matched comparison.} The six categories---"
-         + ", ".join(F["concepts"][:-1]) + ", and " + F["concepts"][-1] + r"---were fixed by a rule on the label counts and the mean "
-         r"instance areas of the fixed cohorts alone, registered before any of them was scored, as were the two matching windows; "
-         r"Appendix~\ref{app:repro-protocol} states the rule in full. They are fitted, lifted, written and graded "
-         r"exactly like the six easy objects, in the same blocks and rows, and their clean-answer AUROC is measured on the same "
-         r"calibration rows and by the same rule as every other cell. The middle panel separates the easy objects of every COCO "
-         r"block, which is the grid-wide number, from the easy objects of the "
-         + str(len(F["blocks"])) + r" blocks the fine-grained cells come from, which is the pool the fine-grained rate is "
-         r"compared with. The bottom panel pairs each chest cell with every natural-image cell whose matching variables lie "
-         r"within " + f2(F["window"], 2) + r" of it and reports two estimators of the ownership difference, each with its own "
-         r"interval. The \emph{pooled} difference is the ownership rate among the matched chest cells minus the rate among the "
-         r"natural-image cells that served as a partner at least once: it is the difference of the two rates printed to its "
-         r"left. The \emph{matched} difference is the mean over matched chest cells of that cell's own ownership minus the "
-         r"ownership rate of its own partner set, so a chest cell with many partners and one with few count equally. The two "
-         r"answer different questions and neither can be obtained from the other. \emph{Chest cells} and \emph{partners} give "
-         r"the effective sample of both: matched chest cells of all chest cells, and distinct natural-image cells used as a "
-         r"partner of all of them. Both intervals are percentile intervals over 5{,}000 draws of a cluster bootstrap whose unit "
-         r"is the model. Probe selectivity is the probe AUROC minus the mean of the twenty random-label control AUROCs on the "
-         r"calibration rows. The last panel stratifies the same cells on clean-answer AUROC instead of matching on it, at the "
-         r"bin edges " + ", ".join(f2(e, 2) for e in r3.stratified()["bin_edges"][1:-1]) + r", which are fixed in the released "
-         r"analysis code and are the conventional reading points of an AUROC. The last bin is closed on the right, every cell "
-         r"of each pool falls in exactly one bin, and none is dropped: that is what separates the stratification from the "
-         r"matching above it. Its interval is the same cluster bootstrap over models.}",
+         r"\caption{\textbf{Small and fine-grained objects, and the difficulty-matched comparison.} Top and middle: the six "
+         r"fine-grained categories graded like the six easy objects, against the easy objects of every COCO block and of the "
+         + str(len(F["blocks"])) + r" blocks the fine-grained cells come from. Bottom: chest cells matched to natural-image "
+         r"cells on difficulty, then the same cells stratified on clean-answer AUROC.}",
          r"\label{tab:cf-fgobj}",
          r"\begin{tabular}{lrrrrrr}", r"\toprule",
          r" & \multicolumn{2}{c}{owned of six} & \multicolumn{2}{c}{median answer AUROC} & \multicolumn{2}{c}{median selectivity} \\",
@@ -972,18 +867,9 @@ def ledger():
     """The reference-and-rule ledger: one row per graded analysis, populated from the packaged artefacts."""
     rows = cl.ledger(ci.write_blocks(ci.load_runs()))
     L = [r"\begin{table}[p]", r"\centering", r"\scriptsize", r"\setlength{\tabcolsep}{3pt}",
-         r"\caption{\textbf{What each analysis scores its writes against.} One row per graded analysis. "
-         r"\emph{Rows} is the cohort each analysis scores and its size. \emph{Reference} is the steering test the "
-         r"own write must pass: the 95th percentile of the 119-direction random family and the absolute sham, a "
-         r"smaller random family read at its maximum, or the sham alone. \emph{Rule} is what decides the verdict: "
-         r"simultaneous max-$T$ lower bounds on the fixed contrasts between the own write and each competitor, or a "
-         r"percentile interval on the ownership contrast with the maximum recomputed in every draw. \emph{Sham} names "
-         r"the direction the sham permutes: \emph{the direction written} means the coordinate-permutation sham of the "
-         r"very direction the analysis writes, and \emph{the seed-0 normal} means the permutation of the seed-0 "
-         r"logistic normal, which four analyses reuse for a direction they did not fit. \emph{Cells} counts the graded "
-         r"(question, arm) cells. The token-weighted writes compare against the uniformly written permutation of the "
-         r"normal they weight. Every entry is read from the packaged per-block statistics, and each declared "
-         r"reference and sham is checked against them.}",
+         r"\caption{\textbf{What each analysis scores its writes against.} One row per graded analysis: the cohort it "
+         r"scores and its size, the steering test its own write must pass, the rule that decides its verdict, the "
+         r"direction its sham permutes, and the number of graded (question, arm) cells.}",
          r"\label{tab:cf-ledger}",
          r"\begin{tabular}{>{\raggedright\arraybackslash}p{0.155\textwidth}>{\raggedright\arraybackslash}p{0.088\textwidth}"
          r">{\raggedright\arraybackslash}p{0.215\textwidth}>{\raggedright\arraybackslash}p{0.175\textwidth}"

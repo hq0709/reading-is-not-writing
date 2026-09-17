@@ -2,7 +2,7 @@
 \centering
 \scriptsize
 \setlength{\tabcolsep}{4pt}
-\caption{\textbf{The grade on radiologist labels, and what refitting on them changes.} For every CheXpert block with the valid module, the complete grade is recomputed on 200 frontal films of the CheXpert validation set (one per patient, radiologist consensus labels, no patient shared with any campaign role) with the campaign rules: the steering reference against the random 95th percentile and the sham on those rows, and the $6\times5$ max-$T$ verdict over 2{,}000 unit-bootstrap draws. The test grade is the same computation on the 600 labeler-labelled test rows. Columns: concepts of six with the complete owned grade on the test rows and on the valid rows, concepts of six whose clinical-comparison verdict agrees across the two cohorts, concepts of six whose owned grade agrees across the two cohorts, and the median $|O_q(\text{valid})-O_q(\text{test})|$ (90th percentile over all cells 0.021). On the 76 cells with at least 10 positives and 10 negatives on both cohorts, readability agrees in 73 of 76 and answer capability in 60 of 76. The lower panel refits the six directions on the radiologist labels themselves and separates the two things that change at once when the refit is compared with the shipped direction: which labels were used, and how many rows were available to fit them.}
+\caption{\textbf{The grade on radiologist labels, and what refitting on them changes.} Top, per CheXpert block with the valid module: the complete grade recomputed on 200 radiologist-labelled films, against the same grade on the 600 labeler-labelled test rows. Bottom: the six directions refitted on the radiologist labels.}
 \label{tab:cf-valid}
 \begin{tabular}{lrrrrr}
 \toprule

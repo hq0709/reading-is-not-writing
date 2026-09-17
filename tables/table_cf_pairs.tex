@@ -2,7 +2,7 @@
 \centering
 \scriptsize
 \setlength{\tabcolsep}{4pt}
-\caption{\textbf{Same write, different reader: paired differences.} For every pair of checkpoints that share a vision tower (identical features and write vectors, or equal to one bf16 rounding step), the difference in ownership $\Delta O_q=O_q(\text{larger})-O_q(\text{smaller})$ on the same 600 test rows, with a paired patient-bootstrap 95\% interval (2{,}000 shared draws, strongest competitor recomputed in every draw): concepts whose interval excludes zero, the median and maximum $|\Delta O_q|$, and their ratio to the mean refit standard deviation of the two blocks.}
+\caption{\textbf{Same write, different reader: paired differences.} For every pair of checkpoints that share a vision tower, the difference in ownership $\Delta O_q=O_q(\text{larger})-O_q(\text{smaller})$ on the same 600 test rows, with a paired patient-bootstrap 95\% interval. The last two columns divide $|\Delta O_q|$ by the two blocks' mean refit standard deviation.}
 \label{tab:cf-pairs}
 \begin{tabular}{llcrrrrr}
 \toprule

@@ -380,7 +380,7 @@ def prose_macros(M: dict, rows: list[dict], wb: dict, warn: list) -> None:
         warn.append(f"seed: Effusion's strongest competitor is {e['argmax_other']} and its rank {e['rank_in_random_family']} "
                     f"(prose says Nodule and second)")
     # ---- the three numbers Figure 3 annotates on each panel, from the sidecar the figure script writes beside it,
-    #      so the caption states the plotted values and never a transcription of them
+    #      so Section 5.3 states the plotted values and never a transcription of them
     exp = HERE.parent / "figures" / "fig3_example.json"
     if exp.exists():
         ex = json.loads(exp.read_text())
@@ -391,9 +391,9 @@ def prose_macros(M: dict, rows: list[dict], wb: dict, warn: list) -> None:
             M[f"cfEx{K}Question"] = d["question"]; M[f"cfEx{K}Competitor"] = d["competitor"]
         if ex["coco"]["max_other_answer"] > 0.05:
             warn.append(f"figure 3: the COCO concept write moves another answer to {ex['coco']['max_other_answer']:.3f}; "
-                        f"the caption says it moves nothing else")
+                        f"Section 5.3 says it moves nothing else")
         if ex["nih"]["competitor_write"] <= ex["nih"]["concept_write"]:
-            warn.append("figure 3: the chest competitor no longer beats the concept write; the caption says it does")
+            warn.append("figure 3: the chest competitor no longer beats the concept write; Section 5.3 says it does")
     # ---- dose response, from the cache Figure 2(c) plots, under the same gate
     dose = json.loads((ci.RUNS / "figures" / "dose_curves.json").read_text())
     dose = {k: v for k, v in dose.items() if v}
@@ -865,6 +865,17 @@ def coverage_macros(M: dict, rows: list[dict], warn: list) -> None:
                     f"five additional templates alone, which is what Appendix A.4 says")
 
 
+ATTR_LABEL = {"view_AP": "AP (portable) projection", "sex_F": "female sex", "age_60": r"age $\geq60$"}
+
+
+def attr_pair_label(pair) -> str:
+    """'sex_F~Nodule' -> 'female sex with Nodule'; mirrors build_robustness_tables._pair_label."""
+    if not pair:
+        return "--"
+    a, _, c = pair.partition("~")
+    return f"{ATTR_LABEL.get(a, a)} with {c}"
+
+
 def round2_macros(M: dict, rows: list[dict], wb: dict, warn: list) -> None:
     """Macros for the round-2 modules (Tables cf-valid, cf-altdird, cf-ansdirt, cf-attr and the full-grade columns of cf-precision), from
     runs/robustness/round2.json (scripts/mayo/robustness_round2.py). Each section's block set is checked against the included
@@ -916,7 +927,7 @@ def round2_macros(M: dict, rows: list[dict], wb: dict, warn: list) -> None:
     M["cfAltdirdEigMin"] = sci(gs["min_eigenvalue"]); M["cfAltdirdEigMax"] = sci(gs["max_eigenvalue"])
     M["cfAltdirdGramDim"] = gs["n"][0] if isinstance(gs["n"], list) else gs["n"]
     if not gs["all_full_rank"]:
-        warn.append("altdird: an R^T R / D spectrum is rank deficient (Table cf-altdird caption says full rank)")
+        warn.append("altdird: an R^T R / D spectrum is rank deficient (Appendix A.7 says full rank)")
     man = {g: sum(owned_cell[(b["model"], b["dataset"], q)] for b in A["blocks"] if b["dataset"] in dss for q in b["per_question"])
            for g, dss in (("chest", ci.CHEST), ("coco", ("coco",)))}
     for g in man:
@@ -959,6 +970,9 @@ def round2_macros(M: dict, rows: list[dict], wb: dict, warn: list) -> None:
     M["cfAttrAnswerAurocMin"] = fx(min(an), 2) if an else "--"; M["cfAttrAnswerAurocMax"] = fx(max(an), 2) if an else "--"
     mm = Pa["chest"]["max_median_abs_cos_pair"] or {}
     M["cfAttrCosMax"] = fx(mm["median_abs_cos"], 2) if mm.get("median_abs_cos") is not None else "--"
+    # the pair count and the pair itself, stated in Appendix A.7 beside cfAttrCosMax
+    M["cfAttrCosPairs"] = len(Pa["chest"]["per_pair_median_abs_cos"])
+    M["cfAttrCosPairLabel"] = attr_pair_label(mm.get("pair"))
     M["cfAttrReadable"] = Pa["chest"]["attr_readable"]
     # the same blocks' clinical probes, for "the attributes are read at least as well as the findings"
     ab = {tuple(b["block"].split("/")) for b in B["blocks"]}
@@ -969,7 +983,7 @@ def round2_macros(M: dict, rows: list[dict], wb: dict, warn: list) -> None:
                     f"(prose says the attributes are read at least as well)")
     if not Pa["chest"]["attribute_random_reference"]:
         warn.append("attr: an attribute question carries no random family, so it is not on the clinical questions' steering "
-                    "reference (Table cf-attr caption says both kinds carry the same one)")
+                    "reference (Appendix A.7 says both kinds carry the same one)")
     if Pa["chest"]["clinical_random_reference"] is False:
         warn.append("attr: a clinical question in the nine-direction family lacks its random family")
     if M["cfAttrReadable"] != M["cfAttrChestAttrN"]:
@@ -1010,11 +1024,13 @@ def round3_macros(M: dict, rows: list[dict], wb: dict, warn: list) -> None:
     M["cfSwapParamsM"] = f"{rec['n_params_replaced'][0] / 1e6:.0f}"
     if not (rec["verified_bitwise_equal_to_donor"] and rec["verified_rest_unchanged"]):
         warn.append("towerswap: a swap is not verified bitwise equal to the donor with the rest unchanged "
-                    "(Table cf-towerswap caption says every one is)")
+                    "(Appendix A.10 says every one is)")
     M["cfSwapBlocks"] = len(T["blocks"]); M["cfSwapCrossovers"] = len(T["crossover_blocks"])
     M["cfSwapRows"] = T["n_rows"][0] if len(T["n_rows"]) == 1 else "--"
     M["cfSwapCombos"] = max(d["n_combinations"] for d in T["per_dataset"].values())
     M["cfSwapConcepts"] = max(d["n_concepts"] for d in T["per_dataset"].values())
+    # arms that appear in both host blocks of a pair, stated in Appendix A.10 beside the agreement claim
+    M["cfSwapArmsTwice"] = T["n_arms_in_two_hosts"]
     for g, G in (("chest", "Chest"), ("coco", "Coco")):
         d = T["pooled"].get(g)
         if not d:
@@ -1274,7 +1290,7 @@ def round3_macros(M: dict, rows: list[dict], wb: dict, warn: list) -> None:
     M["cfAttrPairCellsN"] = pm["n_attr_cells"]
     if A["matched_reference_blocks"] != A["blocks"]:
         warn.append(f"attr: only {A['matched_reference_blocks']} of {A['blocks']} blocks grade attribute and clinical cells "
-                    f"against the same steering reference (Table cf-attr caption says every one does)")
+                    f"against the same steering reference (Appendix A.7 says every one does)")
     Q = r3.attrq(wb)
     M["cfAttrqBlocks"] = Q["n_blocks"]; M["cfAttrqCells"] = Q["n_cells"]; M["cfAttrqPhrasings"] = Q["n_phrasings"]
     M["cfAttrqChanged"] = Q["n_changes"]; M["cfAttrqSelected"] = Q["n_selected"]; M["cfAttrqCapable"] = Q["n_written_capable"]

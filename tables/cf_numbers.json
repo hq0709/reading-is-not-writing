@@ -1247,7 +1247,10 @@
   "cfCoverageChexFirstWave": 20,
   "cfCoverageChexAddedN": 5,
   "cfCoverageChexAddedWord": "five",
-  "cfCoverageChexPartial": 1
+  "cfCoverageChexPartial": 1,
+  "cfAttrCosPairs": 24,
+  "cfAttrCosPairLabel": "AP (portable) projection with Edema",
+  "cfSwapArmsTwice": 10
  },
  "counts": {
   "nih": {

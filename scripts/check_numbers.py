@@ -228,14 +228,17 @@ def main():
         row = tpl[g]; owned_pairs = sum(int(x) for x in re.findall(r"(\d+) \(", row[2]))
         expect(f"cfAnsdirt{G}Kept/KeptN, OwnedPairs/PairsAll", (M[f"cfAnsdirt{G}Kept"], M[f"cfAnsdirt{G}KeptN"], M[f"cfAnsdirt{G}OwnedPairs"], M[f"cfAnsdirt{G}PairsAll"]),
                (int(row[3]), int(row[4]), owned_pairs, 30 * int(row[1])))
-    # the numerics panel of Table cf-scale vs the macros quoted in Section 5.8 and in that table's caption
+    # the numerics panel of Table cf-scale vs the macros quoted in Section 5.8 and in the Appendix A.7 numerics paragraph
     pt = (ROOT / "tables" / "table_cf_scale.tex").read_text()
+    numerics_prose = (ROOT / "sections" / "app_campaign.tex").read_text()
     pr = re.findall(r"& ([\d.]+) & ([\d.]+) & ([\d.]+) & ([\d.]+) \\\\$", pt, flags=re.M)
     print("PRECISION macros vs Table cf-precision:")
     expect("cfPrecisionGradeBlocks = rows", M["cfPrecisionGradeBlocks"], len(pr))
     expect("cfPrecisionGradeCells = 6 x rows x 2 settings", M["cfPrecisionGradeCells"], 12 * len(pr))
     expect("cfPrecisionMaxDW = largest max|dW| in the table", M["cfPrecisionMaxDW"], f"{max(float(r[i]) for r in pr for i in (0, 2)):.3f}")
-    expect("caption macros present", all(k in pt for k in ("cfPrecisionVerdictChanges", "cfPrecisionRefChanges", "cfPrecisionGradeCells")), True)
+    expect("precision macros present in the Appendix A.7 numerics paragraph",
+           [k for k in ("cfPrecisionVerdictChanges", "cfPrecisionRefChanges", "cfPrecisionPointVerdictChanges",
+                        "cfPrecisionGradeCells") if f"\\{k}" not in numerics_prose], [])
     # Table cf-geometry vs the Appendix A.7 geometry macros
     gt = (ROOT / "tables" / "table_cf_geometry.tex").read_text()
     grow = {m.group(1): m.group(2).split(" & ") for m in re.finditer(r"^\\quad (.+?) & (.+?) \\\\$", gt, flags=re.M)}
@@ -319,9 +322,10 @@ def main():
             expect(f"cfSwap{F}{D}{qk}Min/Max = the {D} mean {factor} effect",
                    (M[f"cfSwap{F}{D}{qk}Min"], M[f"cfSwap{F}{D}{qk}Max"]),
                    (min(r[qi] for r in rows_), max(r[qi] for r in rows_)))
+    swap_prose = (ROOT / "sections" / "app_campaign.tex").read_text()
     for name, key in (("cfSwapTensors", "n_tensors_replaced"), ("cfSwapTowerTensors", "n_tower_tensors"),
                       ("cfSwapOutside", "n_tensors_outside_tower")):
-        expect(f"{name} in the caption", str(M[name]) in tw, True)
+        expect(f"{name} in the Appendix A.10 crossed-tower paragraph", f"\\{name}" in swap_prose, True)
 
     # The crossed arms' clean-answer ability has no table: Appendix A.8 carries it in prose, one native and one hybrid
     # figure per crossed block, and the range the prose quotes is recomputed from those twelve macros.
@@ -553,11 +557,11 @@ def main():
                           + re.escape(M["cfStratCvnLo"].lstrip("+")) + ", " + re.escape(M["cfStratCvnHi"].lstrip("+")) + r"\]", fg)), True)
     expect("cfStratTopEdge is the top bin edge of the fixed ladder", M["cfStratTopEdge"], f"{edges[top]:.2f}")
 
-    # ---- Figure 3's caption states the three numbers the figure annotates, from the figure's own sidecar
+    # ---- Section 5.3 states the three numbers Figure 3 annotates, from the figure's own sidecar
     f3 = ROOT / "figures" / "fig3_example.json"
     if f3.exists():
         ex = json.loads(f3.read_text())
-        print("Figure 3 caption vs the figure's sidecar:")
+        print("Figure 3 macros vs the figure's sidecar:")
         for ds, K in (("nih", "Chest"), ("coco", "Coco")):
             d = ex[ds]
             expect(f"cfEx{K} clean / own write / competing write",
@@ -565,7 +569,7 @@ def main():
                    (f"{d['clean']:.2f}", f"{d['concept_write']:.2f}", f"{d['competitor_write']:.2f}"))
             expect(f"cfEx{K} question and competitor", (M[f"cfEx{K}Question"], M[f"cfEx{K}Competitor"]),
                    (d["question"], d["competitor"]))
-        expect("the COCO concept write moves nothing else (the caption says so)",
+        expect("the COCO concept write moves nothing else (Section 5.3 says so)",
                ex["coco"]["max_other_answer"] <= 0.05, True)
     # ---- the two-model seed study's own ownership contrast, quoted in Section 5.2 and in the registered gate table
     sp = json.loads((ROOT / "data" / "accepted_results.json").read_text())["specificity"]["primary"]
