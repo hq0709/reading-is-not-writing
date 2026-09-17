@@ -423,7 +423,11 @@ def main():
     print("abstract and introduction decomposition (macros, in order):")
     order = ["cfChestRefMet", "cfChestAnswerableN", "cfChestOwned", "cfChestRefStrong", "cfChestRefUnres",
              "cfChestCompetitor", "cfChestBelowStrong"]
-    for f in ("0_abstract", "1_introduction"):
+    # the introduction carries the full decomposition; the abstract carries the two counts that open it
+    src = (ROOT / "sections" / "0_abstract.tex").read_text()
+    expect("0_abstract: reference count and owned count present",
+           [m for m in ("cfChestRefMet", "cfChestOwned") if not re.search(rf"\\{m}(?![A-Za-z])", src)], [])
+    for f in ("1_introduction",):
         src = (ROOT / "sections" / f"{f}.tex").read_text()
         at = [(lambda g: g.start() if g else -1)(re.search(rf"\\{m}(?![A-Za-z])", src)) for m in order]
         expect(f"{f}: every decomposition macro present", [m for m, p in zip(order, at) if p < 0], [])
@@ -436,7 +440,7 @@ def main():
         txt = "\n".join(re.sub(r"^\s*\d{1,4}(?=\s{2,}|$)", "", ln) for ln in txt.splitlines())   # ICLR margin line numbers
         flat = re.sub(r"\s+", " ", txt)
         print("rendered PDF vs macros:")
-        for phrase in (f"readable in {M['cfChestReadablePct']}% of checkpoint–concept cells, answerable in {M['cfChestAnswerablePct']}%, and owned in only {M['cfChestOwnedPct']}%",
+        for phrase in (
                        f"readable in {M['cfChestReadable']} of {M['cfChestReadableN']} cells ({M['cfChestReadablePct']}%)",
                        f"{M['cfChestAnswerable']} of the {M['cfChestAnswerableN']} cells with a scored write matrix ({M['cfChestAnswerablePct']}%)",
                        f"Yet only {M['cfChestOwned']} cells ({M['cfChestOwnedPct']}%) are owned",
@@ -448,7 +452,9 @@ def main():
             expect(f"prose: {phrase[:60]}...", found, True)
         # The decomposition sentences are rewritten by the prose pass, so they are checked as an ordered number
         # sequence inside a bounded window instead of as a fixed string.
-        for name, nums in (("chest decomposition", (M["cfChestAnswerableN"], M["cfChestRefMet"], M["cfChestRefMet"], M["cfChestOwned"],
+        for name, nums in (("abstract readable / answerable / owned",
+                            (M["cfChestReadablePct"], M["cfChestAnswerablePct"], M["cfChestOwnedPct"])),
+                           ("chest decomposition", (M["cfChestAnswerableN"], M["cfChestRefMet"], M["cfChestRefMet"], M["cfChestOwned"],
                                                     M["cfChestRefStrong"], M["cfChestRefUnres"])),
                            ("below-reference share", (M["cfChestBelowStrong"], M["cfChestCompetitor"], M["cfChestBelowStrongPct"])),
                            ("readable-and-answerable decomposition", (M["cfReadAns"], M["cfReadAnsRefMet"], M["cfReadAnsOwned"],
