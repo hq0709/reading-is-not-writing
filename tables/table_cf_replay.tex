@@ -1,0 +1,32 @@
+\begin{table}[p]
+\centering
+\scriptsize
+\setlength{\tabcolsep}{4pt}
+\caption{\textbf{Feeding two readers the same tensors.} The token tensors the language model consumes are stored once from the source checkpoint and replayed into every reader of its shared-tower group, so the two readers see the same input bit for bit. Drift is the largest absolute difference between this reader's own tower output and the stored tensor, measured before the replacement, against a mean absolute tensor entry of 0.62--29.12. $\Delta W$ and $\Delta O_q$ compare the replayed grade with the block's own grade on the same rows; \emph{moved} counts concepts of six whose difference is simultaneously nonzero, and \emph{grade changes} counts changes of clinical-comparison verdict or of the owned grade. A reader replaying the tensors of its own block is the control for the machinery. In the bottom panel, \emph{own towers} is the mean absolute difference between the two readers' own-question write magnitudes with each reader running its own tower, \emph{same tensors} the same quantity with the replayed input, \emph{change} the second minus the first, and \emph{relative} that change as a percentage of the first. Every block of this table is on NIH ChestX-ray14.}
+\label{tab:cf-replay}
+\begin{tabular}{llrrrcc}
+\toprule
+Reader & tensors from & drift & $\max|\Delta W|$ & $\max|\Delta O_q|$ & moved & grade changes \\
+\midrule
+Gemma 3 12B & Gemma 3 4B & 0.00 & $0$ & $0$ & 0/6 & 0 \\
+Gemma 3 27B & Gemma 3 4B & 0.00 & $1.5\times10^{-2}$ & $1.7\times10^{-2}$ & 1/6 & 0 \\
+Gemma 3 4B & Gemma 3 4B (own) & 0.00 & $6.2\times10^{-3}$ & $2.0\times10^{-2}$ & 0/6 & 0 \\
+LLaVA-1.5-13B & LLaVA-1.5-7B & 0.00 & $2.1\times10^{-4}$ & $6.1\times10^{-4}$ & 0/6 & 0 \\
+LLaVA-1.5-7B & LLaVA-1.5-7B (own) & 0.00 & $0$ & $0$ & 0/6 & 0 \\
+LLaVA-Med 1.5 7B & LLaVA-1.5-7B & 112.16 & $3.5\times10^{-3}$ & $7.2\times10^{-3}$ & 4/6 & 0 \\
+MedGemma 27B & MedGemma 4B & 0.00 & $1.1\times10^{-3}$ & $2.1\times10^{-3}$ & 0/6 & 0 \\
+MedGemma 4B & MedGemma 4B (own) & 0.00 & $0$ & $0$ & 0/6 & 0 \\
+\midrule
+\multicolumn{7}{l}{\textit{The difference between two readers of one shared-tower group}} \\
+Reader pair & tensors from & own towers & same tensors & change & moved & relative \\
+\midrule
+Gemma 3 12B and Gemma 3 27B & Gemma 3 4B & 0.337 & 0.331 & -0.0052 & 6/6 & -1.6\% \\
+Gemma 3 12B and Gemma 3 4B & Gemma 3 4B & 0.348 & 0.348 & 0.0008 & 6/6 & 0.2\% \\
+Gemma 3 27B and Gemma 3 4B & Gemma 3 4B & 0.273 & 0.269 & -0.0035 & 6/6 & -1.3\% \\
+LLaVA-1.5-13B and LLaVA-1.5-7B & LLaVA-1.5-7B & 0.034 & 0.034 & 0.0001 & 6/6 & 0.2\% \\
+LLaVA-1.5-13B and LLaVA-Med 1.5 7B & LLaVA-1.5-7B & 0.016 & 0.016 & -0.0001 & 4/6 & -0.5\% \\
+LLaVA-1.5-7B and LLaVA-Med 1.5 7B & LLaVA-1.5-7B & 0.032 & 0.033 & 0.0006 & 6/6 & 1.9\% \\
+MedGemma 27B and MedGemma 4B & MedGemma 4B & 0.142 & 0.142 & 0.0000 & 4/6 & 0.0\% \\
+\bottomrule
+\end{tabular}
+\end{table}

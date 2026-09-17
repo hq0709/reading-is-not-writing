@@ -43,6 +43,7 @@ import numpy as np
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 import cf_inclusion as ci   # noqa: E402
+import cf_round3 as r3   # noqa: E402
 
 OUT = HERE.parent / "tables"
 ROB = ci.RUNS / "robustness"
@@ -783,8 +784,9 @@ def round2_macros(M: dict, rows: list[dict], wb: dict, warn: list) -> None:
     if au and min(au) < statistics.median(cl):
         warn.append(f"attr: an attribute's median probe AUROC {min(au):.3f} is below the clinical median {statistics.median(cl):.3f} "
                     f"(prose says the attributes are read at least as well)")
-    if Pa["chest"]["attribute_random_reference"]:
-        warn.append("attr: an attribute question carries a random family (Table cf-attr caption says the sham alone is its reference)")
+    if not Pa["chest"]["attribute_random_reference"]:
+        warn.append("attr: an attribute question carries no random family, so it is not on the clinical questions' steering "
+                    "reference (Table cf-attr caption says both kinds carry the same one)")
     if Pa["chest"]["clinical_random_reference"] is False:
         warn.append("attr: a clinical question in the nine-direction family lacks its random family")
     if M["cfAttrReadable"] != M["cfAttrChestAttrN"]:
@@ -798,6 +800,169 @@ def round2_macros(M: dict, rows: list[dict], wb: dict, warn: list) -> None:
     M["cfPrecisionMaxDC"] = fx(pa["max_abs_dcontrast"], 3) if pa["max_abs_dcontrast"] is not None else "--"
     if pa["blocks"] != M["cfPrecisionBlocks"]:
         warn.append(f"precision: {pa['blocks']} blocks carry the full grade vs {M['cfPrecisionBlocks']} with the module")
+
+
+DS_KEY = {"nih": "Nih", "chexpert": "Chex", "coco": "Coco"}
+_CKPT_ORDER = ("q25-3", "q25-7", "q25-32", "q25-72", "q3-4", "q3-8", "q3-32", "iv35-8", "iv35-14",
+               "iv35-38", "gemma3-4", "gemma3-12", "gemma3-27", "medgemma-4", "medgemma-27", "lingshu-7",
+               "lingshu-32", "llava15-7", "llava15-13", "llavamed-7", "llama32-11")
+
+
+def round3_macros(M: dict, rows: list[dict], wb: dict, warn: list) -> None:
+    """Macros for the four crossed experiments of Section 5 (Tables cf-towerswap, cf-replay, cf-semend, cf-fgobj) and for the
+    three ways the attribute comparison is read (Table cf-attr, bottom panel), through scripts/cf_round3.py. That helper
+    raises when the blocks a module claims in run.json differ from the blocks whose summary carries its results, so no macro
+    here can be built from a block set the manifest does not say exists. The native arms of the crossover and the chest
+    ownership counts are checked against the manifest on top of that."""
+    owned_cell = {(r["model_key"], r["dataset"], r["concept"]): t(r["owned"]) for r in rows if t(r["cell"]) and t(r["block_included"])}
+
+    # ---- TOWERSWAP (Table cf-towerswap)
+    T = r3.towerswap(wb)
+    rec = T["receipt"]
+    for name, key in (("Tensors", "n_tensors_replaced"), ("TowerTensors", "n_tower_tensors"),
+                      ("Outside", "n_tensors_outside_tower"), ("OutsideChanged", "n_tensors_outside_tower_changed")):
+        if len(rec[key]) != 1:
+            warn.append(f"towerswap: blocks differ in {key} {rec[key]}")
+        M[f"cfSwap{name}"] = rec[key][0]
+    M["cfSwapParamsM"] = f"{rec['n_params_replaced'][0] / 1e6:.0f}"
+    if not (rec["verified_bitwise_equal_to_donor"] and rec["verified_rest_unchanged"]):
+        warn.append("towerswap: a swap is not verified bitwise equal to the donor with the rest unchanged "
+                    "(Table cf-towerswap caption says every one is)")
+    M["cfSwapBlocks"] = len(T["blocks"]); M["cfSwapCrossovers"] = len(T["crossover_blocks"])
+    M["cfSwapRows"] = T["n_rows"][0] if len(T["n_rows"]) == 1 else "--"
+    M["cfSwapCombos"] = max(d["n_combinations"] for d in T["per_dataset"].values())
+    M["cfSwapConcepts"] = max(d["n_concepts"] for d in T["per_dataset"].values())
+    for g, G in (("chest", "Chest"), ("coco", "Coco")):
+        d = T["pooled"].get(g)
+        if not d:
+            continue
+        M[f"cfSwap{G}Owned"] = d["owned"]; M[f"cfSwap{G}Cells"] = d["cells"]; M[f"cfSwap{G}Combos"] = d["combinations"]
+        M[f"cfSwap{G}NativeMin"] = min(d["native_owned"]); M[f"cfSwap{G}NativeMax"] = max(d["native_owned"])
+        M[f"cfSwap{G}CrossMin"] = min(d["crossed_owned"]); M[f"cfSwap{G}CrossMax"] = max(d["crossed_owned"])
+    # the two swapped COCO combinations by name, so the prose does not depend on which of them happens to be the larger
+    hosts = sorted({b["reader"] for b in T["blocks"]}, key=lambda m: list(_CKPT_ORDER).index(m) if m in _CKPT_ORDER else 99)
+    if T["per_dataset"].get("coco") and len(hosts) == 2:
+        if {hosts[0], hosts[1]} != {"gemma3-4", "medgemma-4"}:
+            warn.append(f"towerswap: the crossover hosts are {hosts} (Section 5.5 names Gemma 3 4B and MedGemma 4B)")
+        by = {(r["tower"], r["reader"]): r["n_owned"] for r in T["per_dataset"]["coco"]["combinations"]}
+        M["cfSwapCocoGemmaTowerCross"] = by.get((hosts[0], hosts[1]), "--")
+        M["cfSwapCocoMedTowerCross"] = by.get((hosts[1], hosts[0]), "--")
+    if T["pooled"].get("chest", {}).get("owned"):
+        warn.append(f"towerswap: {T['pooled']['chest']['owned']} chest cells are owned in some combination "
+                    f"(Section 5.5 says no combination owns a finding)")
+    for ds, D in DS_KEY.items():
+        xs = [b["crossover"] for b in T["crossover_blocks"] if b["dataset"] == ds]
+        if not xs:
+            continue
+        for name, key in (("Reader", "mean_abs_reader_effect"), ("Tower", "mean_abs_tower_effect")):
+            M[f"cfSwap{name}{D}Min"] = fx(min(x[key] for x in xs), 3)
+            M[f"cfSwap{name}{D}Max"] = fx(max(x[key] for x in xs), 3)
+    # the native arms are this block's own grade recomputed on the crossover's rows: the point estimates must track the
+    # published grade, and a cell may only lose the owned grade to the smaller cohort's resolution, never to a competitor
+    nv = T["native"]
+    M["cfSwapNativeCells"] = nv["cells"]; M["cfSwapNativeOwnedFull"] = nv["owned_full"]; M["cfSwapNativeOwned"] = nv["owned_rows"]
+    M["cfSwapNativeMaxDO"] = fx(nv["max_abs_dO"], 3) if nv["max_abs_dO"] is not None else "--"
+    M["cfSwapNativeUnresolved"] = nv["lost_to_resolution"]
+    man = sum(owned_cell[(b["model"], b["dataset"], q)] for b in T["blocks"] for q in ci.core(wb[(b["model"], b["dataset"])]))
+    if man != nv["owned_full"]:
+        warn.append(f"towerswap: the blocks' published grade owns {nv['owned_full']} cells against {man} in the manifest")
+    if nv["sign_flips"] or nv["lost_to_competitor"]:
+        warn.append(f"towerswap: a native arm flips the sign of the ownership contrast in {nv['sign_flips']} cells and loses "
+                    f"{nv['lost_to_competitor']} published owned cells to a competitor (Section 5.5 says the crossover's rows "
+                    f"only cost resolution)")
+    if T["arms_disagreeing_across_hosts"]:
+        warn.append(f"towerswap: arms graded in both host blocks disagree: {T['arms_disagreeing_across_hosts']}")
+
+    # ---- REPLAY (Table cf-replay)
+    R = r3.replay(wb)
+    M["cfReplayBlocks"] = len(R["blocks"]); M["cfReplaySelf"] = R["n_self"]; M["cfReplayCross"] = R["n_cross"]
+    M["cfReplaySelfExact"] = R["n_self_exact"]; M["cfReplayCells"] = R["cells"]; M["cfReplayMoved"] = R["n_nonzero"]
+    M["cfReplayVerdictChanges"] = R["verdict_changes"]; M["cfReplayOwnedChanges"] = R["owned_changes"]
+    M["cfReplayMaxDW"] = sci(R["max_abs_dW"]); M["cfReplayMaxDO"] = sci(R["max_abs_dO"])
+    M["cfReplayMaxDWSelf"] = sci(R["max_abs_dW_self"]) if R["max_abs_dW_self"] else "0"
+    M["cfReplayDriftZero"] = R["n_drift_zero"]; M["cfReplayDriftMax"] = fx(R["drift_max_abs"], 2)
+    M["cfReplayTensorMin"] = fx(min(b["block_mean_abs"] for b in R["blocks"]), 2)
+    M["cfReplayTensorMax"] = fx(max(b["block_mean_abs"] for b in R["blocks"]), 2)
+    M["cfReplayPairs"] = len(R["pairs"]); M["cfReplayPairMoved"] = R["pair_nonzero"]; M["cfReplayPairCells"] = R["pair_cells"]
+    M["cfReplayPairOwnMin"] = fx(R["pair_own_min"], 3); M["cfReplayPairOwnMax"] = fx(R["pair_own_max"], 3)
+    M["cfReplayChangeMax"] = fx(R["pair_change_max"], 4)
+    M["cfReplayRelMax"] = fx(max(abs(100 * p["mean_abs_change"] / p["mean_abs_own_towers"]) for p in R["pairs"]), 1)
+    if R["verdict_changes"] or R["owned_changes"]:
+        warn.append(f"replay: {R['verdict_changes']} verdict and {R['owned_changes']} ownership changes "
+                    f"(Section 5.5 says the replay changes neither)")
+    if R["n_self_exact"] < R["n_self"]:
+        print(f"  NOTE: {R['n_self'] - R['n_self_exact']} of {R['n_self']} self-replays do not reproduce the block's own grade "
+              f"to the last bit; the largest difference over them is {R['max_abs_dW_self']:.1e} in a write magnitude")
+
+    # ---- SEMEND (Table cf-semend)
+    S = r3.semend(wb)
+    M["cfSemBlocks"] = S["n_blocks"]; M["cfSemEndpoints"] = S["n_endpoints"]; M["cfSemCells"] = S["cells"]
+    M["cfSemRows"] = S["blocks"][0]["n_rows"] if S["blocks"] else "--"
+    M["cfSemRandom"] = S["blocks"][0]["n_random"] if S["blocks"] else "--"
+    M["cfSemLabelOwned"] = S["owned"]["label"]; M["cfSemAnswerOwned"] = S["owned"]["answer"]
+    M["cfSemLabelRef"] = S["reference_met"]["label"]; M["cfSemAnswerRef"] = S["reference_met"]["answer"]
+    M["cfSemNegOpposite"] = S["negation_opposite"]; M["cfSemNegN"] = S["negation_n"]
+    M["cfSemForcedOwned"] = S["forced_both_owned"]; M["cfSemForcedN"] = S["negation_n"]
+    M["cfSemGapMin"] = fx(S["forced_gap_min"], 3); M["cfSemGapMax"] = fx(S["forced_gap_max"], 3)
+    M["cfSemReportOwned"] = S["report_owned"]; M["cfSemReportCells"] = S["report_cells"]
+    M["cfSemIVN"] = S["iv_n"]; M["cfSemIVExcl"] = S["iv_excludes_zero"]
+    M["cfSemIVMin"] = fx(S["iv_delta_min"], 3); M["cfSemIVMax"] = fx(S["iv_delta_max"], 3)
+    for fam, F in (("label", "Label"), ("answer", "Answer")):
+        d = S["iv_per_family"][fam]
+        M[f"cfSemIV{F}Min"] = fx(d["delta_min"], 3); M[f"cfSemIV{F}Max"] = fx(d["delta_max"], 3)
+        M[f"cfSemIV{F}BaseMin"] = fx(d["base_min"], 3); M[f"cfSemIV{F}BaseMax"] = fx(d["base_max"], 3)
+    M["cfSemIVBaseMin"] = fx(min(S["iv_per_family"][f]["base_min"] for f in r3.FAMS), 3)
+    M["cfSemIVBaseMax"] = fx(max(S["iv_per_family"][f]["base_max"] for f in r3.FAMS), 3)
+    if S["iv_excludes_zero"] != S["iv_n"]:
+        warn.append(f"semend: the added-variance interval excludes zero in {S['iv_excludes_zero']} of {S['iv_n']} "
+                    f"block-and-family combinations (Section 5.6 says in every one)")
+    if S["owned"]["label"] >= S["owned"]["answer"]:
+        warn.append(f"semend: the label direction is owned in {S['owned']['label']} endpoint cells against "
+                    f"{S['owned']['answer']} for the answer direction (Section 5.6 says fewer)")
+
+    # ---- FGOBJ (Table cf-fgobj)
+    F = r3.fgobj(wb)
+    P = F["pool"]
+    M["cfFgBlocks"] = len(F["blocks"]); M["cfFgConcepts"] = len(F["concepts"]); M["cfFgWindow"] = fx(F["window"], 2)
+    for g, G in (("chest", "Chest"), ("coco_easy", "Easy"), ("coco_fine", "Fine")):
+        d = P[g]
+        M[f"cfFg{G}Owned"] = d["owned"]; M[f"cfFg{G}Cells"] = d["cells"]; M[f"cfFg{G}Rate"] = fx(d["owned_rate"], 3)
+        M[f"cfFg{G}Auroc"] = fx(d["median_answer_auroc"], 3); M[f"cfFg{G}Sel"] = fx(d["median_selectivity"], 3)
+    for m, Mk in (("selectivity", "Sel"), ("answer_auroc", "Ans"), ("both", "Both")):
+        d = F["matched"][m]
+        M[f"cfFgMatch{Mk}N"] = d["n_matched_chest_cells"]; M[f"cfFgMatch{Mk}Cells"] = d["n_chest_cells"]
+        M[f"cfFgMatch{Mk}Chest"] = fx(d["chest_owned_rate_matched"], 3); M[f"cfFgMatch{Mk}Nat"] = fx(d["natural_owned_rate_used"], 3)
+        M[f"cfFgMatch{Mk}Diff"] = fx(d["matched_ownership_difference"], 3, signed=True)
+        M[f"cfFgMatch{Mk}Lo"] = fx(d["matched_ownership_difference_ci95"][0], 3, signed=True)
+        M[f"cfFgMatch{Mk}Hi"] = fx(d["matched_ownership_difference_ci95"][1], 3, signed=True)
+    if abs(P["coco_fine"]["owned_rate"] - P["coco_easy"]["owned_rate"]) > 0.05:
+        warn.append(f"fgobj: the fine-grained ownership rate {P['coco_fine']['owned_rate']:.3f} differs from the easy rate "
+                    f"{P['coco_easy']['owned_rate']:.3f} (Section 5.4 says they are the same)")
+    if F["matched"]["selectivity"]["n_matched_chest_cells"] != P["chest"]["cells"]:
+        warn.append("fgobj: matching on probe selectivity alone leaves chest cells unmatched (Section 5.4 says every one matches)")
+
+    # ---- the attribute comparison read three ways (Table cf-attr, bottom panel) and the phrasing selection
+    A = r3.attr_modes(wb)
+    M["cfAttrModeBlocks"] = A["blocks"]; M["cfAttrPairWindow"] = fx(A["window"], 2)
+    M["cfAttrRefBlocks"] = A["matched_reference_blocks"]
+    for mode, K in (("all_cells", "All"), ("answer_capable_cells", "Cap"), ("answerability_matched", "Pair")):
+        c = A["modes"][mode]
+        M[f"cfAttr{K}AttrOwned"] = c["attr_owned"]; M[f"cfAttr{K}AttrN"] = c["attr_cells"]
+        M[f"cfAttr{K}ClinOwned"] = c["clin_owned"]; M[f"cfAttr{K}ClinN"] = c["clin_cells"]
+        M[f"cfAttr{K}Diff"] = fx(c["attr_owned_share"] - c["clin_owned_share"], 3, signed=True)
+    pm = A["modes"]["answerability_matched"]
+    M["cfAttrPairMatched"] = pm["n_attr_cells_matched"]; M["cfAttrPairUnmatched"] = pm["n_attr_cells_unmatched"]
+    M["cfAttrPairCellsN"] = pm["n_attr_cells"]
+    if A["matched_reference_blocks"] != A["blocks"]:
+        warn.append(f"attr: only {A['matched_reference_blocks']} of {A['blocks']} blocks grade attribute and clinical cells "
+                    f"against the same steering reference (Table cf-attr caption says every one does)")
+    Q = r3.attrq(wb)
+    M["cfAttrqBlocks"] = Q["n_blocks"]; M["cfAttrqCells"] = Q["n_cells"]; M["cfAttrqPhrasings"] = Q["n_phrasings"]
+    M["cfAttrqChanged"] = Q["n_changes"]; M["cfAttrqSelected"] = Q["n_selected"]; M["cfAttrqCapable"] = Q["n_written_capable"]
+    M["cfAttrqWrittenAuroc"] = fx(Q["median_written_auroc"], 3); M["cfAttrqSelectedAuroc"] = fx(Q["median_selected_auroc"], 3)
+    M["cfAttrqGain"] = fx(Q["median_gain"], 3); M["cfAttrqGainMax"] = fx(Q["max_gain"], 3)
+    if Q["n_blocks"] != A["blocks"]:
+        warn.append(f"attrq: {Q['n_blocks']} blocks score the phrasings against {A['blocks']} with the attribute family")
 
 
 def main() -> Path:
@@ -890,6 +1055,7 @@ def main() -> Path:
     M["cfAltdirCocoPctMin"], M["cfAltdirCocoPctMax"] = min(coco_p), max(coco_p)
     robustness_macros(M, rows, wb, warn)
     round2_macros(M, rows, wb, warn)
+    round3_macros(M, rows, wb, warn)
     extcomp_macros(M, wb, warn)
     seed_macros(M, warn)
     prose_macros(M, rows, wb, warn)

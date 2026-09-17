@@ -1,0 +1,38 @@
+\begin{table}[p]
+\centering
+\scriptsize
+\setlength{\tabcolsep}{4pt}
+\caption{\textbf{Crossing the tower and the reader.} The vision tower of one checkpoint is loaded behind the other's connector and language model. Of the 438 tensors of the host tower, 437 carry weights, and every one of them is replaced and verified bitwise equal to the donor's (417 million parameters); the remaining tensor is a buffer the module rebuilds. None of the 451 tensors outside the tower changes. The written directions travel with the tower, because they are fitted in the representation that tower produces; everything else---rows, dose, template, reference family, and decision rule---is the campaign's. G is Gemma~3 4B and M is MedGemma 4B, and each column of the top two panels is tower/reader. A dash marks an arm that is not graded in that host block. The middle panel counts the four combinations of each dataset once; an arm graded in both host blocks agrees in all 10 cases where it appears twice. The bottom panel holds one factor and changes the other: the reader effect is the mean absolute change in the six own-question write magnitudes when the reader is replaced at a fixed tower, the tower effect the same with the roles exchanged, and the last two columns average each factor over its two levels. Concepts of six whose change is simultaneously nonzero are in brackets.}
+\label{tab:cf-towerswap}
+\begin{tabular}{llcccccc}
+\toprule
+ & & \multicolumn{2}{c}{native} & \multicolumn{2}{c}{swapped} & & \\
+\cmidrule(lr){3-4}\cmidrule(lr){5-6}
+Host checkpoint & Dataset & G/G & M/M & M/G & G/M & concepts & crossover \\
+\midrule
+Gemma 3 4B & NIH ChestX-ray14 & 0 & 0 & 0 & 0 & 6 & complete \\
+Gemma 3 4B & CheXpert Plus & 0 & 0 & 0 & 0 & 6 & complete \\
+Gemma 3 4B & COCO & 5 & 5 & 0 & 4 & 6 & complete \\
+MedGemma 4B & NIH ChestX-ray14 & 0 & 0 & 0 & 0 & 6 & complete \\
+MedGemma 4B & CheXpert Plus & 0 & 0 & -- & 0 & 6 & -- \\
+MedGemma 4B & COCO & 5 & 5 & -- & 4 & 6 & -- \\
+\midrule
+\multicolumn{8}{l}{\textit{The four combinations of each dataset, shared arms counted once}} \\
+Combinations & Dataset & G/G & M/M & M/G & G/M & concepts & owned of cells \\
+\midrule
+all four & NIH ChestX-ray14 & 0 & 0 & 0 & 0 & 6 & 0/24 \\
+all four & CheXpert Plus & 0 & 0 & 0 & 0 & 6 & 0/24 \\
+all four & COCO & 5 & 5 & 0 & 4 & 6 & 14/24 \\
+\midrule
+\multicolumn{8}{l}{\textit{Crossover: the effect of replacing one factor with the other held fixed}} \\
+ & & \multicolumn{2}{c}{reader effect at} & \multicolumn{2}{c}{tower effect at} & & \\
+\cmidrule(lr){3-4}\cmidrule(lr){5-6}
+Host checkpoint & Dataset & own tower & partner tower & own reader & partner reader & mean reader & mean tower \\
+\midrule
+Gemma 3 4B & NIH ChestX-ray14 & 0.133 [1] & 0.240 [5] & 0.164 [4] & 0.160 [6] & 0.186 & 0.162 \\
+Gemma 3 4B & CheXpert Plus & 0.382 [5] & 0.125 [4] & 0.269 [5] & 0.183 [4] & 0.254 & 0.226 \\
+Gemma 3 4B & COCO & 0.072 [2] & 0.202 [3] & 0.295 [5] & 0.200 [4] & 0.137 & 0.248 \\
+MedGemma 4B & NIH ChestX-ray14 & 0.229 [3] & 0.133 [1] & 0.160 [6] & 0.164 [4] & 0.181 & 0.162 \\
+\bottomrule
+\end{tabular}
+\end{table}

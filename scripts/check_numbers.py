@@ -270,6 +270,153 @@ def main():
         s = json.loads(a1.read_text())
         for ds, D in (("nih", "Nih"), ("chexpert", "Chex"), ("coco", "Coco")):
             expect(f"own share {ds} (figA1 vs macro)", pct(s[ds]["own_share"], 1), M[f"cfOwnShare{D}"])
+    # ---- the four crossed experiments: every macro against the table it is printed in, and each table against the summaries
+    print("crossed-experiment macros vs their tables and the block summaries:")
+    import cf_round3 as r3   # noqa: E402
+    wb = ci.write_blocks(ci.load_runs())      # cf_round3 raises if a module's run.json set differs from its summary set
+    tw = (ROOT / "tables" / "table_cf_towerswap.tex").read_text()
+    T = r3.towerswap(wb)
+    tw_rows = re.findall(r"^(.+?) & (NIH ChestX-ray14|CheXpert Plus|COCO) & ([\d-]+) & ([\d-]+) & ([\d-]+) & ([\d-]+) & (\d+) & (.+?) \\\\$",
+                         tw, flags=re.M)
+    host = [r for r in tw_rows if r[0] != "all four"]
+    allf = [r for r in tw_rows if r[0] == "all four"]
+    expect("Table cf-towerswap host rows = cfSwapBlocks", len(host), M["cfSwapBlocks"])
+    expect("Table cf-towerswap dataset rows = datasets with a swap", len(allf), len(T["per_dataset"]))
+    expect("cfSwapCrossovers = rows saying complete", M["cfSwapCrossovers"], sum(r[7] == "complete" for r in host))
+    chest = [r for r in allf if r[1] != "COCO"]
+    coco = [r for r in allf if r[1] == "COCO"]
+    owned_of = lambda rs: (sum(int(x) for r in rs for x in r[2:6] if x != "-" and x != "--"),
+                           sum(int(r[6]) for r in rs for x in r[2:6] if x not in ("-", "--")))
+    expect("cfSwapChestOwned/Cells = the chest dataset rows", (M["cfSwapChestOwned"], M["cfSwapChestCells"]), owned_of(chest))
+    expect("cfSwapCocoOwned/Cells = the COCO dataset row", (M["cfSwapCocoOwned"], M["cfSwapCocoCells"]), owned_of(coco))
+    expect("cfSwapCocoNativeMin/Max = the two native columns", (M["cfSwapCocoNativeMin"], M["cfSwapCocoNativeMax"]),
+           (min(int(x) for r in coco for x in r[2:4]), max(int(x) for r in coco for x in r[2:4])))
+    expect("cfSwapCocoCrossMin/Max = the two swapped columns", (M["cfSwapCocoCrossMin"], M["cfSwapCocoCrossMax"]),
+           (min(int(x) for r in coco for x in r[4:6]), max(int(x) for r in coco for x in r[4:6])))
+    tw_head = re.search(r"^Combinations & Dataset & (\S+) & (\S+) & (\S+) & (\S+) & ", tw, flags=re.M)
+    expect("Table cf-towerswap swapped columns are M/G then G/M", tw_head.groups()[2:], ("M/G", "G/M"))
+    expect("cfSwapCocoMedTowerCross/GemmaTowerCross = those two columns of the COCO row",
+           (M["cfSwapCocoMedTowerCross"], M["cfSwapCocoGemmaTowerCross"]), (int(coco[0][4]), int(coco[0][5])))
+    cx_rows = re.findall(r"^(.+?) & (NIH ChestX-ray14|CheXpert Plus|COCO) & [\d.]+ \[\d\] & [\d.]+ \[\d\] & [\d.]+ \[\d\] & "
+                         r"[\d.]+ \[\d\] & ([\d.]+) & ([\d.]+) \\\\$", tw, flags=re.M)
+    expect("Table cf-towerswap crossover rows = cfSwapCrossovers", len(cx_rows), M["cfSwapCrossovers"])
+    for ds, D in (("NIH ChestX-ray14", "Nih"), ("CheXpert Plus", "Chex"), ("COCO", "Coco")):
+        xs = [r for r in cx_rows if r[1] == ds]
+        if not xs:
+            continue
+        for i, name in ((2, "Reader"), (3, "Tower")):
+            expect(f"cfSwap{name}{D}Min/Max = the {ds} crossover rows",
+                   (M[f"cfSwap{name}{D}Min"], M[f"cfSwap{name}{D}Max"]), (min(r[i] for r in xs), max(r[i] for r in xs)))
+    for name, key in (("cfSwapTensors", "n_tensors_replaced"), ("cfSwapTowerTensors", "n_tower_tensors"),
+                      ("cfSwapOutside", "n_tensors_outside_tower")):
+        expect(f"{name} in the caption", str(M[name]) in tw, True)
+
+    rp = (ROOT / "tables" / "table_cf_replay.tex").read_text()
+    R = r3.replay(wb)
+    rp_rows = re.findall(r"^(.+?) & (.+?) & ([\d.]+) & (\$.+?\$) & (\$.+?\$) & (\d+)/(\d+) & (\d+) \\\\$", rp, flags=re.M)
+    expect("Table cf-replay reader rows = cfReplayBlocks", len(rp_rows), M["cfReplayBlocks"])
+    expect("cfReplaySelf = rows whose tensors are their own", M["cfReplaySelf"], sum("(own)" in r[1] for r in rp_rows))
+    expect("cfReplayMoved/Cells = the moved column", (M["cfReplayMoved"], M["cfReplayCells"]),
+           (sum(int(r[5]) for r in rp_rows), sum(int(r[6]) for r in rp_rows)))
+    expect("cfReplayVerdictChanges + cfReplayOwnedChanges = the grade-changes column",
+           M["cfReplayVerdictChanges"] + M["cfReplayOwnedChanges"], sum(int(r[7]) for r in rp_rows))
+    expect("cfReplayMaxDW = the largest write change in the table", f"${M['cfReplayMaxDW']}$",
+           max((r[3] for r in rp_rows), key=lambda x: float(re.sub(r"\\times10\^\{(-?\d+)\}", r"e\1", x.strip("$")))))
+    expect("cfReplayDriftMax = the largest drift in the table", M["cfReplayDriftMax"], max(rp_rows, key=lambda r: float(r[2]))[2])
+    expect("cfReplayDriftZero = rows with zero drift", M["cfReplayDriftZero"], sum(float(r[2]) == 0.0 for r in rp_rows))
+    pr_rows = re.findall(r"^(.+? and .+?) & .+? & ([\d.]+) & ([\d.]+) & (-?[\d.]+) & (\d+)/(\d+) & "
+                         r"(-?[\d.]+)\\% \\\\$", rp, flags=re.M)
+    expect("Table cf-replay pair rows = cfReplayPairs", len(pr_rows), M["cfReplayPairs"])
+    expect("cfReplayPairOwnMin/Max = the own-towers column", (M["cfReplayPairOwnMin"], M["cfReplayPairOwnMax"]),
+           (min(r[1] for r in pr_rows), max(r[1] for r in pr_rows)))
+    expect("cfReplayChangeMax = the largest absolute change", M["cfReplayChangeMax"],
+           f"{max(abs(float(r[3])) for r in pr_rows):.4f}")
+    expect("cfReplayRelMax = the largest absolute relative change", M["cfReplayRelMax"],
+           f"{max(abs(float(r[6])) for r in pr_rows):.1f}")
+    expect("cfReplayPairMoved/Cells = the pair moved column", (M["cfReplayPairMoved"], M["cfReplayPairCells"]),
+           (sum(int(r[4]) for r in pr_rows), sum(int(r[5]) for r in pr_rows)))
+
+    se = (ROOT / "tables" / "table_cf_semend.tex").read_text()
+    S = r3.semend(wb)
+    tot = re.search(r"^\\textit\{all\} & \\textit\{(\d+) blocks\} & \\textit\{(\d+) endpoints\} & (\d+)/(\d+) & (\d+)/(\d+) & "
+                    r"(\d+)/(\d+) & (\d+)/(\d+) \\\\$", se, flags=re.M)
+    expect("Table cf-semend totals row present", bool(tot), True)
+    if tot:
+        g = tot.groups()
+        expect("cfSemBlocks/Endpoints/Cells", (M["cfSemBlocks"], M["cfSemEndpoints"], M["cfSemCells"]),
+               (int(g[0]), int(g[1]), int(g[3])))
+        expect("cfSemLabelOwned/Ref and cfSemAnswerOwned/Ref",
+               (M["cfSemLabelOwned"], M["cfSemLabelRef"], M["cfSemAnswerOwned"], M["cfSemAnswerRef"]),
+               (int(g[2]), int(g[4]), int(g[6]), int(g[8])))
+    ep_rows = re.findall(r"^(.+?) & (?:NIH ChestX-ray14|CheXpert Plus) & (?:negated question|forced choice, finding first|"
+                         r"forced choice, competitor first|report continuation) & (\d+)/(\d+) & (\d+)/(\d+) & (\d+)/(\d+) & "
+                         r"(\d+)/(\d+) \\\\$", se, flags=re.M)
+    expect("Table cf-semend endpoint rows = blocks x endpoints", len(ep_rows), M["cfSemBlocks"] * M["cfSemEndpoints"])
+    expect("cfSemLabelOwned = the endpoint rows", M["cfSemLabelOwned"], sum(int(r[1]) for r in ep_rows))
+    expect("cfSemAnswerOwned = the endpoint rows", M["cfSemAnswerOwned"], sum(int(r[5]) for r in ep_rows))
+    t_rows = re.findall(r"^(.+?) & (?:NIH ChestX-ray14|CheXpert Plus) & (\d+)/(\d+) & ([\d.]+) & (\d+)/(\d+) & (\d+)/(\d+) & "
+                        r"(\d+)/(\d+) \\\\$", se, flags=re.M)
+    expect("Table cf-semend test rows = cfSemBlocks", len(t_rows), M["cfSemBlocks"])
+    expect("cfSemNegOpposite/N = the negation column", (M["cfSemNegOpposite"], M["cfSemNegN"]),
+           (sum(int(r[1]) for r in t_rows), sum(int(r[2]) for r in t_rows)))
+    expect("cfSemForcedOwned/N = the forced-choice column", (M["cfSemForcedOwned"], M["cfSemForcedN"]),
+           (sum(int(r[4]) for r in t_rows), sum(int(r[5]) for r in t_rows)))
+    expect("cfSemGapMin/Max = the order-gap column", (M["cfSemGapMin"], M["cfSemGapMax"]),
+           (min(r[3] for r in t_rows), max(r[3] for r in t_rows)))
+    expect("cfSemReportOwned/Cells = the report column", (M["cfSemReportOwned"], M["cfSemReportCells"]),
+           (sum(int(r[6]) for r in t_rows), sum(int(r[7]) for r in t_rows)))
+    iv_rows = re.findall(r"^(.+?) & (?:NIH ChestX-ray14|CheXpert Plus) & (label|answer) direction & ([\d.]+) & ([\d.]+) & "
+                         r"([\d.]+) & \[(-?[\d.]+), (-?[\d.]+)\] \\\\$", se, flags=re.M)
+    expect("Table cf-semend regression rows = cfSemIVN", len(iv_rows), M["cfSemIVN"])
+    expect("cfSemIVMin/Max = the added-variance column", (M["cfSemIVMin"], M["cfSemIVMax"]),
+           (min(r[4] for r in iv_rows), max(r[4] for r in iv_rows)))
+    expect("cfSemIVBaseMin/Max = the base column", (M["cfSemIVBaseMin"], M["cfSemIVBaseMax"]),
+           (min(r[2] for r in iv_rows), max(r[2] for r in iv_rows)))
+    expect("cfSemIVExcl = regression rows whose interval excludes zero", M["cfSemIVExcl"],
+           sum(float(r[5]) > 0 and float(r[6]) > 0 for r in iv_rows))
+    for fam, F in (("label", "Label"), ("answer", "Answer")):
+        xs = [r for r in iv_rows if r[1] == fam]
+        expect(f"cfSemIV{F}Min/Max", (M[f"cfSemIV{F}Min"], M[f"cfSemIV{F}Max"]), (min(r[4] for r in xs), max(r[4] for r in xs)))
+
+    fg = (ROOT / "tables" / "table_cf_fgobj.tex").read_text()
+    F = r3.fgobj(wb)
+    fg_rows = re.findall(r"^(.+?) & (\d) & (\d) & ([\d.]+) & ([\d.]+) & ([\d.]+) & ([\d.]+) \\\\$", fg, flags=re.M)
+    expect("Table cf-fgobj block rows = cfFgBlocks", len(fg_rows), M["cfFgBlocks"])
+    expect("cfFgFineOwned = the per-block fine column", M["cfFgFineOwned"], sum(int(r[1]) for r in fg_rows))
+    pool = {m.group(1): m.groups() for m in re.finditer(
+        r"^(chest findings|the six easy objects|the six fine-grained objects) & (\d+) & (\d+)/(\d+) & ([\d.]+) & ([\d.]+) & "
+        r"([\d.]+) & (\d+)/(\d+) \\\\$", fg, flags=re.M)}
+    for g, G in (("chest findings", "Chest"), ("the six easy objects", "Easy"), ("the six fine-grained objects", "Fine")):
+        row = pool[g]
+        expect(f"cfFg{G} owned/cells/rate/AUROC/selectivity",
+               (M[f"cfFg{G}Owned"], M[f"cfFg{G}Cells"], M[f"cfFg{G}Rate"], M[f"cfFg{G}Auroc"], M[f"cfFg{G}Sel"]),
+               (int(row[2]), int(row[3]), row[4], row[5], row[6]))
+    mt = {m.group(1): m.groups() for m in re.finditer(
+        r"^(probe selectivity alone|clean-answer AUROC alone|both variables|both variables, easy partners only) & "
+        r"(\d+)/(\d+) & (\d+)/(\d+) & ([\d.]+) & ([\d.]+) & (-?[\d.]+) & \[(-?[\d.]+), (-?[\d.]+)\] \\\\$", fg, flags=re.M)}
+    for lab, K in (("probe selectivity alone", "Sel"), ("clean-answer AUROC alone", "Ans"), ("both variables", "Both")):
+        row = mt[lab]
+        signed = lambda x: ("+" + x) if not x.startswith("-") else x
+        expect(f"cfFgMatch{K} N/cells/chest/natural/difference/interval",
+               (M[f"cfFgMatch{K}N"], M[f"cfFgMatch{K}Cells"], M[f"cfFgMatch{K}Chest"], M[f"cfFgMatch{K}Nat"],
+                M[f"cfFgMatch{K}Diff"], M[f"cfFgMatch{K}Lo"], M[f"cfFgMatch{K}Hi"]),
+               (int(row[1]), int(row[2]), row[5], row[6], signed(row[7]), signed(row[8]), signed(row[9])))
+    expect("cfFgMatchSelN = every chest cell (the prose says all of them match)", M["cfFgMatchSelN"], M["cfFgChestCells"])
+
+    # the attribute comparison read three ways, in the bottom panel of Table cf-attr
+    am = {m.group(1): m.groups() for m in re.finditer(
+        r"^(every cell|answer-capable cells only|answerability-matched pairs) & (cell|pair) & (\d+) & (\d+) & (\d+) & (\d+) & "
+        r"(-?[\d.]+) \\\\$", (ROOT / "tables" / "table_cf_attr.tex").read_text(), flags=re.M)}
+    for lab, K in (("every cell", "All"), ("answer-capable cells only", "Cap"), ("answerability-matched pairs", "Pair")):
+        row = am[lab]
+        expect(f"cfAttr{K} attribute/clinical cells and owned",
+               (M[f"cfAttr{K}AttrN"], M[f"cfAttr{K}AttrOwned"], M[f"cfAttr{K}ClinN"], M[f"cfAttr{K}ClinOwned"]),
+               (int(row[2]), int(row[3]), int(row[4]), int(row[5])))
+    expect("cfAttrAllAttrOwned/N = cfAttrChestAttrOwned/N (the same pool, two macros)",
+           (M["cfAttrAllAttrOwned"], M["cfAttrAllAttrN"], M["cfAttrAllClinOwned"], M["cfAttrAllClinN"]),
+           (M["cfAttrChestAttrOwned"], M["cfAttrChestAttrN"], M["cfAttrChestClinOwned"], M["cfAttrChestClinN"]))
+    expect("cfAttrqBlocks = cfAttrBlocks (the phrasings are scored in every attribute block)", M["cfAttrqBlocks"], M["cfAttrBlocks"])
+    expect("cfAttrRefBlocks = cfAttrBlocks (one steering reference in every block)", M["cfAttrRefBlocks"], M["cfAttrBlocks"])
     # the abstract and the introduction state the reference decomposition in order, from macros (Section 5.1 carries the
     # same numbers in the results): reference met, of how many cells, owned, stronger competitor, unresolved, and the
     # share of stronger-competitor verdicts arising below the reference
@@ -294,7 +441,7 @@ def main():
                        f"{M['cfChestAnswerable']} of the {M['cfChestAnswerableN']} cells with a scored write matrix ({M['cfChestAnswerablePct']}%)",
                        f"Yet only {M['cfChestOwned']} cells ({M['cfChestOwnedPct']}%) are owned",
                        f"In {M['cfChestCompetitor']} cells ({M['cfChestCompetitorPct']}%), the verdict",
-                       f"owns {M['cfCocoOwnedPct']}% of cells",
+                       f"owns {M['cfCocoOwnedPct']}% of cells on COCO",
                        f"Objects are owned in {M['cfCocoOwned']} of {M['cfCocoOwnedN']} cells ({M['cfCocoOwnedPct']}%)",
                        ):
             found = phrase in flat or phrase.replace("–", "-") in flat

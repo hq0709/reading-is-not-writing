@@ -14,6 +14,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 import cf_inclusion as ci   # noqa: E402
+import cf_round3 as r3   # noqa: E402
 
 ROB = Path("/rodata/azradonc_dev/m253405/cf-transfer/runs/robustness")
 OUT = Path(__file__).resolve().parents[1] / "tables"
@@ -556,9 +557,9 @@ def attr():
          r"(portable) projection, female sex, and age at least 60---are read from the dataset's own metadata and fitted on the same "
          r"images, features, projection, and probe settings as the clinical probes. The three attribute directions and the six "
          r"clinical directions are lifted and written together as one nine-direction family at the primary dose and template, and "
-         r"graded with the paper's rule ($9\times8$ max-$T$ verdict over 2{,}000 shared unit-bootstrap draws). Attribute questions have "
-         r"no random family, so their steering reference is the sham alone; clinical questions keep the random 95th percentile and "
-         r"the sham. Top: per checkpoint and dataset, owned attribute cells and owned clinical cells inside the same family, and "
+         r"graded with the paper's rule ($9\times8$ max-$T$ verdict over 2{,}000 shared unit-bootstrap draws). Attribute and clinical "
+         r"questions carry the same steering reference in every block of this table: the 119-direction random family at the same dose "
+         r"and the coordinate-permutation sham. Top: per checkpoint and dataset, owned attribute cells and owned clinical cells inside the same family, and "
          r"which attributes are owned. Bottom: per attribute and dataset, medians over blocks of the probe AUROC against the "
          r"attribute label, the probe selectivity against the stratum controls, the AUROC of the probe score against the model's own "
          r"clean answer, and the absolute raw model-space cosine between the attribute direction and the six clinical normals "
@@ -587,9 +588,245 @@ def attr():
                 continue
             L.append(f"{ATTR_LABEL[a]} & {name} & {f2(d['median_auroc_real'], 3)} & {f2(d['median_selectivity'])} & {f2(d['median_answer_auroc'])} & "
                      f"{f2(d['median_abs_cos_to_clinical'])} & {d['owned']}/{d['blocks']} \\\\")
+    cmp_ = ch["comparison"]
+    L += [r"\midrule", r"\multicolumn{7}{l}{\textit{The same comparison read three ways, pooled over the "
+          + str(ch["blocks"]) + r" chest blocks}} \\",
+          r"Comparison & unit & attribute cells & owned & finding cells & owned & difference \\", r"\midrule"]
+    for mode, label, unit in (("all_cells", "every cell", "cell"),
+                              ("answer_capable_cells", "answer-capable cells only", "cell"),
+                              ("answerability_matched", "answerability-matched pairs", "pair")):
+        c = cmp_[mode]
+        L.append(f"{label} & {unit} & {c['attr_cells']} & {c['attr_owned']} & {c['clin_cells']} & {c['clin_owned']} & "
+                 f"{f2(c['attr_owned_share'] - c['clin_owned_share'], 3)} \\\\")
     L += [r"\bottomrule", r"\end{tabular}", r"\end{table}"]
     (OUT / "table_cf_attr.tex").write_text("\n".join(L) + "\n")
     print("table_cf_attr.tex", {g: P[g]["blocks"] for g, _ in groups})
+
+
+# --------------------------------------------------------------------------- the four crossed experiments of Section 5
+
+def _short(model_key: str) -> str:
+    """Single-letter tag for the two checkpoints of the crossover, defined in the table's caption."""
+    return CKPT.get(model_key, model_key)[0]
+
+
+def towerswap():
+    """TOWERSWAP: the vision tower of one checkpoint loaded behind the other's connector and language model, against the two
+    native arms, on the same rows. Top: owned concepts of six in each of the four (tower, reader) combinations, per host block
+    and then per dataset with the two hosts' shared arms counted once. Bottom: the four crossover contrasts."""
+    T = r3.towerswap(ci.write_blocks(ci.load_runs()))
+    rec, order = T["receipt"], ("nih", "chexpert", "coco")
+    readers = sorted({b["reader"] for b in T["blocks"]}, key=lambda m: list(CKPT).index(m) if m in CKPT else 99)
+    a, b_ = readers[0], readers[-1]
+    cols = [(a, a), (b_, b_), (b_, a), (a, b_)]      # native, native, swapped, swapped
+    heads = [f"{_short(t)}/{_short(r)}" for t, r in cols]
+    twice = sum(1 for d in T["per_dataset"].values() for r in d["combinations"] if r["n_blocks"] > 1)
+    L = [r"\begin{table}[p]", r"\centering", r"\scriptsize", r"\setlength{\tabcolsep}{4pt}",
+         r"\caption{\textbf{Crossing the tower and the reader.} The vision tower of one checkpoint is loaded behind the other's "
+         r"connector and language model. Of the " + str(rec["n_tower_tensors"][0]) + r" tensors of the host tower, "
+         + str(rec["n_tensors_replaced"][0]) + r" carry weights, and every one of them is replaced and verified bitwise equal to "
+         r"the donor's (" + f"{rec['n_params_replaced'][0] / 1e6:.0f}" + r" million parameters); the remaining tensor is a buffer "
+         r"the module rebuilds. None of the " + str(rec["n_tensors_outside_tower"][0]) + r" tensors outside the tower changes. The "
+         r"written directions travel with the tower, because they are fitted in the representation that tower produces; everything "
+         r"else---rows, dose, template, reference family, and decision rule---is the campaign's. " + _short(a) + r" is "
+         + CKPT.get(a, a).replace(" 3 ", "~3 ") + r" and " + _short(b_) + r" is " + CKPT.get(b_, b_) + r", and each column of the "
+         r"top two panels is tower/reader. A dash marks an arm that is not graded in that host block. The middle panel counts the "
+         r"four combinations of each dataset once; an arm graded in both host blocks agrees in all " + str(twice)
+         + r" cases where it appears twice. The bottom panel holds one factor and "
+         r"changes the other: the reader effect is the mean absolute change in the six own-question write magnitudes when the "
+         r"reader is replaced at a fixed tower, the tower effect the same with the roles exchanged, and the last two columns "
+         r"average each factor over its two levels. Concepts of six whose change is simultaneously nonzero are in brackets.}",
+         r"\label{tab:cf-towerswap}",
+         r"\begin{tabular}{llcccccc}", r"\toprule",
+         r" & & \multicolumn{2}{c}{native} & \multicolumn{2}{c}{swapped} & & \\",
+         r"\cmidrule(lr){3-4}\cmidrule(lr){5-6}",
+         r"Host checkpoint & Dataset & " + " & ".join(heads) + r" & concepts & crossover \\", r"\midrule"]
+    for b in T["blocks"]:
+        by = {(c["tower"], c["reader"]): c for c in b["combinations"]}
+        L.append(f"{CKPT.get(b['model'], b['model'])} & {NAMES[b['dataset']]} & "
+                 + " & ".join(str(by[c]["n_owned"]) if by[c]["complete"] else "--" for c in cols)
+                 + f" & {max((c['n_concepts'] or 0) for c in b['combinations'])} & "
+                 + ("complete" if b["crossover_complete"] else "--") + r" \\")
+    L += [r"\midrule", r"\multicolumn{8}{l}{\textit{The four combinations of each dataset, shared arms counted once}} \\",
+          r"Combinations & Dataset & " + " & ".join(heads) + r" & concepts & owned of cells \\", r"\midrule"]
+    for ds in order:
+        d = T["per_dataset"].get(ds)
+        if not d:
+            continue
+        by = {(r["tower"], r["reader"]): r["n_owned"] for r in d["combinations"]}
+        L.append(f"all four & {NAMES[ds]} & " + " & ".join("--" if by.get(c) is None else str(by[c]) for c in cols)
+                 + f" & {d['n_concepts']} & {d['owned']}/{d['cells']}" + r" \\")
+    L += [r"\midrule", r"\multicolumn{8}{l}{\textit{Crossover: the effect of replacing one factor with the other held fixed}} \\",
+          r" & & \multicolumn{2}{c}{reader effect at} & \multicolumn{2}{c}{tower effect at} & & \\",
+          r"\cmidrule(lr){3-4}\cmidrule(lr){5-6}",
+          r"Host checkpoint & Dataset & own tower & partner tower & own reader & partner reader & mean reader & mean tower \\",
+          r"\midrule"]
+    for b in T["crossover_blocks"]:
+        cx = b["crossover"]
+        L.append(f"{CKPT.get(b['model'], b['model'])} & {NAMES[b['dataset']]} & " + " & ".join(
+            f"{f2(cx[n]['mean_abs_effect'], 3)} [{cx[n]['n_simultaneously_nonzero']}]"
+            for n in ("reader_effect_at_own_tower", "reader_effect_at_partner_tower",
+                      "tower_effect_at_own_reader", "tower_effect_at_partner_reader"))
+            + f" & {f2(cx['mean_abs_reader_effect'], 3)} & {f2(cx['mean_abs_tower_effect'], 3)} \\\\")
+    L += [r"\bottomrule", r"\end{tabular}", r"\end{table}"]
+    (OUT / "table_cf_towerswap.tex").write_text("\n".join(L) + "\n")
+    print("table_cf_towerswap.tex", len(T["blocks"]), "block(s),", len(T["crossover_blocks"]), "crossover(s)")
+
+
+def replay():
+    """REPLAY: the stored token tensors of the consumed block fed to both readers of a shared-tower pair, so that the input is
+    identical bit for bit rather than equal up to rounding. Top: each reader's replayed grade against its own grade, with the
+    drift of its own tower output from the stored tensor. Bottom: how much the difference between two readers changes when they
+    are fed the same tensors instead of each running its own tower."""
+    R = r3.replay(ci.write_blocks(ci.load_runs()))
+    L = [r"\begin{table}[p]", r"\centering", r"\scriptsize", r"\setlength{\tabcolsep}{4pt}",
+         r"\caption{\textbf{Feeding two readers the same tensors.} The token tensors the language model consumes are stored once "
+         r"from the source checkpoint and replayed into every reader of its shared-tower group, so the two readers see the same "
+         r"input bit for bit. Drift is the largest absolute difference between this reader's own tower output and the stored "
+         r"tensor, measured before the replacement, against a mean absolute tensor entry of "
+         + f"{min(b['block_mean_abs'] for b in R['blocks']):.2f}--{max(b['block_mean_abs'] for b in R['blocks']):.2f}"
+         + r". $\Delta W$ and $\Delta O_q$ compare the replayed grade with the block's own grade on the same rows; "
+         r"\emph{moved} counts concepts of six whose difference is simultaneously nonzero, and \emph{grade changes} counts "
+         r"changes of clinical-comparison verdict or of the owned grade. A reader replaying the tensors of its own block is the "
+         r"control for the machinery. In the bottom panel, \emph{own towers} is the mean absolute difference between the two "
+         r"readers' own-question write magnitudes with each reader running its own tower, \emph{same tensors} the same quantity "
+         r"with the replayed input, \emph{change} the second minus the first, and \emph{relative} that change as a percentage of "
+         r"the first. Every block of this table is on " + ", ".join(sorted({NAMES[b["dataset"]] for b in R["blocks"]})) + r".}",
+         r"\label{tab:cf-replay}",
+         r"\begin{tabular}{llrrrcc}", r"\toprule",
+         r"Reader & tensors from & drift & $\max|\Delta W|$ & $\max|\Delta O_q|$ & moved & grade changes \\", r"\midrule"]
+    ex = lambda x: "$0$" if not x else f"${sci(x, 1)}$"
+    for b in R["blocks"]:
+        L.append(f"{CKPT.get(b['reader'], b['reader'])} & "
+                 f"{CKPT.get(b['source_block'], b['source_block'])}"
+                 + ("" if not b["self_replay"] else r" (own)")
+                 + f" & {f2(b['drift_max_abs'], 2)} & {ex(b['max_abs_dW'])} & {ex(b['max_abs_dO'])} & "
+                 f"{b['n_nonzero']}/{b['n_concepts']} & {b['verdict_changes'] + b['owned_changes']} \\\\")
+    L += [r"\midrule", r"\multicolumn{7}{l}{\textit{The difference between two readers of one shared-tower group}} \\",
+          r"Reader pair & tensors from & own towers & same tensors & change & moved & relative \\", r"\midrule"]
+    src = {b["reader"]: b["source_block"] for b in R["blocks"]}
+    for p in R["pairs"]:
+        a, b_ = p["readers"]
+        L.append(f"{CKPT.get(a, a)} and {CKPT.get(b_, b_)} & "
+                 f"{CKPT.get(src.get(a, ''), src.get(a, ''))} & {f2(p['mean_abs_own_towers'], 3)} & "
+                 f"{f2(p['mean_abs_exact'], 3)} & {f2(p['mean_abs_change'], 4)} & {p['n_nonzero_exact']}/{p['n_concepts']} & "
+                 f"{f2(100 * p['mean_abs_change'] / p['mean_abs_own_towers'], 1)}\\% \\\\")
+    L += [r"\bottomrule", r"\end{tabular}", r"\end{table}"]
+    (OUT / "table_cf_replay.tex").write_text("\n".join(L) + "\n")
+    print("table_cf_replay.tex", len(R["blocks"]), "block(s),", len(R["pairs"]), "pair(s)")
+
+
+ENDPOINT_LABEL = {"NY": "negated question", "DA": "forced choice, finding first",
+                  "DB": "forced choice, competitor first", "RF": "report continuation"}
+FAM_NAME = {"label": "label direction", "answer": "answer direction"}
+
+
+def semend():
+    """SEMEND: both direction families written at four endpoints no direction was fitted against. Top: owned and
+    reference-meeting concepts of six per block and endpoint. Middle: the sign test on the negated question, the order gap of
+    the counterbalanced forced choice, and the report continuation. Bottom: the incremental validity of the ownership contrast
+    over the write magnitude, the probe selectivity and the clean-answer AUROC."""
+    S = r3.semend(ci.write_blocks(ci.load_runs()))
+    eps = [e for e in ("NY", "DA", "DB", "RF") if e in S["endpoints"]]
+    L = [r"\begin{table}[p]", r"\centering", r"\scriptsize", r"\setlength{\tabcolsep}{3pt}",
+         r"\caption{\textbf{Four endpoints no direction was fitted against.} Both direction families of Section~"
+         r"\ref{sec:ansdir} are written at the primary dose into the same blocks and read at four endpoints: the negated form of "
+         r"the concept's yes/no question, a two-alternative forced choice against the concept's strongest competitor in each of "
+         r"the two presentation orders, and the log-probability of the finding word in a report continuation. Owned and "
+         r"reference-meeting counts use the campaign's rule with the endpoint's own sham and, where the endpoint scores it, its "
+         r"own random family. \emph{Opposite} counts concepts of six whose raw effect on the negated question has the sign "
+         r"opposite to its effect on the affirmative one. \emph{Order gap} is the mean absolute difference between the two "
+         r"presentation orders of the forced choice. The bottom panel regresses each endpoint effect on the write magnitude, the "
+         r"probe selectivity and the clean-answer AUROC with endpoint dummies, then adds the ownership contrast and its owned "
+         r"indicator; $\Delta R^2$ is what the ownership contrast adds, with a percentile interval over "
+         + f"{S['blocks'][0]['draws']:,}".replace(",", "{,}") + r" patient-bootstrap draws.}",
+         r"\label{tab:cf-semend}",
+         r"\begin{tabular}{lllcccc}", r"\toprule",
+         r" & & & \multicolumn{2}{c}{label direction} & \multicolumn{2}{c}{answer direction} \\",
+         r"\cmidrule(lr){4-5}\cmidrule(lr){6-7}",
+         r"Checkpoint & Dataset & Endpoint & owned & reference & owned & reference \\", r"\midrule"]
+    for b in S["blocks"]:
+        for ep in eps:
+            d = b["per_endpoint"][ep]
+            L.append(f"{CKPT.get(b['model'], b['model'])} & {NAMES[b['dataset']]} & {ENDPOINT_LABEL[ep]} & "
+                     + " & ".join(f"{d[fam]['owned']}/{d[fam]['n_concepts']} & {d[fam]['reference_met']}/{d[fam]['n_concepts']}"
+                                  for fam in r3.FAMS) + r" \\")
+    L += [r"\midrule",
+          f"\\textit{{all}} & \\textit{{{S['n_blocks']} blocks}} & \\textit{{{len(eps)} endpoints}} & "
+          f"{S['owned']['label']}/{S['cells']} & {S['reference_met']['label']}/{S['cells']} & "
+          f"{S['owned']['answer']}/{S['cells']} & {S['reference_met']['answer']}/{S['cells']} \\\\",
+          r"\midrule", r"\multicolumn{7}{l}{\textit{The three endpoint-specific tests}} \\",
+          r"Checkpoint & Dataset & opposite on the negation & order gap & forced choice owned & report owned & core owned \\",
+          r"\midrule"]
+    for b in S["blocks"]:
+        L.append(f"{CKPT.get(b['model'], b['model'])} & {NAMES[b['dataset']]} & {b['negation_opposite']}/{b['negation_n']} & "
+                 f"{f2(b['forced_order_gap'], 3)} & {b['forced_both_owned']}/{b['negation_n']} & "
+                 f"{b['report_owned']}/{b['report_cells']} & {len(b['owned_core'])}/{b['negation_n']} \\\\")
+    L += [r"\midrule", r"\multicolumn{7}{l}{\textit{What the ownership contrast adds over the write magnitude, the probe "
+          r"selectivity and the clean-answer AUROC}} \\",
+          r"Checkpoint & Dataset & Direction & base $R^2$ & with ownership & $\Delta R^2$ & 95\% interval \\", r"\midrule"]
+    for b in S["blocks"]:
+        for fam in r3.FAMS:
+            v = b["incremental_validity"][fam]
+            L.append(f"{CKPT.get(b['model'], b['model'])} & {NAMES[b['dataset']]} & {FAM_NAME[fam]} & {f2(v['base_r2'], 3)} & "
+                     f"{f2(v['full_r2'], 3)} & {f2(v['delta_r2'], 3)} & "
+                     f"[{f2(v['delta_r2_ci95'][0], 3)}, {f2(v['delta_r2_ci95'][1], 3)}] \\\\")
+    L += [r"\bottomrule", r"\end{tabular}", r"\end{table}"]
+    (OUT / "table_cf_semend.tex").write_text("\n".join(L) + "\n")
+    print("table_cf_semend.tex", S["n_blocks"], "block(s),", len(eps), "endpoint(s)")
+
+
+POOL_LABEL = {"chest": "chest findings", "coco_easy": "the six easy objects", "coco_fine": "the six fine-grained objects"}
+MATCH_LABEL = {"selectivity": "probe selectivity alone", "answer_auroc": "clean-answer AUROC alone",
+               "both": "both variables", "both_easy_partners_only": "both variables, easy partners only"}
+
+
+def fgobj():
+    """FGOBJ: six small or fine-grained COCO categories fitted, written and graded exactly like the six easy ones, and the
+    difficulty-matched comparison of chest cells against natural-image cells (runs/robustness/round2.json fgobj section)."""
+    F = r3.fgobj(ci.write_blocks(ci.load_runs()))
+    P = F["pool"]
+    L = [r"\begin{table}[p]", r"\centering", r"\scriptsize", r"\setlength{\tabcolsep}{4pt}",
+         r"\caption{\textbf{Small and fine-grained objects, and the difficulty-matched comparison.} The six categories---"
+         + ", ".join(F["concepts"][:-1]) + ", and " + F["concepts"][-1] + r"---were fixed by a rule written before the grid was "
+         r"built and before any outcome was known, as were the two matching windows. They are fitted, lifted, written and graded "
+         r"exactly like the six easy objects, in the same blocks and rows, and their clean-answer AUROC is measured on the same "
+         r"calibration rows and by the same rule as every other cell. The bottom panel pairs each chest cell with every "
+         r"natural-image cell whose matching variables lie within "
+         + f2(F["window"], 2) + r" of it, and reports the ownership rate on each side of the surviving pairs, with a percentile "
+         r"interval over 5{,}000 draws of a cluster bootstrap whose unit is the model. Probe selectivity is the probe AUROC minus "
+         r"the mean of the twenty random-label control AUROCs on the calibration rows.}",
+         r"\label{tab:cf-fgobj}",
+         r"\begin{tabular}{lrrrrrr}", r"\toprule",
+         r" & \multicolumn{2}{c}{owned of six} & \multicolumn{2}{c}{median answer AUROC} & \multicolumn{2}{c}{median selectivity} \\",
+         r"\cmidrule(lr){2-3}\cmidrule(lr){4-5}\cmidrule(lr){6-7}",
+         r"Checkpoint & fine & easy & fine & easy & fine & easy \\", r"\midrule"]
+    for b in sorted(F["blocks"], key=lambda b: _ckpt_key(b["block"])):
+        L.append(f"{CKPT.get(b['model'], b['model'])} & {b['fine_owned']} & {b['easy_owned']} & "
+                 f"{f2(b['median_answer_auroc_fine'], 3)} & {f2(b['median_answer_auroc_easy'], 3)} & "
+                 f"{f2(b['median_selectivity_fine'], 3)} & {f2(b['median_selectivity_easy'], 3)} \\\\")
+    L += [r"\midrule", r"\multicolumn{7}{l}{\textit{The three pools of cells}} \\",
+          r"Cells & blocks & owned & rate & median answer AUROC & median selectivity & readable \\", r"\midrule"]
+    for g in ("chest", "coco_easy", "coco_fine"):
+        d = P[g]
+        L.append(f"{POOL_LABEL[g]} & {d['blocks']} & {d['owned']}/{d['cells']} & {f2(d['owned_rate'], 3)} & "
+                 f"{f2(d['median_answer_auroc'], 3)} & {f2(d['median_selectivity'], 3)} & {d['readable']}/{d['cells']} \\\\")
+    L += [r"\midrule", r"\multicolumn{7}{l}{\textit{Chest cells matched to natural-image cells on difficulty}} \\",
+          r"Matching & chest cells & partners & chest rate & natural rate & difference & 95\% interval \\", r"\midrule"]
+    for m in ("selectivity", "answer_auroc", "both"):
+        d = F["matched"][m]
+        L.append(f"{MATCH_LABEL[m]} & {d['n_matched_chest_cells']}/{d['n_chest_cells']} & "
+                 f"{d['n_natural_cells_used']}/{d['n_natural_cells']} & {f2(d['chest_owned_rate_matched'], 3)} & "
+                 f"{f2(d['natural_owned_rate_used'], 3)} & {f2(d['matched_ownership_difference'], 3)} & "
+                 f"[{f2(d['matched_ownership_difference_ci95'][0], 3)}, {f2(d['matched_ownership_difference_ci95'][1], 3)}] \\\\")
+    d = F["matched_easy_only"]
+    L.append(f"{MATCH_LABEL['both_easy_partners_only']} & {d['n_matched_chest_cells']}/{d['n_chest_cells']} & "
+             f"{d['n_natural_cells_used']}/{d['n_natural_cells']} & {f2(d['chest_owned_rate_matched'], 3)} & "
+             f"{f2(d['natural_owned_rate_used'], 3)} & {f2(d['matched_ownership_difference'], 3)} & "
+             f"[{f2(d['matched_ownership_difference_ci95'][0], 3)}, {f2(d['matched_ownership_difference_ci95'][1], 3)}] \\\\")
+    L += [r"\bottomrule", r"\end{tabular}", r"\end{table}"]
+    (OUT / "table_cf_fgobj.tex").write_text("\n".join(L) + "\n")
+    print("table_cf_fgobj.tex", len(F["blocks"]), "block(s)")
 
 
 if __name__ == "__main__":
@@ -603,5 +840,9 @@ if __name__ == "__main__":
     refit()
     valid()
     attr()
+    towerswap()
+    replay()
+    semend()
+    fgobj()
     for merged in ("altdird", "ansdirt", "extcomp", "tokenw", "rescue"):   # now panels of table_cf_altdir / table_cf_ansdir
         (OUT / f"table_cf_{merged}.tex").unlink(missing_ok=True)
