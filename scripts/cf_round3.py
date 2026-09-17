@@ -10,6 +10,9 @@ consistency check so that a table and the macro beside it can never drift apart.
     semend_cv(wb)   the same question answered OUT OF SAMPLE: leave-one-concept-out and leave-one-block-out
                     cross-validation with a concept-level permutation null (runs/robustness/round2.json).
     fgobj(wb)       fine-grained object family and the difficulty-matched comparison (runs/robustness/round2.json).
+    stratified()    the same chest-versus-natural-image question answered by stratifying on clean-answer AUROC instead
+                    of matching on it, and the same stratification of attributes against findings
+                    (runs/robustness/round2.json).
     validfit_arms() label source against sample size for the expert-label refits (runs/robustness/validfit.json).
     attrq(wb)       phrasing selection for the three non-clinical attributes.
 
@@ -299,6 +302,37 @@ def fgobj(wb: dict) -> dict:
             "same_block": F["same_block_comparison"],
             "prespecification": F["prespecification"], "matching_variables": F["matching_variables"],
             "window": F["matched"]["both"]["window_answer_auroc"]}
+
+
+STRAT_GROUPS_CVN = ("nih", "chexpert", "chest", "coco_easy", "coco_fine", "natural")
+STRAT_GROUPS_AVF = ("attribute_nih", "attribute_chexpert", "attribute_chest",
+                    "finding_nih", "finding_chexpert", "finding_chest")
+
+
+def stratified() -> dict:
+    """Ownership by clean-answer AUROC over the bin edges fixed in robustness_round2.py, for the two comparisons of
+    Sections 5.4 and 5.8 (runs/robustness/round2.json stratified section). Every cell of a pool lands in exactly one
+    bin, so a group's bin counts must sum to its total; that is checked here rather than trusted."""
+    S = json.loads((ROB / "round2.json").read_text()).get("stratified")
+    if not S:
+        raise RuntimeError("round2.json carries no stratified section; rerun scripts/mayo/robustness_round2.py")
+    for fam, want in (("chest_vs_natural", STRAT_GROUPS_CVN), ("attribute_vs_finding", STRAT_GROUPS_AVF)):
+        G = S[fam]["groups"]
+        if tuple(G) != want:
+            raise RuntimeError(f"round2.json stratified {fam}: groups {tuple(G)} are not {want}")
+        for g, d in G.items():
+            if sum(b["cells"] for b in d["bins"]) != d["cells"] or sum(b["owned"] for b in d["bins"]) != d["owned"]:
+                raise RuntimeError(f"round2.json stratified {fam} {g}: the bins do not sum to the group total; "
+                                   f"rerun scripts/mayo/robustness_round2.py")
+            if d["cells_without_answer_auroc"]:
+                raise RuntimeError(f"round2.json stratified {fam} {g}: {d['cells_without_answer_auroc']} cells carry no "
+                                   f"clean-answer AUROC, so the stratification does not cover the pool")
+    for fam, a, b in (("chest_vs_natural", "chest", "natural"), ("attribute_vs_finding", "attribute", "finding")):
+        c = S[fam]["contrast"]
+        if (c["a"], c["b"]) != (a, b) or c["bin"] != S["top_bin"]:
+            raise RuntimeError(f"round2.json stratified {fam}: the contrast is {c['a']} vs {c['b']} in bin {c['bin']}, "
+                               f"not {a} vs {b} in {S['top_bin']}")
+    return S
 
 
 # ------------------------------------------------------------------------ held-out incremental validity of ownership

@@ -465,6 +465,103 @@ def main():
                abs(round(float(M[f"cfFgMatch{K}Pooled"]) - float(row[5]) + float(row[6]), 6)) <= 0.001, True)
     expect("cfFgMatchSelN = every chest cell (the prose says all of them match)", M["cfFgMatchSelN"], M["cfFgChestCells"])
 
+    # ---- the stratified panels of Table cf-fgobj and Table cf-attr, recomputed here from the raw cells
+    # The bins are re-derived from runs/robustness/round2.json's own cell lists rather than read from its stratified
+    # section, so a reviewer's recount of the artefacts and the panel have to meet.
+    ST = r3.stratified()
+    edges, top = ST["bin_edges"], ST["top_bin_index"]
+
+    def rebin(cells):
+        """(owned, cells) per bin, recomputed from a raw cell list; the last bin is closed on the right."""
+        out = []
+        for i in range(len(edges) - 1):
+            sel = [c for c in cells if c["answer_auroc"] is not None
+                   and (edges[i] <= c["answer_auroc"] < edges[i + 1]
+                        or (i == len(edges) - 2 and c["answer_auroc"] >= edges[i]))]
+            out.append((sum(bool(c["owned"]) for c in sel), len(sel)))
+        return out
+
+    raw = json.loads((ci.RUNS / "robustness" / "round2.json").read_text())
+    fcells = raw["fgobj"]["cells"]
+    acells = [{"dataset": b["dataset"], "owned": c["owned"], "answer_auroc": (c.get("answerability") or {}).get("answer_auroc")}
+              for b in raw["attr"]["blocks"] for c in b["attributes"].values()]
+    ccells = [{"dataset": b["dataset"], "owned": c["owned"], "answer_auroc": (c.get("answerability") or {}).get("answer_auroc")}
+              for b in raw["attr"]["blocks"] for c in b["clinical"].values()]
+    recomputed = {
+        "nih": rebin([c for c in fcells if c["dataset"] == "nih"]),
+        "chexpert": rebin([c for c in fcells if c["dataset"] == "chexpert"]),
+        "chest": rebin([c for c in fcells if c["group"] == "chest"]),
+        "coco_easy": rebin([c for c in fcells if c["group"] == "coco_easy"]),
+        "coco_fine": rebin([c for c in fcells if c["group"] == "coco_fine"]),
+        "natural": rebin([c for c in fcells if c["group"] in ("coco_easy", "coco_fine")]),
+        "attribute_nih": rebin([c for c in acells if c["dataset"] == "nih"]),
+        "attribute_chexpert": rebin([c for c in acells if c["dataset"] == "chexpert"]),
+        "attribute_chest": rebin(acells),
+        "finding_nih": rebin([c for c in ccells if c["dataset"] == "nih"]),
+        "finding_chexpert": rebin([c for c in ccells if c["dataset"] == "chexpert"]),
+        "finding_chest": rebin(ccells)}
+    STRAT_ROW = re.compile(r"^(.+?) & (\d+)/(\d+) & (\d+)/(\d+) & (\d+)/(\d+) & (\d+)/(\d+) & (\d+)/(\d+) & (\d+)/(\d+) \\\\$", re.M)
+    panel = {m.group(1): [(int(m.group(2 * i + 2)), int(m.group(2 * i + 3))) for i in range(6)]
+             for m in STRAT_ROW.finditer(fg + (ROOT / "tables" / "table_cf_attr.tex").read_text())}
+    print("stratified panels vs a recount of the raw cells:")
+    for g, lab, G in (("nih", "NIH ChestX-ray14", "Nih"), ("chexpert", "CheXpert Plus", "Chex"),
+                      ("chest", r"\textit{chest findings}", "Chest"),
+                      ("coco_easy", "easy objects, every COCO block", "Easy"),
+                      ("coco_fine", "fine-grained objects, these blocks", "Fine"),
+                      ("natural", r"\textit{natural-image objects}", "Nat"),
+                      ("attribute_nih", "attributes, NIH ChestX-ray14", "AttrNih"),
+                      ("attribute_chexpert", "attributes, CheXpert Plus", "AttrChex"),
+                      ("attribute_chest", r"\textit{attributes, chest}", "Attr"),
+                      ("finding_nih", "findings, NIH ChestX-ray14", "FindNih"),
+                      ("finding_chexpert", "findings, CheXpert Plus", "FindChex"),
+                      ("finding_chest", r"\textit{findings, chest}", "Find")):
+        want = recomputed[g] + [(sum(o for o, _ in recomputed[g]), sum(n for _, n in recomputed[g]))]
+        expect(f"stratified panel row {g}", panel.get(lab), want)
+        expect(f"cfStrat{G} top bin and totals",
+               (M[f"cfStrat{G}TopOwned"], M[f"cfStrat{G}TopN"], M[f"cfStrat{G}Owned"], M[f"cfStrat{G}Cells"]),
+               (want[top][0], want[top][1], want[-1][0], want[-1][1]))
+        if want[top][1]:
+            expect(f"cfStrat{G}TopPct = the top-bin rate", M[f"cfStrat{G}TopPct"], pct(want[top][0], want[top][1]))
+    # the stratified pools are the pools of the panels above them, and of the ATTR comparison
+    expect("stratified chest pool = the FGOBJ chest pool", (M["cfStratChestOwned"], M["cfStratChestCells"]),
+           (M["cfFgChestOwned"], M["cfFgChestCells"]))
+    expect("stratified natural pool = the two COCO pools together", (M["cfStratNatOwned"], M["cfStratNatCells"]),
+           (M["cfFgEasyOwned"] + M["cfFgFineOwned"], M["cfFgEasyCells"] + M["cfFgFineCells"]))
+    expect("stratified attribute / finding pools = the ATTR pools",
+           (M["cfStratAttrOwned"], M["cfStratAttrCells"], M["cfStratFindOwned"], M["cfStratFindCells"]),
+           (M["cfAttrAllAttrOwned"], M["cfAttrAllAttrN"], M["cfAttrAllClinOwned"], M["cfAttrAllClinN"]))
+    expect("stratified NIH + CheXpert = chest", (M["cfStratNihCells"] + M["cfStratChexCells"]), M["cfStratChestCells"])
+    expect("no well-answered attribute cell is owned (Sections 5.4, 5.8 and the conclusion say none is)",
+           M["cfStratAttrTopOwned"], 0)
+    expect("the top-bin contrast line of Table cf-fgobj carries cfStratCvnDiff and its interval",
+           bool(re.search(re.escape(M["cfStratCvnDiff"].lstrip("+")) + r", 95\\% interval \["
+                          + re.escape(M["cfStratCvnLo"].lstrip("+")) + ", " + re.escape(M["cfStratCvnHi"].lstrip("+")) + r"\]", fg)), True)
+    expect("cfStratTopEdge is the top bin edge of the fixed ladder", M["cfStratTopEdge"], f"{edges[top]:.2f}")
+
+    # ---- Figure 3's caption states the three numbers the figure annotates, from the figure's own sidecar
+    f3 = ROOT / "figures" / "fig3_example.json"
+    if f3.exists():
+        ex = json.loads(f3.read_text())
+        print("Figure 3 caption vs the figure's sidecar:")
+        for ds, K in (("nih", "Chest"), ("coco", "Coco")):
+            d = ex[ds]
+            expect(f"cfEx{K} clean / own write / competing write",
+                   (M[f"cfEx{K}Clean"], M[f"cfEx{K}Own"], M[f"cfEx{K}Comp"]),
+                   (f"{d['clean']:.2f}", f"{d['concept_write']:.2f}", f"{d['competitor_write']:.2f}"))
+            expect(f"cfEx{K} question and competitor", (M[f"cfEx{K}Question"], M[f"cfEx{K}Competitor"]),
+                   (d["question"], d["competitor"]))
+        expect("the COCO concept write moves nothing else (the caption says so)",
+               ex["coco"]["max_other_answer"] <= 0.05, True)
+    # ---- the two-model seed study's own ownership contrast, quoted in Section 5.2 and in the registered gate table
+    sp = json.loads((ROOT / "data" / "accepted_results.json").read_text())["specificity"]["primary"]
+    expect("cfSeedPrior* = data/accepted_results.json specificity.primary",
+           (M["cfSeedPriorO"], M["cfSeedPriorOLo"], M["cfSeedPriorOHi"]),
+           (f"{sp['margin']:+.3f}", f"{sp['ci95'][0]:+.3f}", f"{sp['ci95'][1]:+.3f}"))
+    gates = (ROOT / "tables" / "table_gates.tex").read_text()
+    expect("the registered gate table carries the same seed ownership contrast",
+           bool(re.search(r"-?" + re.escape(f"{sp['margin']:.4f}") + r" \[" + re.escape(f"{sp['ci95'][0]:.4f}")
+                          + r", " + re.escape(f"{sp['ci95'][1]:.4f}") + r"\]", gates)), True)
+
     # the refit-arms panel of Table cf-valid: the label source separated from the sample size
     va = (ROOT / "tables" / "table_cf_valid.tex").read_text()
     arm_rows = {m.group(1) + "|" + m.group(2): m.groups() for m in re.finditer(

@@ -2,7 +2,7 @@
 \centering
 \scriptsize
 \setlength{\tabcolsep}{4pt}
-\caption{\textbf{Non-clinical attributes of the same radiographs.} Three attributes of each film---an anteroposterior (portable) projection, female sex, and age at least 60---are read from the dataset's own metadata and fitted on the same images, features, projection, and probe settings as the clinical probes. The three attribute directions and the six clinical directions are lifted and written together as one nine-direction family at the primary dose and template, and graded with the paper's rule ($9\times8$ max-$T$ verdict over 2{,}000 shared unit-bootstrap draws). Attribute and clinical questions carry the same steering reference in every block of this table: the 119-direction random family at the same dose and the coordinate-permutation sham. Top: per checkpoint and dataset, owned attribute cells and owned clinical cells inside the same family, and which attributes are owned. Bottom: per attribute and dataset, medians over blocks of the probe AUROC against the attribute label, the probe selectivity against the stratum controls, the AUROC of the probe score against the model's own clean answer, and the absolute raw model-space cosine between the attribute direction and the six clinical normals (median over blocks and the six normals); the last column counts the blocks where the attribute is owned. Taken per attribute--finding pair as the median over blocks, the largest absolute raw model-space cosine over the 24 pairs is 0.11 (AP (portable) projection with Edema).}
+\caption{\textbf{Non-clinical attributes of the same radiographs.} Three attributes of each film---an anteroposterior (portable) projection, female sex, and age at least 60---are read from the dataset's own metadata and fitted on the same images, features, projection, and probe settings as the clinical probes. The three attribute directions and the six clinical directions are lifted and written together as one nine-direction family at the primary dose and template, and graded with the paper's rule ($9\times8$ max-$T$ verdict over 2{,}000 shared unit-bootstrap draws). Attribute and clinical questions carry the same steering reference in every block of this table: the 119-direction random family at the same dose and the coordinate-permutation sham. Top: per checkpoint and dataset, owned attribute cells and owned clinical cells inside the same family, and which attributes are owned. Bottom: per attribute and dataset, medians over blocks of the probe AUROC against the attribute label, the probe selectivity against the stratum controls, the AUROC of the probe score against the model's own clean answer, and the absolute raw model-space cosine between the attribute direction and the six clinical normals (median over blocks and the six normals); the last column counts the blocks where the attribute is owned. Taken per attribute--finding pair as the median over blocks, the largest absolute raw model-space cosine over the 24 pairs is 0.11 (AP (portable) projection with Edema). The last panel splits the same cells by how well the model already answers each question, at the bin edges 0.50, 0.70, 0.80, 0.90 fixed in the released analysis code; the last bin is closed on the right and every cell falls in exactly one bin.}
 \label{tab:cf-attr}
 \begin{tabular}{llrrccc}
 \toprule
@@ -70,6 +70,16 @@ Comparison & unit & attribute cells & owned & finding cells & owned & difference
 every cell & cell & 114 & 12 & 228 & 23 & 0.004 \\
 answer-capable cells only & cell & 100 & 11 & 141 & 22 & -0.046 \\
 answerability-matched pairs & pair & 188 & 14 & 188 & 17 & -0.016 \\
+\midrule
+\multicolumn{7}{l}{\textit{The same cells stratified on clean-answer AUROC, owned of cells}} \\
+Cells & $<$ 0.50 & 0.50--0.70 & 0.70--0.80 & 0.80--0.90 & $\geq$ 0.90 & all cells \\
+\midrule
+attributes, NIH ChestX-ray14 & 1/4 & 1/26 & 3/14 & 2/6 & 0/7 & 7/57 \\
+attributes, CheXpert Plus & 0/5 & 3/29 & 0/12 & 2/5 & 0/6 & 5/57 \\
+\textit{attributes, chest} & 1/9 & 4/55 & 3/26 & 4/11 & 0/13 & 12/114 \\
+findings, NIH ChestX-ray14 & 0/6 & 2/63 & 2/32 & 2/13 & 0/0 & 6/114 \\
+findings, CheXpert Plus & 0/13 & 4/47 & 2/9 & 5/21 & 6/24 & 17/114 \\
+\textit{findings, chest} & 0/19 & 6/110 & 4/41 & 7/34 & 6/24 & 23/228 \\
 \bottomrule
 \end{tabular}
 \end{table}

@@ -2,7 +2,7 @@
 \centering
 \scriptsize
 \setlength{\tabcolsep}{5pt}
-\caption{\textbf{Direction and label geometry against off-diagonal dominance.} Per dataset and pooled over the two chest sets (``--'': defined per dataset only); Appendix~\ref{app:cf-robustness} defines each row. The last three rows count the sign of $O_q$, not the owned grade.}
+\caption{\textbf{Direction and label geometry against off-diagonal dominance.} Per dataset and pooled over the two chest sets (``--'': defined per dataset only); Appendix~\ref{app:cf-robustness} defines each row. The random reference is a mean absolute cosine, so the row above it gives the directions' mean absolute cosine as well as their signed mean. The last three rows count the sign of $O_q$, not the owned grade.}
 \label{tab:cf-geometry}
 \begin{tabular}{lrrrr}
 \toprule
@@ -10,6 +10,7 @@
 \midrule
 \multicolumn{5}{l}{\textit{Geometry of the six directions and the six labels}} \\
 \quad mean off-diagonal cosine between the directions & 0.018 & 0.232 & -- & 0.040 \\
+\quad mean off-diagonal $|\cos|$ between the directions & 0.099 & 0.234 & -- & 0.056 \\
 \quad mean $|\cos|$ between random unit directions & 0.023 & 0.023 & -- & 0.023 \\
 \quad mean off-diagonal $\phi$ between the labels & 0.026 & 0.381 & -- & 0.022 \\
 \midrule

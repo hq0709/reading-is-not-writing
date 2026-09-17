@@ -158,6 +158,11 @@ def robustness_macros(M: dict, rows: list[dict], wb: dict, warn: list) -> None:
     dg, lg, lo, asc = G["direction_geometry"], G["label_geometry"], G["leave_one_out"], G["association"]
     M["cfGeoCosNih"] = fx(dg["nih"]["offdiag_cos_model_mean"], 3); M["cfGeoCosRandom"] = fx(dg["nih"]["random_pair_abs_cos_mean"], 3)
     M["cfGeoCosChex"] = fx(dg["chexpert"]["offdiag_cos_model_mean"], 2)
+    # the random reference is a mean ABSOLUTE cosine, so the paper compares it with mean absolute cosines and never
+    # with the signed means above; both are kept because the table prints both
+    M["cfGeoAbsCosNih"] = fx(dg["nih"]["offdiag_abs_cos_model_mean"], 3)
+    M["cfGeoAbsCosChex"] = fx(dg["chexpert"]["offdiag_abs_cos_model_mean"], 2)
+    M["cfGeoAbsCosCoco"] = fx(dg["coco"]["offdiag_abs_cos_model_mean"], 3)
     cx = G["labels"]["chexpert"]["concepts"]; i, j = cx.index("Effusion"), cx.index("Consolidation")
     M["cfGeoCosEffCons"] = fx(dg["chexpert"]["cos_model_mean_matrix"][i][j], 2); M["cfGeoPhiEffCons"] = fx(G["labels"]["chexpert"]["phi"][i][j], 2)
     M["cfGeoPhiNih"] = fx(lg["nih"]["offdiag_phi_mean"], 3)
@@ -374,6 +379,21 @@ def prose_macros(M: dict, rows: list[dict], wb: dict, warn: list) -> None:
     if e["argmax_other"] != "Nodule" or e["rank_in_random_family"] != 2:
         warn.append(f"seed: Effusion's strongest competitor is {e['argmax_other']} and its rank {e['rank_in_random_family']} "
                     f"(prose says Nodule and second)")
+    # ---- the three numbers Figure 3 annotates on each panel, from the sidecar the figure script writes beside it,
+    #      so the caption states the plotted values and never a transcription of them
+    exp = HERE.parent / "figures" / "fig3_example.json"
+    if exp.exists():
+        ex = json.loads(exp.read_text())
+        for ds, K in (("nih", "Chest"), ("coco", "Coco")):
+            d = ex[ds]
+            M[f"cfEx{K}Clean"] = fx(d["clean"], 2); M[f"cfEx{K}Own"] = fx(d["concept_write"], 2)
+            M[f"cfEx{K}Comp"] = fx(d["competitor_write"], 2); M[f"cfEx{K}MaxOther"] = fx(d["max_other_answer"], 2)
+            M[f"cfEx{K}Question"] = d["question"]; M[f"cfEx{K}Competitor"] = d["competitor"]
+        if ex["coco"]["max_other_answer"] > 0.05:
+            warn.append(f"figure 3: the COCO concept write moves another answer to {ex['coco']['max_other_answer']:.3f}; "
+                        f"the caption says it moves nothing else")
+        if ex["nih"]["competitor_write"] <= ex["nih"]["concept_write"]:
+            warn.append("figure 3: the chest competitor no longer beats the concept write; the caption says it does")
     # ---- dose response, from the cache Figure 2(c) plots, under the same gate
     dose = json.loads((ci.RUNS / "figures" / "dose_curves.json").read_text())
     dose = {k: v for k, v in dose.items() if v}
@@ -442,7 +462,7 @@ def prose_macros(M: dict, rows: list[dict], wb: dict, warn: list) -> None:
     # ---- InternVL3.5 chest writes (Section 5.5)
     iv = [abs(f(r["W_qq"])) for r in rows if t(r["cell"]) and t(r["block_included"]) and r["dataset"] in ci.CHEST
           and r["model_key"].startswith("iv35")]
-    M["cfInternvlWqqMax"] = fx(math.ceil(max(iv) * 100) / 100, 2)
+    M["cfInternvlWqqMax"] = fx(math.ceil(max(iv) * 1000) / 1000, 3)   # a 3-dp ceiling: the 2-dp one lands on the effect floor
     # ---- |cos| of the difference-of-means and pattern directions with the logistic normal (Section 5.6): per block the
     #      median over concepts, from fits/vis.last/altdir_seed0.npz (cos_model over cftransfer.altdir.FAMILY_ORDER)
     FAM_ORDER = ("logistic", "dom", "pattern", "orth", "resid")
@@ -482,6 +502,13 @@ def seed_macros(M: dict, warn: list) -> None:
     for k in ("Ctrl", "CtrlLo", "CtrlHi"):
         if M[f"cfSeedDecLlavaEff{k}"] != M[f"cfSeedDecLlavaEdema{k}"]:
             warn.append(f"seed: the two LLaVA cells differ in control {k} (the prose quotes one control AUROC for both)")
+    # the two-model NIH study's own Effusion ownership, which Section 5.2 says the campaign reproduces: read from the
+    # registered seed artefact rather than typed into the prose
+    sp = json.loads((HERE.parent / "data" / "accepted_results.json").read_text())["specificity"]["primary"]
+    M["cfSeedPriorO"] = fx(sp["margin"], 3, signed=True)
+    M["cfSeedPriorOLo"] = fx(sp["ci95"][0], 3, signed=True); M["cfSeedPriorOHi"] = fx(sp["ci95"][1], 3, signed=True)
+    M["cfSeedPriorOFull"] = fx(sp["margin"], 4, signed=True)
+    M["cfSeedPriorOLoFull"] = fx(sp["ci95"][0], 4, signed=True); M["cfSeedPriorOHiFull"] = fx(sp["ci95"][1], 4, signed=True)
 
 
 def extcomp_macros(M: dict, wb: dict, warn: list) -> None:
@@ -1104,8 +1131,8 @@ def round3_macros(M: dict, rows: list[dict], wb: dict, warn: list) -> None:
         warn.append(f"semend: an in-sample increment is negative ({S['iv_delta_min']:.4f}); adding predictors cannot "
                     f"lower a training R^2, so the regression is not the one Table cf-semend describes")
     if CV["ownership_adds_out_of_sample"]:
-        warn.append("semend: ownership now adds predictive value out of sample; Section 5.6 states that it does not, "
-                    "so the sentence and this guard both have to change")
+        warn.append("semend: ownership now adds predictive value out of sample; Section 5.6 states that the held-out "
+                    "test finds none, so the sentence and this guard both have to change")
     if min(CV["pooled_leave_one_concept_out"]["min_permutation_p"],
            CV["pooled_leave_one_block_out"]["min_permutation_p"]) < 0.05:
         warn.append("semend: one held-out test reaches p < 0.05 under the permutation null; Section 5.6 says none does")
@@ -1169,6 +1196,51 @@ def round3_macros(M: dict, rows: list[dict], wb: dict, warn: list) -> None:
                     f"so the same-block difference is not null (Section 5.4 says fine-grainedness does not reduce ownership)")
     if F["matched"]["selectivity"]["n_matched_chest_cells"] != P["chest"]["cells"]:
         warn.append("fgobj: matching on probe selectivity alone leaves chest cells unmatched (Section 5.4 says every one matches)")
+
+    # ---- ownership stratified on clean-answer AUROC (Table cf-fgobj bottom panel, Table cf-attr bottom panel)
+    # The stratification is what Sections 5.4 and 5.8 lead with: it keeps every cell, where the matched estimator can
+    # pair only part of the chest pool. Each group's bins must sum to its total, which cf_round3.stratified checks.
+    ST = r3.stratified()
+    M["cfStratTopEdge"] = fx(ST["bin_edges"][ST["top_bin_index"]], 2)
+    M["cfStratBins"] = len(ST["bin_labels"])
+    inner = [fx(e, 2) for e in ST["bin_edges"][1:-1]]
+    M["cfStratEdges"] = ", ".join(inner[:-1]) + " and " + inner[-1]
+    for fam, keys in (("chest_vs_natural", (("chest", "Chest"), ("natural", "Nat"), ("nih", "Nih"),
+                                            ("chexpert", "Chex"), ("coco_easy", "Easy"), ("coco_fine", "Fine"))),
+                      ("attribute_vs_finding", (("attribute_chest", "Attr"), ("finding_chest", "Find"),
+                                                ("attribute_nih", "AttrNih"), ("attribute_chexpert", "AttrChex"),
+                                                ("finding_nih", "FindNih"), ("finding_chexpert", "FindChex")))):
+        for g, G in keys:
+            d = ST[fam]["groups"][g]
+            top = d["bins"][ST["top_bin_index"]]
+            M[f"cfStrat{G}TopOwned"] = top["owned"]; M[f"cfStrat{G}TopN"] = top["cells"]
+            M[f"cfStrat{G}TopPct"] = pct(top["owned"], top["cells"]) if top["cells"] else 0
+            M[f"cfStrat{G}Owned"] = d["owned"]; M[f"cfStrat{G}Cells"] = d["cells"]
+            for i, b in enumerate(d["bins"]):
+                M[f"cfStrat{G}Bin{'ABCDE'[i]}Owned"] = b["owned"]; M[f"cfStrat{G}Bin{'ABCDE'[i]}N"] = b["cells"]
+    for key, K in (("contrast", "Cvn"), ("contrast_easy_partners_only", "CvnEasy")):
+        c = ST["chest_vs_natural"][key]
+        M[f"cfStrat{K}Diff"] = fx(c["difference"], 3, signed=True)
+        M[f"cfStrat{K}Lo"] = fx(c["difference_ci95"][0], 3, signed=True)
+        M[f"cfStrat{K}Hi"] = fx(c["difference_ci95"][1], 3, signed=True)
+    c = ST["attribute_vs_finding"]["contrast"]
+    M["cfStratAvfDiff"] = fx(c["difference"], 3, signed=True)
+    M["cfStratAvfLo"] = fx(c["difference_ci95"][0], 3, signed=True)
+    M["cfStratAvfHi"] = fx(c["difference_ci95"][1], 3, signed=True)
+    # the stratified pools ARE the pools of the two tables above them; a drift between them is a regenerate, not a
+    # rounding difference, and the prose of Sections 5.4 and 5.8 reads both
+    if (ST["chest_vs_natural"]["groups"]["chest"]["cells"], ST["chest_vs_natural"]["groups"]["chest"]["owned"]) != \
+            (P["chest"]["cells"], P["chest"]["owned"]):
+        warn.append("stratified: the chest pool differs from the FGOBJ chest pool; they are the same cells")
+    if ST["attribute_vs_finding"]["groups"]["attribute_chest"]["owned"] != M["cfAttrChestAttrOwned"] or \
+            ST["attribute_vs_finding"]["groups"]["finding_chest"]["owned"] != M["cfAttrChestClinOwned"]:
+        warn.append("stratified: the attribute / finding owned counts differ from the ATTR section's; they are the same cells")
+    if M["cfStratAttrTopOwned"]:
+        warn.append(f"stratified: {M['cfStratAttrTopOwned']} of the {M['cfStratAttrTopN']} well-answered attribute cells is "
+                    f"owned; Sections 5.4 and 5.8 say none is, so the sentence has to change")
+    if M["cfStratChestTopPct"] >= M["cfStratNatTopPct"]:
+        warn.append("stratified: chest cells are owned at least as often as natural-image cells in the top answer bin; "
+                    "the abstract and Section 5.4 say the opposite")
 
     # ---- the attribute comparison read three ways (Table cf-attr, bottom panel) and the phrasing selection
     A = r3.attr_modes(wb)
@@ -1254,6 +1326,12 @@ def main() -> Path:
     for c, name in (("Effusion", "cfSelEffusion"), ("Cardiomegaly", "cfSelCardiomegaly")):
         xs = [f(r["selectivity"]) for r in cells if r["dataset"] in ci.CHEST and r["concept"] == c and t(r["probe_graded"]) and r["selectivity"] != ""]
         M[name] = f"{sum(xs) / len(xs):.2f}"
+    # the spread of chest probe selectivity, so Section 5.1 states a measured quartile range and not an impression
+    schest = sorted(f(r["selectivity"]) for r in cells
+                    if r["dataset"] in ci.CHEST and t(r["probe_graded"]) and r["selectivity"] != "")
+    qs = statistics.quantiles(schest, n=4)
+    M["cfSelChestMed"] = f"{statistics.median(schest):.2f}"
+    M["cfSelChestQOne"] = f"{qs[0]:.2f}"; M["cfSelChestQThree"] = f"{qs[2]:.2f}"; M["cfSelChestN"] = len(schest)
     # per dataset
     for ds, D in DS_MACRO.items():
         d = C[ds]

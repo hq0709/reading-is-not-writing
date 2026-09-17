@@ -1,0 +1,36 @@
+{
+ "nih": {
+  "block": "q25-7/nih",
+  "row_id": "00005446_000",
+  "question": "Effusion",
+  "competitor": "Nodule",
+  "clean": 0.020054716697597806,
+  "concept_write": 0.5632939760340381,
+  "competitor_write": 0.7521430929245843,
+  "max_other_answer": 0.816353196457029,
+  "other_questions_under_concept_write": {
+   "Atelectasis": 0.607069590511778,
+   "Pneumothorax": 0.1310120161037098,
+   "Cardiomegaly": 0.5097748698384391,
+   "Mass": 0.816353196457029,
+   "Nodule": 0.6630973594644649
+  }
+ },
+ "coco": {
+  "block": "q25-7/coco",
+  "row_id": "000000028449",
+  "question": "dog",
+  "competitor": "bottle",
+  "clean": 5.250361068239135e-05,
+  "concept_write": 0.9990938038846848,
+  "competitor_write": 0.007079555061574563,
+  "max_other_answer": 0.002079706445268966,
+  "other_questions_under_concept_write": {
+   "person": 0.0003915092070495569,
+   "car": 0.00038523310709959234,
+   "chair": 0.0003111920576334484,
+   "bottle": 0.002079706445268966,
+   "bicycle": 9.28548702845571e-05
+  }
+ }
+}

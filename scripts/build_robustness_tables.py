@@ -70,6 +70,7 @@ def geometry():
     sections = [
         ("Geometry of the six directions and the six labels", [
             ("mean off-diagonal cosine between the directions", mean_per_ds(dg, "offdiag_cos_model_mean")),
+            ("mean off-diagonal $|\\cos|$ between the directions", mean_per_ds(dg, "offdiag_abs_cos_model_mean")),
             ("mean $|\\cos|$ between random unit directions", mean_per_ds(dg, "random_pair_abs_cos_mean")),
             ("mean off-diagonal $\\phi$ between the labels", mean_per_ds(lg, "offdiag_phi_mean"))]),
         ("Cells whose strongest competitor is (chance: one in five)", [
@@ -85,8 +86,9 @@ def geometry():
             ("cells with at least two competitors above the own write", count("n_above_ge2"))])]
     L = [r"\begin{table}[h]", r"\centering", r"\scriptsize", r"\setlength{\tabcolsep}{5pt}",
          r"\caption{\textbf{Direction and label geometry against off-diagonal dominance.} Per dataset and pooled over the two chest "
-         r"sets (``--'': defined per dataset only); Appendix~\ref{app:cf-robustness} defines each row. The last three rows count the "
-         r"sign of $O_q$, not the owned grade.}",
+         r"sets (``--'': defined per dataset only); Appendix~\ref{app:cf-robustness} defines each row. The random reference is a mean "
+         r"absolute cosine, so the row above it gives the directions' mean absolute cosine as well as their signed mean. The last "
+         r"three rows count the sign of $O_q$, not the owned grade.}",
          r"\label{tab:cf-geometry}",
          r"\begin{tabular}{lrrrr}", r"\toprule",
          r" & NIH ChestX-ray14 & CheXpert Plus & both chest sets & COCO \\"]
@@ -629,7 +631,9 @@ def attr():
          r"(median over blocks and the six normals); the last column counts the blocks where the attribute is owned. Taken per "
          r"attribute--finding pair as the median over blocks, the largest absolute raw model-space cosine over the "
          + f"{len(ch['per_pair_median_abs_cos'])}" + r" pairs is " + f2(mm.get("median_abs_cos")) + r" ("
-         + _pair_label(mm.get("pair")) + r").}",
+         + _pair_label(mm.get("pair")) + r"). The last panel splits the same cells by how well the model already answers each "
+         r"question, at the bin edges " + ", ".join(f2(e, 2) for e in r3.stratified()["bin_edges"][1:-1]) + r" fixed in the "
+         r"released analysis code; the last bin is closed on the right and every cell falls in exactly one bin.}",
          r"\label{tab:cf-attr}",
          r"\begin{tabular}{llrrccc}", r"\toprule",
          r"Checkpoint & Dataset & attributes owned & findings owned & " + " & ".join(ATTR_SHORT[a] for a in attrs) + r" \\", r"\midrule"]
@@ -661,6 +665,16 @@ def attr():
         c = cmp_[mode]
         L.append(f"{label} & {unit} & {c['attr_cells']} & {c['attr_owned']} & {c['clin_cells']} & {c['clin_owned']} & "
                  f"{f2(c['attr_owned_share'] - c['clin_owned_share'], 3)} \\\\")
+    S = r3.stratified(); A = S["attribute_vs_finding"]
+    L += [r"\midrule", r"\multicolumn{7}{l}{\textit{The same cells stratified on clean-answer AUROC, owned of cells}} \\",
+          r"Cells & " + " & ".join(b.replace(">=", r"$\geq$").replace("<", r"$<$").replace("-", "--")
+                                   for b in S["bin_labels"]) + r" & all cells \\", r"\midrule"]
+    for g, name in (("attribute_nih", "attributes, NIH ChestX-ray14"), ("attribute_chexpert", "attributes, CheXpert Plus"),
+                    ("attribute_chest", r"\textit{attributes, chest}"), ("finding_nih", "findings, NIH ChestX-ray14"),
+                    ("finding_chexpert", "findings, CheXpert Plus"), ("finding_chest", r"\textit{findings, chest}")):
+        d = A["groups"][g]
+        L.append(name + " & " + " & ".join(f"{b['owned']}/{b['cells']}" for b in d["bins"])
+                 + f" & {d['owned']}/{d['cells']} \\\\")
     L += [r"\bottomrule", r"\end{tabular}", r"\end{table}"]
     (OUT / "table_cf_attr.tex").write_text("\n".join(L) + "\n")
     print("table_cf_attr.tex", {g: P[g]["blocks"] for g, _ in groups})
@@ -852,6 +866,9 @@ POOL_LABEL = {"chest": "chest findings", "coco_easy": "easy objects, every COCO 
 POOL_ORDER = ("chest", "coco_easy", "coco_easy_same_blocks", "coco_fine")
 MATCH_LABEL = {"selectivity": "probe selectivity alone", "answer_auroc": "clean-answer AUROC alone",
                "both": "both variables", "both_easy_partners_only": "both variables, easy partners only"}
+STRAT_LABEL = {"nih": "NIH ChestX-ray14", "chexpert": "CheXpert Plus", "chest": r"\textit{chest findings}",
+               "coco_easy": "easy objects, every COCO block", "coco_fine": "fine-grained objects, these blocks",
+               "natural": r"\textit{natural-image objects}"}
 
 
 def fgobj():
@@ -878,7 +895,11 @@ def fgobj():
          r"the effective sample of both: matched chest cells of all chest cells, and distinct natural-image cells used as a "
          r"partner of all of them. Both intervals are percentile intervals over 5{,}000 draws of a cluster bootstrap whose unit "
          r"is the model. Probe selectivity is the probe AUROC minus the mean of the twenty random-label control AUROCs on the "
-         r"calibration rows.}",
+         r"calibration rows. The last panel stratifies the same cells on clean-answer AUROC instead of matching on it, at the "
+         r"bin edges " + ", ".join(f2(e, 2) for e in r3.stratified()["bin_edges"][1:-1]) + r", which are fixed in the released "
+         r"analysis code and are the conventional reading points of an AUROC. The last bin is closed on the right, every cell "
+         r"of each pool falls in exactly one bin, and none is dropped: that is what separates the stratification from the "
+         r"matching above it. Its interval is the same cluster bootstrap over models.}",
          r"\label{tab:cf-fgobj}",
          r"\begin{tabular}{lrrrrrr}", r"\toprule",
          r" & \multicolumn{2}{c}{owned of six} & \multicolumn{2}{c}{median answer AUROC} & \multicolumn{2}{c}{median selectivity} \\",
@@ -912,6 +933,20 @@ def fgobj():
         for est, key in (("pooled", "pooled_ownership_difference"), ("matched", "matched_ownership_difference")):
             L.append(f"\\quad {est} &  &  &  &  & {f2(d[key], 3)} & "
                      f"[{f2(d[key + '_ci95'][0], 3)}, {f2(d[key + '_ci95'][1], 3)}] \\\\")
+    S = r3.stratified()
+    C = S["chest_vs_natural"]
+    L += [r"\midrule", r"\multicolumn{7}{l}{\textit{Chest cells and natural-image cells stratified on clean-answer "
+          r"AUROC, owned of cells}} \\",
+          r"Cells & " + " & ".join(b.replace(">=", r"$\geq$").replace("<", r"$<$").replace("-", "--")
+                                   for b in S["bin_labels"]) + r" & all cells \\", r"\midrule"]
+    for g in ("nih", "chexpert", "chest", "coco_easy", "coco_fine", "natural"):
+        d = C["groups"][g]
+        L.append(STRAT_LABEL[g] + " & " + " & ".join(f"{b['owned']}/{b['cells']}" for b in d["bins"])
+                 + f" & {d['owned']}/{d['cells']} \\\\")
+    c = C["contrast"]
+    L += [r"\multicolumn{7}{l}{\quad chest minus natural-image in the "
+          + S["top_bin"].replace(">=", r"$\geq$") + r" bin: " + f2(c["difference"], 3) + r", 95\% interval ["
+          + f2(c["difference_ci95"][0], 3) + ", " + f2(c["difference_ci95"][1], 3) + r"]} \\"]
     L += [r"\bottomrule", r"\end{tabular}", r"\end{table}"]
     (OUT / "table_cf_fgobj.tex").write_text("\n".join(L) + "\n")
     print("table_cf_fgobj.tex", len(F["blocks"]), "block(s)")

@@ -674,6 +674,7 @@ def colored_annotation(fig, ax, xy, pieces, dx=5, fontsize=7.5):
 
 def fig3_example(blocks):
     from PIL import Image
+    annotated = {}                    # the three numbers each panel annotates, for the caption's macros
     FW, FH = fs.WIDTH, 3.53          # 3.7 in until the round-2 prose; 0.12 in of top and 0.05 in of bottom padding removed
     f = plt.figure(figsize=(FW, FH))
     img_w, img_x = 1.02, 0.12; bar_x, bar_w = 1.96, 2.58; ax_h = 1.15
@@ -702,6 +703,11 @@ def fig3_example(blocks):
         if r == 1:
             ax.set_xlabel(r"$P(\mathrm{yes})$ to each question at $\alpha=+0.25$, Qwen2.5-VL-7B", fontsize=7.5)
         b0, bt, bc = vals[0][jt], vals[1][jt], vals[2][jt]
+        annotated[ds] = {"block": f"{mk}/{ds}", "row_id": rid, "question": target, "competitor": comp,
+                         "clean": float(b0), "concept_write": float(bt), "competitor_write": float(bc),
+                         "max_other_answer": float(max(writes[target].get(c, float("nan")) for c in concepts if c != target)),
+                         "other_questions_under_concept_write": {c: float(writes[target].get(c, float("nan")))
+                                                                 for c in concepts if c != target}}
         pieces = [(f"{b0:.2f}", EX_COL["clean"]), (" → ", fs.INK), (f"{bt:.2f}", EX_COL["concept"]), (" / ", fs.INK), (f"{bc:.2f}", EX_COL["competitor"])]
         colored_annotation(f, ax, (1.0, jt), pieces, dx=5, fontsize=7.5)
         f.text(img_x / FW, title_y[r] / FH, claim, ha="left", va="bottom", fontsize=8.5, color=fs.INK)
@@ -710,6 +716,7 @@ def fig3_example(blocks):
                Rectangle((0, 0), 1, 1, color=EX_COL["competitor"], label="strongest competing write (Nodule in a, bottle in b)")]
     f.legend(handles=handles, loc="lower center", bbox_to_anchor=(0.5, 0.0), ncol=3, fontsize=6.8, frameon=True, edgecolor="#8a8a8a",
              handlelength=1.4, handleheight=0.8, columnspacing=1.2, handletextpad=0.5, borderpad=0.45)
+    (FIG / "fig3_example.json").write_text(json.dumps(annotated, indent=1) + "\n")
     check_overlaps(f, "fig3_example")
     fs.save(f, FIG / "fig3_example")
 
