@@ -4,15 +4,17 @@
 \setlength{\tabcolsep}{4pt}
 \caption{\textbf{Ownership under alternative scales, strata, refits, and loci.} Per dataset: cells with the complete owned grade on the probability scale (the paper's grade) and on the logit-margin scale (the steering reference recomputed on that scale and a positive percentile interval for $O^m_q$), with the cells owned on both; cells with $O_q>0$ (the sign alone) among owned and among not-owned cells when every cell is restricted to its unsaturated rows ($0.01<P(\mathrm{yes})<0.99$ on the clean pass); median $|O_q(\text{seed }k)-O_q(\text{seed }0)|$ over the two refit seeds and the owned cells that keep $O_q>0$ under both (REFIT exists for NIH and COCO); median $|W_{q,q}|$ at the primary and connector loci and connector cells whose write beats the connector random family.}
 \label{tab:cf-scale}
-\resizebox{\textwidth}{!}{\begin{tabular}{lrrrrrrrrrr}
+\begin{tabular}{lrrrrrrrrrr}
 \toprule
-Dataset & owned ($p$) & owned ($m$) & both & unsat.\ owned $O>0$ & unsat.\ other $O>0$ & refit med.\ $|\Delta O|$ & owned stable & $|W_{q,q}|$ prim.\ & $|W_{q,q}|$ conn.\ & conn.\ $>$ p95 \\
+ & \multicolumn{3}{c}{owned cells} & \multicolumn{2}{c}{unsaturated, $O_q>0$} & \multicolumn{2}{c}{refits} & \multicolumn{2}{c}{median $|W_{q,q}|$} & connector \\
+\cmidrule(lr){2-4}\cmidrule(lr){5-6}\cmidrule(lr){7-8}\cmidrule(lr){9-10}
+Dataset & $p$ & $m$ & both & owned & other & med.\ $|\Delta O|$ & stable & primary & connector & $>$ p95 \\
 \midrule
 NIH ChestX-ray14 & 10/126 & 9/126 & 8 & 10/10 & 21/110 & 0.028 & 6/10 & 0.044 & 0.009 & 13/126 \\
 CheXpert Plus & 19/120 & 21/120 & 19 & 19/19 & 12/97 & 0.031 & 5/12 & 0.030 & 0.011 & 8/96 \\
 COCO & 101/120 & 102/120 & 100 & 93/94 & 9/19 & 0.023 & 95/101 & 0.238 & 0.008 & 87/120 \\
 \midrule
-\multicolumn{11}{l}{\textit{Batch effects at the gates (61 blocks): batched-vs-single candidate-logit difference 0.07--1.84 (median 0.36); margin sign agreement in 55 of 61 blocks; owned cells in disagreeing blocks: 0.}} \\
+\multicolumn{11}{p{0.9\linewidth}}{\textit{Batch effects at the gates (61 blocks): batched-vs-single candidate-logit difference 0.07--1.84 (median 0.36); margin sign agreement in 55 of 61 blocks; owned cells in disagreeing blocks: 0.}} \\
 \bottomrule
-\end{tabular}}
+\end{tabular}
 \end{table}

@@ -2,7 +2,8 @@
 
     python scripts/check_numbers.py        (exit 1 on any disagreement)
 
-Reads runs/manifest.csv (cf_inclusion.read_manifest), tables/table_cf_main.tex, figures/fig2_counts.json (written by
+Reads runs/manifest.csv (cf_inclusion.read_manifest), tables/table_cf_main.tex, tables/table_cf_{altdir,ansdir,precision,geometry}.tex,
+tables/table_seed_mass.tex with the registered seed tables (table_decoding, table_encoding_mass, table_mass_confirmation), figures/fig2_counts.json (written by
 plot_paper_figures.py fig2_overview), figures/figA1_own_share.json (figA1_write_structure), tables/cf_numbers.json
 (build_numbers.py), tables/table_cf_contingency.tex (the Section 5.1 decomposition macros), runs/robustness/round2.json with tables/table_cf_valid.tex and tables/table_cf_attr.tex (round-2 and ATTR macros), and, when main.pdf exists and pdftotext is available, the rendered abstract and Section 5.1.
 """
@@ -25,6 +26,23 @@ DS = ("nih", "chexpert", "coco")
 bad = 0
 
 
+def round_half_up(x):
+    return int(x + 0.5)
+
+
+def altdir_panels(tex):
+    """[(panel title, {row label: [(owned, cells) per dataset, or (0, 0) for '--']})] of Table cf-altdir."""
+    out = []
+    for chunk in tex.split(r"\multicolumn{8}{l}{\textit{")[1:]:
+        title = chunk.split("}} \\\\", 1)[0]
+        rows = {}
+        for m in re.finditer(r"^\\quad (.+?) & (\w*) & (.+?) \\\\$", chunk, flags=re.M):
+            cells = m.group(3).split(" & ")
+            rows[m.group(1)] = [tuple(map(int, cells[i].split("/"))) if "/" in cells[i] else (0, 0) for i in (0, 2, 4)]
+        out.append((title, rows))
+    return out
+
+
 def expect(name, a, b):
     global bad
     ok = a == b
@@ -38,10 +56,10 @@ def main():
     for ds in DS:
         d = C[ds]
         print(f"  {ds:8s} {d['probe_cells']}/{d['readable']} | {d['write_cells']}/{d['answerable']}/{d['owned']}")
-    # Table 1 "All cells" row
+    # Table 1 "All cells" rows: means and owned shares, then the nine (count, denominator) pairs on the row below
     tex = (ROOT / "tables" / "table_cf_main.tex").read_text()
     row = re.search(r"\\textbf\{All cells\} & (.*?) \\\\", tex).group(1)
-    sup = re.findall(r"\^\{(\d+)/(\d+)\}", row)          # nine (count, denominator) pairs: Read/Ans/Own x 3 datasets
+    sup = re.findall(r"(\d+)/(\d+)", re.search(r"count / cells & (.*?) \\\\", tex).group(1))   # Read/Ans/Own x 3 datasets
     print("Table 1 'All cells' row vs manifest:")
     for i, ds in enumerate(DS):
         d = C[ds]
@@ -71,6 +89,27 @@ def main():
     expect("cfChestOwned", M["cfChestOwned"], C["chest"]["owned"])
     expect("cfCocoOwned/N", (M["cfCocoOwned"], M["cfCocoOwnedN"]), (C["coco"]["owned"], C["coco"]["write_cells"]))
     expect("cfCells", M["cfCells"], C["all"]["write_cells"])
+    # Table cf-prevalence (label counts per cohort) against the frozen data manifests, and the support macros against it
+    from build_numbers import cohort_counts   # noqa: E402
+    pv = (ROOT / "tables" / "table_cf_prevalence.tex").read_text()
+    dsname = {"NIH ChestX-ray14": "nih", "CheXpert Plus": "chexpert", "COCO": "coco"}
+    print("Table cf-prevalence vs the data manifests (train / calibration / test):")
+    ds = None
+    for m in re.finditer(r"^\s*([A-Za-z0-9 .-]*?)\s*&\s*([A-Za-z]+)\s*&\s*([\d &]+?)\s*\\\\$", pv, flags=re.M):
+        ds = dsname.get(m.group(1).strip(), ds)
+        if ds is None:
+            continue
+        got = [int(x) for x in m.group(3).split("&")]
+        want = []
+        for role in ("train", "calibration", "test"):
+            p, n = cohort_counts(ds, role)[m.group(2)]
+            want += [p, n]
+        expect(f"{ds} {m.group(2)} pos/neg", [got[0], got[1], got[3], got[4], got[6], got[7]], want)
+    expect("cfCal/cfTest ineligible cells vs Table cf-prevalence",
+           (M["cfCalChexInelPos"], M["cfCalChexInelNeg"], M["cfTestChexInelPos"], M["cfTestChexInelNeg"],
+            M["cfCalCocoInelPos"], M["cfTestCocoInelPos"]),
+           (cohort_counts("chexpert", "calibration")["Atelectasis"] + cohort_counts("chexpert", "test")["Atelectasis"]
+            + (cohort_counts("coco", "calibration")["bicycle"][0], cohort_counts("coco", "test")["bicycle"][0])))
     # contingency macros (Section 5.1 decomposition) vs Table cf-contingency
     ct = (ROOT / "tables" / "table_cf_contingency.tex").read_text()
     crow = re.findall(r"^(.*?) & (met|not met) & (\d+) & (\d+) & (\d+) & (\d+) \\\\$", ct, flags=re.M)
@@ -141,20 +180,108 @@ def main():
             expect(f"figure 2(c) {ds} blocks", g[ds], man_dose[ds])
     else:
         print("  (figures/fig2_dose_blocks.json missing: run plot_paper_figures.py)")
-    # EXTCOMP macros against Table cf-extcomp
-    et = (ROOT / "tables" / "table_cf_extcomp.tex").read_text()
-    er = re.findall(r"& (\d+)/6 & (\d+)/6 \\\\", et)
-    if er:
-        print("EXTCOMP macros vs Table cf-extcomp:")
-        expect("cfExtcompBlocks", M["cfExtcompBlocks"], len(er))
-        expect("cfExtcompOwned", M["cfExtcompOwned"], sum(int(a) for a, _ in er))
-        expect("cfExtcompExtOwned", M["cfExtcompExtOwned"], sum(int(b) for _, b in er))
-        expect("cfExtcompRetained within both counts", M["cfExtcompRetained"] <= min(M["cfExtcompOwned"], M["cfExtcompExtOwned"]), True)
+    # Table cf-altdir (constructions, displacement lift, token weights, extended competitor family): every panel vs the macros
+    panels = altdir_panels((ROOT / "tables" / "table_cf_altdir.tex").read_text())
+    print("ALTDIR / ALTDIRD / TOKENW / EXTCOMP macros vs Table cf-altdir:")
+    (t1, r1), (t2, r2), (t3, r3), (t4, r4) = panels
+    for ds, D, i in (("nih", "Nih", 0), ("chexpert", "Chex", 1), ("coco", "Coco", 2)):
+        for fam, F in (("logistic normal", "Logistic"), ("difference of means", "Dom"), ("Haufe pattern", "Pattern"),
+                       ("orthogonalised normal", "Orth"), ("residualised normal", "Resid"), ("owned under at least one", "Any")):
+            expect(f"cfAltdir{D}{F}/N", (M[f"cfAltdir{D}{F}"], M[f"cfAltdir{D}N"]), r1[fam][i])
+    chest_pct = [round_half_up(100 * a / n) for fam in list(r1)[:5] for (a, n) in r1[fam][:2]]
+    coco_pct = [round_half_up(100 * a / n) for fam in list(r1)[:5] for (a, n) in r1[fam][2:3]]
+    expect("cfAltdirChestPctMin/Max", (M["cfAltdirChestPctMin"], M["cfAltdirChestPctMax"]), (min(chest_pct), max(chest_pct)))
+    expect("cfAltdirCocoPctMin/Max", (M["cfAltdirCocoPctMin"], M["cfAltdirCocoPctMax"]), (min(coco_pct), max(coco_pct)))
+    expect("cfAltdirBlocks (panel header)", t1, f"Direction construction ({M['cfAltdirBlocksPerDs']} blocks per dataset)")
+    ch = lambda row: tuple(map(sum, zip(*row[:2])))
+    expect("cfAltdirdChest Dom/Pattern of N", (M["cfAltdirdChestDom"], M["cfAltdirdChestPattern"], M["cfAltdirdChestN"]),
+           (ch(r2["difference of means"])[0], ch(r2["Haufe pattern"])[0], ch(r2["difference of means"])[1]))
+    expect("cfAltdirdCoco Dom/Pattern of N", (M["cfAltdirdCocoDom"], M["cfAltdirdCocoPattern"], M["cfAltdirdCocoN"]),
+           (r2["difference of means"][2][0], r2["Haufe pattern"][2][0], r2["difference of means"][2][1]))
+    expect("cfTokenwChest uniform/softmax/top quarter of cells",
+           (M["cfTokenwUniformChestOwned"], M["cfTokenwSoftChestOwned"], M["cfTokenwTopqChestOwned"], M["cfTokenwChestCells"]),
+           (ch(r3["uniform"])[0], ch(r3["softmax of the probe score"])[0], ch(r3["top quarter of tokens"])[0], ch(r3["uniform"])[1]))
+    expect("cfTokenwCoco softmax/top quarter of cells", (M["cfTokenwSoftCocoOwned"], M["cfTokenwTopqCocoOwned"], M["cfTokenwCocoCells"]),
+           (r3["softmax of the probe score"][2][0], r3["top quarter of tokens"][2][0], r3["uniform"][2][1]))
+    blocks3 = dict((k, int(n)) for n, k in re.findall(r"(\d+) (NIH|CheXpert|COCO)", t3))
+    expect("cfTokenwChestBlocks (panel header)", M["cfTokenwChestBlocks"], blocks3.get("NIH", 0) + blocks3.get("CheXpert", 0))
+    blocks4 = dict((k, int(n)) for n, k in re.findall(r"(\d+) (NIH|CheXpert|COCO)", t4))
+    expect("cfExtcompBlocks (panel header)", M["cfExtcompBlocks"], sum(blocks4.values()))
+    expect("cfExtcompOwned (six directions)", M["cfExtcompOwned"], sum(a for a, n in r4["six clinical directions"] if n))
+    expect("cfExtcompExtOwned (extended family)", M["cfExtcompExtOwned"], sum(a for a, n in r4["with every extra dataset label"] if n))
+    expect("cfExtcompRetained within both counts", M["cfExtcompRetained"] <= min(M["cfExtcompOwned"], M["cfExtcompExtOwned"]), True)
+    # Table cf-ansdir aggregate rows (primary template) and the ANSDIRT aggregates vs the macros
+    at = (ROOT / "tables" / "table_cf_ansdir.tex").read_text()
+    agg = {m.group(1): m.groups() for m in re.finditer(
+        r"^(NIH ChestX-ray14|CheXpert Plus|\\textit\{chest\}|COCO) & (\d+) blocks & (\d+)/(\d+) & (\d+)/(\d+) & (\d+) & (\d+) & (\d+) & (\d+)/(\d+) & "
+        r"([\d.]+) & ([\d.]+) & ([\d.]+) & ([\d.]+) \\\\$", at, flags=re.M)}
+    tpl = {m.group(1): m.groups() for m in re.finditer(r"^(\\textit\{chest\}|COCO) & (\d+) blocks & ((?:\d+ \(\d+\) & ){5})(\d+)/(\d+) \\\\$", at, flags=re.M)}
+    print("answer-direction macros vs Table cf-ansdir:")
+    c = agg["\\textit{chest}"]
+    expect("cfAnsChest blocks, N, label owned, a_q owned, beats", (M["cfAnsChestBlocks"], M["cfAnsChestN"], M["cfAnsChestOwnedLabel"], M["cfAnsChestOwnedA"], M["cfAnsChestBeats"]),
+           (int(c[1]), int(c[3]), int(c[2]), int(c[4]), int(c[9])))
+    expect("cfValCosSigmaChestMin/Max and Coco (whitened cosine rows)", (M["cfValCosSigmaChestMin"], M["cfValCosSigmaChestMax"], M["cfValCosSigmaCoco"]),
+           (min(agg["NIH ChestX-ray14"][13], agg["CheXpert Plus"][13]), max(agg["NIH ChestX-ray14"][13], agg["CheXpert Plus"][13]), agg["COCO"][13]))
+    for g, G in (("\\textit{chest}", "Chest"), ("COCO", "Coco")):
+        row = tpl[g]; owned_pairs = sum(int(x) for x in re.findall(r"(\d+) \(", row[2]))
+        expect(f"cfAnsdirt{G}Kept/KeptN, OwnedPairs/PairsAll", (M[f"cfAnsdirt{G}Kept"], M[f"cfAnsdirt{G}KeptN"], M[f"cfAnsdirt{G}OwnedPairs"], M[f"cfAnsdirt{G}PairsAll"]),
+               (int(row[3]), int(row[4]), owned_pairs, 30 * int(row[1])))
+    # Table cf-precision vs the macros quoted in Section 5.8 and in its caption
+    pt = (ROOT / "tables" / "table_cf_precision.tex").read_text()
+    pr = re.findall(r"& ([\d.]+) & ([\d.]+) & ([\d.]+) & ([\d.]+) \\\\$", pt, flags=re.M)
+    print("PRECISION macros vs Table cf-precision:")
+    expect("cfPrecisionGradeBlocks = rows", M["cfPrecisionGradeBlocks"], len(pr))
+    expect("cfPrecisionGradeCells = 6 x rows x 2 settings", M["cfPrecisionGradeCells"], 12 * len(pr))
+    expect("cfPrecisionMaxDW = largest max|dW| in the table", M["cfPrecisionMaxDW"], f"{max(float(r[i]) for r in pr for i in (0, 2)):.3f}")
+    expect("caption macros present", all(k in pt for k in ("cfPrecisionVerdictChanges", "cfPrecisionRefChanges", "cfPrecisionGradeCells")), True)
+    # Table cf-geometry vs the Appendix A.7 geometry macros
+    gt = (ROOT / "tables" / "table_cf_geometry.tex").read_text()
+    grow = {m.group(1): m.group(2).split(" & ") for m in re.finditer(r"^\\quad (.+?) & (.+?) \\\\$", gt, flags=re.M)}
+    print("geometry macros vs Table cf-geometry:")
+    expect("cfGeoCosNih/Chex", (M["cfGeoCosNih"], M["cfGeoCosChex"]), (grow["mean off-diagonal cosine between the directions"][0], f"{float(grow['mean off-diagonal cosine between the directions'][1]):.2f}"))
+    expect("cfGeoCosRandom", M["cfGeoCosRandom"], grow["mean $|\\cos|$ between random unit directions"][0])
+    expect("cfGeoPhiNih", M["cfGeoPhiNih"], grow["mean off-diagonal $\\phi$ between the labels"][0])
+    frac = lambda label, i: tuple(map(int, grow[label][i].split("/")))
+    pc = lambda label, i: round_half_up(100 * frac(label, i)[0] / frac(label, i)[1])
+    cos_rates = [pc("the most similar direction", i) for i in (0, 1)]
+    lab_rates = [pc(l, i) for l in ("the label with the largest $\\phi$", "the most co-occurring label") for i in (0, 1)]
+    expect("cfGeoChanceCosMin/Max", (M["cfGeoChanceCosMin"], M["cfGeoChanceCosMax"]), (min(cos_rates), max(cos_rates)))
+    expect("cfGeoChanceLabelMin/Max", (M["cfGeoChanceLabelMin"], M["cfGeoChanceLabelMax"]), (min(lab_rates), max(lab_rates)))
+    expect("cfGeoRhoAdvCos/Phi (chest)", (M["cfGeoRhoAdvCos"], M["cfGeoRhoAdvPhi"]),
+           (grow["the cosine between the two directions"][2], grow["the $\\phi$ between the two labels"][2]))
+    expect("cfGeoOwnWins Nih/Chex pct", (M["cfGeoOwnWinsNihPct"], M["cfGeoOwnWinsChexPct"]), (pc("cells with $O_q>0$", 0), pc("cells with $O_q>0$", 1)))
+    expect("cfNihCells/cfChexCells", (M["cfNihCells"], M["cfChexCells"]), (frac("cells with $O_q>0$", 0)[1], frac("cells with $O_q>0$", 1)[1]))
+    expect("cfGeoTwoAbove/N (chest)", (M["cfGeoTwoAbove"], M["cfGeoTwoAboveN"]), frac("cells with at least two competitors above the own write", 2))
+    # seed study: decodability macros (Appendix C.1) vs the registered table, and the merged Mass table vs the registered tables
+    print("seed-study macros and table vs the registered seed tables:")
+    dec = (ROOT / "tables" / "table_decoding.tex").read_text()
+    for name, model, concept in (("QwenEff", "Qwen2.5-VL-7B", "Effusion"), ("LlavaEff", "LLaVA-1.5-7B", "Effusion"), ("LlavaEdema", "LLaVA-1.5-7B", "Edema")):
+        r = re.search(rf"^{re.escape(model)} & {concept} & .*$", dec, flags=re.M).group(0)
+        nums = re.findall(r"\d\.\d{4}", r)
+        expect(f"cfSeedDec{name} (AUROC, CI, control, spread, selectivity, CI)",
+               tuple(M[f"cfSeedDec{name}{k}"] for k in ("Auroc", "AurocLo", "AurocHi", "Ctrl", "CtrlLo", "CtrlHi", "Sel", "SelLo", "SelHi")), tuple(nums))
+    mass = (ROOT / "tables" / "table_seed_mass.tex").read_text()
+    for reg in ("table_encoding_mass.tex", "table_mass_confirmation.tex"):
+        body = (ROOT / "tables" / reg).read_text().split(r"\midrule", 1)[1].split(r"\bottomrule", 1)[0]
+        for ln in (x.strip().rstrip("\\").strip() for x in body.strip().splitlines() if x.strip()):
+            expect(f"seed-mass row {ln.split(' & ')[0]}", ln in mass, True)
     a1 = ROOT / "figures" / "figA1_own_share.json"
     if a1.exists():
         s = json.loads(a1.read_text())
         for ds, D in (("nih", "Nih"), ("chexpert", "Chex"), ("coco", "Coco")):
             expect(f"own share {ds} (figA1 vs macro)", pct(s[ds]["own_share"], 1), M[f"cfOwnShare{D}"])
+    # the abstract and the introduction state the reference decomposition in order, from macros (Section 5.1 carries the
+    # same numbers in the results): reference met, of how many cells, owned, stronger competitor, unresolved, and the
+    # share of stronger-competitor verdicts arising below the reference
+    print("abstract and introduction decomposition (macros, in order):")
+    order = ["cfChestRefMet", "cfChestAnswerableN", "cfChestOwned", "cfChestRefStrong", "cfChestRefUnres",
+             "cfChestCompetitor", "cfChestBelowStrong"]
+    for f in ("0_abstract", "1_introduction"):
+        src = (ROOT / "sections" / f"{f}.tex").read_text()
+        at = [(lambda g: g.start() if g else -1)(re.search(rf"\\{m}(?![A-Za-z])", src)) for m in order]
+        expect(f"{f}: every decomposition macro present", [m for m, p in zip(order, at) if p < 0], [])
+        expect(f"{f}: reference before ownership before the below-reference share",
+               [p for p in at if p >= 0] == sorted(p for p in at if p >= 0), True)
     # rendered prose
     pdf = ROOT / "main.pdf"
     if pdf.exists() and shutil.which("pdftotext"):

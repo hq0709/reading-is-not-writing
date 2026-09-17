@@ -2,32 +2,32 @@
 \centering
 \scriptsize
 \setlength{\tabcolsep}{4pt}
-\caption{\textbf{Label counts per concept.} Positive / negative / unknown rows in the training and test cohorts of the fixed manifests (unknown = CheXpert labeler uncertain or blank; unknown rows are excluded from probe fitting, selectivity, and answer AUROC, and scored like every other row under every write).}
+\caption{\textbf{Label counts per cohort and concept.} Positive / negative / unknown rows of the three scored cohorts of the fixed manifests: the training cohort, which fits the scaler, the six probes, the control probes, and the answer direction; the 400-row calibration cohort, on which the readable and answerable grades and their ten-positive / ten-negative support rule are evaluated; and the 600-row test cohort, which carries every write. Unknown = CheXpert labeler uncertain or blank; unknown rows are excluded from probe fitting, selectivity, and answer AUROC, and are scored like every other row under every write.}
 \label{tab:cf-prevalence}
-\begin{tabular}{llrrrrrr}
+\begin{tabular}{llrrrrrrrrr}
 \toprule
-Dataset & Concept & \multicolumn{3}{c}{train (pos / neg / unk)} & \multicolumn{3}{c}{test (pos / neg / unk)} \\
-\midrule
-NIH ChestX-ray14 & Effusion & 2423 & 15789 & 0 & 46 & 554 & 0 \\
- & Atelectasis & 2311 & 15901 & 0 & 57 & 543 & 0 \\
- & Pneumothorax & 1254 & 16958 & 0 & 17 & 583 & 0 \\
- & Cardiomegaly & 881 & 17331 & 0 & 23 & 577 & 0 \\
- & Mass & 1263 & 16949 & 0 & 32 & 568 & 0 \\
- & Nodule & 1549 & 16663 & 0 & 47 & 553 & 0 \\
+Dataset & Concept & \multicolumn{3}{c}{train (pos / neg / unk)} & \multicolumn{3}{c}{calibration (pos / neg / unk)} & \multicolumn{3}{c}{test (pos / neg / unk)} \\
+\cmidrule(lr){3-5}\cmidrule(lr){6-8}\cmidrule(lr){9-11}
+NIH ChestX-ray14 & Effusion & 2423 & 15789 & 0 & 20 & 380 & 0 & 46 & 554 & 0 \\
+ & Atelectasis & 2311 & 15901 & 0 & 33 & 367 & 0 & 57 & 543 & 0 \\
+ & Pneumothorax & 1254 & 16958 & 0 & 13 & 387 & 0 & 17 & 583 & 0 \\
+ & Cardiomegaly & 881 & 17331 & 0 & 15 & 385 & 0 & 23 & 577 & 0 \\
+ & Mass & 1263 & 16949 & 0 & 15 & 385 & 0 & 32 & 568 & 0 \\
+ & Nodule & 1549 & 16663 & 0 & 27 & 373 & 0 & 47 & 553 & 0 \\
 \addlinespace
-CheXpert Plus & Effusion & 5897 & 4277 & 9826 & 158 & 130 & 312 \\
- & Atelectasis & 2891 & 86 & 17023 & 84 & 2 & 514 \\
- & Pneumothorax & 1086 & 6456 & 12458 & 32 & 213 & 355 \\
- & Cardiomegaly & 2312 & 1903 & 15785 & 71 & 58 & 471 \\
- & Consolidation & 966 & 3652 & 15382 & 25 & 113 & 462 \\
- & Edema & 3814 & 2231 & 13955 & 133 & 59 & 408 \\
+CheXpert Plus & Effusion & 5897 & 4277 & 9826 & 117 & 93 & 190 & 158 & 130 & 312 \\
+ & Atelectasis & 2891 & 86 & 17023 & 67 & 4 & 329 & 84 & 2 & 514 \\
+ & Pneumothorax & 1086 & 6456 & 12458 & 17 & 136 & 247 & 32 & 213 & 355 \\
+ & Cardiomegaly & 2312 & 1903 & 15785 & 49 & 46 & 305 & 71 & 58 & 471 \\
+ & Consolidation & 966 & 3652 & 15382 & 25 & 83 & 292 & 25 & 113 & 462 \\
+ & Edema & 3814 & 2231 & 13955 & 70 & 54 & 276 & 133 & 59 & 408 \\
 \addlinespace
-COCO & person & 10877 & 9123 & 0 & 321 & 279 & 0 \\
- & dog & 693 & 19307 & 0 & 15 & 585 & 0 \\
- & car & 2051 & 17949 & 0 & 60 & 540 & 0 \\
- & chair & 2183 & 17817 & 0 & 63 & 537 & 0 \\
- & bottle & 1455 & 18545 & 0 & 47 & 553 & 0 \\
- & bicycle & 567 & 19433 & 0 & 14 & 586 & 0 \\
+COCO & person & 10877 & 9123 & 0 & 228 & 172 & 0 & 321 & 279 & 0 \\
+ & dog & 693 & 19307 & 0 & 10 & 390 & 0 & 15 & 585 & 0 \\
+ & car & 2051 & 17949 & 0 & 48 & 352 & 0 & 60 & 540 & 0 \\
+ & chair & 2183 & 17817 & 0 & 59 & 341 & 0 & 63 & 537 & 0 \\
+ & bottle & 1455 & 18545 & 0 & 34 & 366 & 0 & 47 & 553 & 0 \\
+ & bicycle & 567 & 19433 & 0 & 9 & 391 & 0 & 14 & 586 & 0 \\
 \bottomrule
 \end{tabular}
 \end{table}

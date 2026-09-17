@@ -2,9 +2,8 @@
 \centering
 \scriptsize
 \setlength{\tabcolsep}{4pt}
-\caption{\textbf{Reference family and controls.} Median and interquartile range over all cells (first four rows) or over all blocks with the corresponding module (remaining rows), per dataset. The last row counts concept cells whose write meets the steering reference (above the random p95 and the sham) and misses the complete owned grade: their simultaneous advantage over the five clinical competitors is not positive. Table~\ref{tab:cf-contingency} splits these cells into stronger-competitor and unresolved cells.}
+\caption{\textbf{Reference family and controls.} Median and interquartile range over all cells (first four rows) or over all blocks with the corresponding module (next six rows), per dataset. The last three rows count the concept cells whose write meets the steering reference (above the random p95 and the sham), the owned cells, and the reference-meeting cells that miss the complete owned grade: their simultaneous advantage over the five clinical competitors is not positive. Table~\ref{tab:cf-contingency} splits these cells into stronger-competitor and unresolved cells.}
 \label{tab:cf-controls}
-\resizebox{\textwidth}{!}{%
 \begin{tabular}{lrrrrrr}
 \toprule
 & \multicolumn{2}{c}{NIH ChestX-ray14} & \multicolumn{2}{c}{CheXpert Plus} & \multicolumn{2}{c}{COCO (control)} \\
@@ -22,7 +21,9 @@ Label gap (logits) & -0.1 & [-0.9, -0.0] & -0.3 & [-1.3, +0.0] & -5.3 & [-14.8, 
 $|$Wording contrast$|$ (IY$-$WY) & +0.033 & [+0.008, +0.078] & +0.021 & [+0.007, +0.035] & +0.028 & [+0.007, +0.065] \\
 $|$Mapping contrast$|$ (IA$-$IB) & +0.037 & [+0.008, +0.073] & +0.019 & [+0.003, +0.055] & +0.030 & [+0.007, +0.051] \\
 \midrule
-Reference met but not owned & \multicolumn{2}{c}{5 of 126 (reference met: 15; owned: 10)} & \multicolumn{2}{c}{10 of 120 (reference met: 29; owned: 19)} & \multicolumn{2}{c}{2 of 120 (reference met: 103; owned: 101)} \\
+Reference met & \multicolumn{2}{c}{15 of 126} & \multicolumn{2}{c}{29 of 120} & \multicolumn{2}{c}{103 of 120} \\
+Owned & \multicolumn{2}{c}{10 of 126} & \multicolumn{2}{c}{19 of 120} & \multicolumn{2}{c}{101 of 120} \\
+Reference met but not owned & \multicolumn{2}{c}{5 of 126} & \multicolumn{2}{c}{10 of 120} & \multicolumn{2}{c}{2 of 120} \\
 \bottomrule
-\end{tabular}}
+\end{tabular}
 \end{table}

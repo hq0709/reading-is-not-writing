@@ -6,7 +6,6 @@
 \input{tables/cf_colors}
 \caption{\textbf{Reading, answering, and writing per checkpoint.} For each dataset: \textsc{Read} = mean probe selectivity $S$ over the six concepts, with the number of readable concepts (of six; selectivity lower bound $>0$) as superscript; \textsc{Ans} = mean clean-answer AUROC, with the number of answer-capable concepts (lower bound $>0.5$); \textsc{Own} = mean ownership $O_q$, with the number of owned concepts (steering reference met and all simultaneous lower bounds $>0$). The three right columns give the owned share of clinical cells (NIH + CheXpert), of COCO cells, and their ratio. A block enters the \textsc{Ans} and \textsc{Own} counts only if both its write matrix and its calibration module completed; the \textsc{Read} count in the last row is over every probe-graded cell (calibration completed, including blocks whose write matrix is ineligible or incomplete), and the \textsc{Ans}/\textsc{Own} counts over the cells with a scored write matrix. Cells are shaded by value: sage for \textsc{Read}/\textsc{Ans} (darker = higher), slate for positive and terracotta for negative mean ownership (darker = larger magnitude); grey ``inel.'' = ineligible yes/no template, grey ``inc.'' = write matrix incomplete at packaging; ``--'' = block not run. Checkpoints are sorted by clinical owned share, descending.}
 \label{tab:cf-main}
-\resizebox{\textwidth}{!}{%
 \begin{tabular}{l@{\hspace{3pt}}ccc@{\hspace{4pt}}ccc@{\hspace{4pt}}ccc@{\hspace{4pt}}ccc}
 \toprule
 & \multicolumn{3}{c}{NIH ChestX-ray14} & \multicolumn{3}{c}{CheXpert Plus} & \multicolumn{3}{c}{COCO (control)} & \multicolumn{3}{c}{Owned share} \\
@@ -35,7 +34,8 @@ MedGemma 27B & \cellcolor{cfSage3}0.12$^{3}$ & \cellcolor{cfSage3}0.80$^{6}$ & \
 LLaVA-1.5-13B & \cellcolor{cfSage2}0.08$^{2}$ & \cellcolor{cfSage1}0.53$^{0}$ & \cellcolor{cfTerra2}-0.02$^{0}$ & \cellcolor{cfSage3}0.17$^{4}$ & \cellcolor{cfSage1}0.51$^{1}$ & \cellcolor{cfTerra1}-0.01$^{0}$ & \cellcolor{cfSage4}0.28$^{5}$ & \cellcolor{cfSage4}0.96$^{5}$ & \cellcolor{cfSlate2}+0.02$^{2}$ & \cellcolor{cfSlate1}0\% & \cellcolor{cfSlate2}33\% & 0\% \\
 Llama 3.2 Vision 11B & \cellcolor{cfSage2}0.08$^{2}$ & \cellcolor{cfSage2}0.65$^{4}$ & \cellcolor{cfTerra2}-0.03$^{0}$ & \cellcolor{cfSage3}0.16$^{4}$ & \cellcolor{cfSage2}0.73$^{4}$ & \cellcolor{cfTerra2}-0.04$^{0}$ & \cellcolor{cfSage3}0.12$^{5}$ & \cellcolor{cfSage4}0.95$^{5}$ & \cellcolor{cfTerra1}-0.01$^{1}$ & \cellcolor{cfSlate1}0\% & \cellcolor{cfSlate2}17\% & 0\% \\
 \midrule
-\textbf{All cells} & 0.08$^{57/126}$ & 0.66$^{87/126}$ & -0.07$^{10/126}$ & 0.18$^{81/120}$ & 0.71$^{66/120}$ & -0.06$^{19/120}$ & 0.08$^{74/120}$ & 0.96$^{100/120}$ & +0.25$^{101/120}$ & 12\% & 84\% & 14\% \\
+\textbf{All cells} & 0.08 & 0.66 & -0.07 & 0.18 & 0.71 & -0.06 & 0.08 & 0.96 & +0.25 & 12\% & 84\% & 14\% \\
+\quad count / cells & 57/126 & 87/126 & 10/126 & 81/120 & 66/120 & 19/120 & 74/120 & 100/120 & 101/120 & & & \\
 \bottomrule
-\end{tabular}}
+\end{tabular}
 \end{table}

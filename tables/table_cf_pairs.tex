@@ -4,22 +4,24 @@
 \setlength{\tabcolsep}{4pt}
 \caption{\textbf{Same write, different reader: paired differences.} For every pair of checkpoints that share a vision tower (identical features and write vectors, or equal to one bf16 rounding step), the difference in ownership $\Delta O_q=O_q(\text{larger})-O_q(\text{smaller})$ on the same 600 test rows, with a paired patient-bootstrap 95\% interval (2{,}000 shared draws, strongest competitor recomputed in every draw): concepts whose interval excludes zero, the median and maximum $|\Delta O_q|$, and their ratio to the mean refit standard deviation of the two blocks.}
 \label{tab:cf-pairs}
-\resizebox{\textwidth}{!}{\begin{tabular}{llcrrrr}
+\begin{tabular}{llcrrrrr}
 \toprule
-Pair & Dataset & relation & $\Delta O_q$ CI $\not\ni 0$ & median $|\Delta O_q|$ & max $|\Delta O_q|$ & median / max ratio to refit SD \\
+ & & & $\Delta O_q$ CI & \multicolumn{2}{c}{$|\Delta O_q|$} & \multicolumn{2}{c}{ratio to refit SD} \\
+\cmidrule(lr){5-6}\cmidrule(lr){7-8}
+Pair & Dataset & relation & $\not\ni 0$ & median & max & median & max \\
 \midrule
-Gemma 3 4B $\to$ Gemma 3 12B & NIH ChestX-ray14 & bit-identical & 5/6 & 0.33 & 0.83 & 2.7 / 6.9 \\
-Gemma 3 4B $\to$ Gemma 3 12B & CheXpert Plus & bit-identical & 6/6 & 0.29 & 0.83 & 2.1 / 5.9 \\
-Gemma 3 4B $\to$ Gemma 3 12B & COCO & bit-identical & 5/6 & 0.23 & 0.87 & 1.6 / 6.0 \\
-Gemma 3 12B $\to$ Gemma 3 27B & NIH ChestX-ray14 & bf16-equal & 6/6 & 0.37 & 0.79 & 3.7 / 8.0 \\
-Gemma 3 12B $\to$ Gemma 3 27B & CheXpert Plus & bf16-equal & 6/6 & 0.35 & 0.81 & 1.4 / 3.3 \\
-Gemma 3 12B $\to$ Gemma 3 27B & COCO & bf16-equal & 5/6 & 0.15 & 0.40 & 1.7 / 4.3 \\
-Gemma 3 4B $\to$ Gemma 3 27B & NIH ChestX-ray14 & bf16-equal & 5/6 & 0.07 & 0.24 & 1.8 / 6.0 \\
-Gemma 3 4B $\to$ Gemma 3 27B & CheXpert Plus & bf16-equal & 6/6 & 0.17 & 0.65 & 4.6 / 17.3 \\
-Gemma 3 4B $\to$ Gemma 3 27B & COCO & bf16-equal & 6/6 & 0.16 & 1.02 & 1.4 / 8.8 \\
-MedGemma 4B $\to$ MedGemma 27B & NIH ChestX-ray14 & bf16-equal & 5/6 & 0.09 & 0.30 & 1.5 / 5.0 \\
-MedGemma 4B $\to$ MedGemma 27B & CheXpert Plus & bf16-equal & 5/6 & 0.19 & 0.54 & 1.8 / 5.0 \\
-MedGemma 4B $\to$ MedGemma 27B & COCO & bf16-equal & 3/6 & 0.05 & 0.35 & 0.6 / 4.6 \\
+Gemma 3 4B $\to$ Gemma 3 12B & NIH ChestX-ray14 & bit-identical & 5/6 & 0.33 & 0.83 & 2.7 & 6.9 \\
+Gemma 3 4B $\to$ Gemma 3 12B & CheXpert Plus & bit-identical & 6/6 & 0.29 & 0.83 & 2.1 & 5.9 \\
+Gemma 3 4B $\to$ Gemma 3 12B & COCO & bit-identical & 5/6 & 0.23 & 0.87 & 1.6 & 6.0 \\
+Gemma 3 12B $\to$ Gemma 3 27B & NIH ChestX-ray14 & bf16-equal & 6/6 & 0.37 & 0.79 & 3.7 & 8.0 \\
+Gemma 3 12B $\to$ Gemma 3 27B & CheXpert Plus & bf16-equal & 6/6 & 0.35 & 0.81 & 1.4 & 3.3 \\
+Gemma 3 12B $\to$ Gemma 3 27B & COCO & bf16-equal & 5/6 & 0.15 & 0.40 & 1.7 & 4.3 \\
+Gemma 3 4B $\to$ Gemma 3 27B & NIH ChestX-ray14 & bf16-equal & 5/6 & 0.07 & 0.24 & 1.8 & 6.0 \\
+Gemma 3 4B $\to$ Gemma 3 27B & CheXpert Plus & bf16-equal & 6/6 & 0.17 & 0.65 & 4.6 & 17.3 \\
+Gemma 3 4B $\to$ Gemma 3 27B & COCO & bf16-equal & 6/6 & 0.16 & 1.02 & 1.4 & 8.8 \\
+MedGemma 4B $\to$ MedGemma 27B & NIH ChestX-ray14 & bf16-equal & 5/6 & 0.09 & 0.30 & 1.5 & 5.0 \\
+MedGemma 4B $\to$ MedGemma 27B & CheXpert Plus & bf16-equal & 5/6 & 0.19 & 0.54 & 1.8 & 5.0 \\
+MedGemma 4B $\to$ MedGemma 27B & COCO & bf16-equal & 3/6 & 0.05 & 0.35 & 0.6 & 4.6 \\
 \bottomrule
-\end{tabular}}
+\end{tabular}
 \end{table}

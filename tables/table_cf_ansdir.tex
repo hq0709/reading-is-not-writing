@@ -1,22 +1,51 @@
 \begin{table}[h]
 \centering
 \scriptsize
-\setlength{\tabcolsep}{4pt}
-\caption{\textbf{The direction the reader responds to.} For each block, the answer direction $a_q$ is a ridge regression of the model's own clean answer margin on the same projected, train-scaled features the probes use (3{,}000 training rows), lifted like the probe normal and written at the same dose against the same reference family. Columns: concepts whose $a_q$ is owned (steering reference and fixed-family advantage over the other five $a_d$); concepts whose $a_q$ write beats the strongest logistic competitor of the label direction; median own write $W^a_{q,q}$; raw model-space cosine between $a_q$ and the label direction $\hat w_q$, median over the six concepts of the block; median cross-validated $R^2$ of the regression; and, for reference, the concepts owned by the label direction.}
+\setlength{\tabcolsep}{3.5pt}
+\caption{\textbf{The answer direction.} Top, on the primary template: concepts owned by the label direction $\hat w_q$ and by the answer direction $a_q$, split into kept (both), rescued ($a_q$ only), and lost ($\hat w_q$ only); concepts whose $a_q$ write beats the strongest logistic competitor; and medians of $W^a_{q,q}$, of the raw and whitened cosines between $a_q$ and $\hat w_q$, and of the cross-validated $R^2$. Bottom: $a_q$ written under each held-out template, with the concepts owned and, in parentheses, the IY-owned concepts that stay owned, and the kept (concept, template) pairs.}
 \label{tab:cf-ansdir}
-\resizebox{\textwidth}{!}{\begin{tabular}{llrrrrrr}
+\begin{tabular}{llrrrrrrrrrr}
 \toprule
-Checkpoint & Dataset & $a_q$ owned & $a_q>$ max logistic comp. & med.\ $W^a_{q,q}$ & med.\ $\cos(a_q,\hat w_q)$ & med.\ $R^2$ & $\hat w_q$ owned \\
+ & & \multicolumn{5}{c}{owned concepts} & & \multicolumn{4}{c}{median} \\
+\cmidrule(lr){3-7}\cmidrule(lr){9-12}
+Checkpoint & Dataset & $\hat w_q$ & $a_q$ & kept & rescued & lost & $a_q>$ comp. & $W^a_{q,q}$ & $\cos$ & $\cos_\Sigma$ & $R^2$ \\
 \midrule
-Qwen2.5-VL-7B & NIH ChestX-ray14 & 3/6 & 6/6 & 0.61 & 0.07 & 0.54 & 0/6 \\
-Qwen2.5-VL-7B & CheXpert Plus & 6/6 & 6/6 & 0.55 & 0.06 & 0.48 & 0/6 \\
-Qwen2.5-VL-7B & COCO & 6/6 & 6/6 & 0.78 & 0.64 & 0.58 & 6/6 \\
-Lingshu 32B & NIH ChestX-ray14 & 3/6 & 6/6 & 0.24 & 0.30 & 0.77 & 2/6 \\
-Lingshu 32B & CheXpert Plus & 5/6 & 6/6 & 0.22 & 0.33 & 0.80 & 5/6 \\
-Lingshu 32B & COCO & 6/6 & 6/6 & 0.36 & 0.54 & 0.55 & 6/6 \\
-Gemma 3 12B & NIH ChestX-ray14 & 2/6 & 5/6 & 0.47 & 0.18 & 0.17 & 1/6 \\
-Gemma 3 12B & CheXpert Plus & 0/6 & 1/6 & 0.37 & 0.17 & 0.19 & 1/6 \\
-Gemma 3 12B & COCO & 6/6 & 6/6 & 0.61 & 0.59 & 0.37 & 6/6 \\
+Qwen2.5-VL-7B & NIH ChestX-ray14 & 0/6 & 3/6 & 0 & 3 & 0 & 6/6 & 0.61 & 0.07 & 0.35 & 0.54 \\
+Qwen2.5-VL-7B & CheXpert Plus & 0/6 & 6/6 & 0 & 6 & 0 & 6/6 & 0.55 & 0.06 & 0.36 & 0.48 \\
+Qwen2.5-VL-7B & COCO & 6/6 & 6/6 & 6 & 0 & 0 & 6/6 & 0.78 & 0.64 & 0.84 & 0.58 \\
+Gemma 3 12B & NIH ChestX-ray14 & 1/6 & 2/6 & 1 & 1 & 0 & 5/6 & 0.47 & 0.18 & 0.33 & 0.17 \\
+Gemma 3 12B & CheXpert Plus & 1/6 & 0/6 & 0 & 0 & 1 & 1/6 & 0.37 & 0.17 & 0.10 & 0.19 \\
+Gemma 3 12B & COCO & 6/6 & 6/6 & 6 & 0 & 0 & 6/6 & 0.61 & 0.59 & 0.79 & 0.37 \\
+Lingshu 32B & NIH ChestX-ray14 & 2/6 & 3/6 & 2 & 1 & 0 & 6/6 & 0.24 & 0.30 & 0.60 & 0.77 \\
+Lingshu 32B & CheXpert Plus & 5/6 & 5/6 & 5 & 0 & 0 & 6/6 & 0.22 & 0.33 & 0.87 & 0.80 \\
+Lingshu 32B & COCO & 6/6 & 6/6 & 6 & 0 & 0 & 6/6 & 0.36 & 0.54 & 0.73 & 0.55 \\
+\midrule
+NIH ChestX-ray14 & 3 blocks & 3/18 & 8/18 & 3 & 5 & 0 & 17/18 & 0.47 & 0.18 & 0.43 & 0.54 \\
+CheXpert Plus & 3 blocks & 6/18 & 11/18 & 5 & 6 & 1 & 13/18 & 0.35 & 0.16 & 0.36 & 0.48 \\
+\textit{chest} & 6 blocks & 9/36 & 19/36 & 8 & 11 & 1 & 30/36 & 0.41 & 0.18 & 0.39 & 0.50 \\
+COCO & 3 blocks & 18/18 & 18/18 & 18 & 0 & 0 & 18/18 & 0.61 & 0.61 & 0.81 & 0.54 \\
 \bottomrule
-\end{tabular}}
+\end{tabular}
+
+\medskip
+\begin{tabular}{llrrrrrr}
+\toprule
+ & & \multicolumn{5}{c}{held-out template: owned (IY-owned kept)} & \\
+\cmidrule(lr){3-7}
+Checkpoint & Dataset & WY & IA & IB & WA & WB & kept pairs \\
+\midrule
+Qwen2.5-VL-7B & NIH ChestX-ray14 & 4 (3) & 3 (3) & 4 (3) & 4 (3) & 4 (3) & 15/15 \\
+Qwen2.5-VL-7B & CheXpert Plus & 4 (4) & 6 (6) & 5 (5) & 5 (5) & 5 (5) & 25/30 \\
+Qwen2.5-VL-7B & COCO & 6 (6) & 6 (6) & 6 (6) & 6 (6) & 6 (6) & 30/30 \\
+Gemma 3 12B & NIH ChestX-ray14 & 2 (1) & 1 (1) & 0 (0) & 1 (0) & 1 (0) & 2/10 \\
+Gemma 3 12B & CheXpert Plus & 0 (0) & 1 (0) & 1 (0) & 1 (0) & 1 (0) & 0/0 \\
+Gemma 3 12B & COCO & 5 (5) & 6 (6) & 6 (6) & 6 (6) & 6 (6) & 29/30 \\
+Lingshu 32B & NIH ChestX-ray14 & 3 (3) & 3 (3) & 3 (3) & 3 (3) & 3 (3) & 15/15 \\
+Lingshu 32B & CheXpert Plus & 5 (5) & 3 (3) & 3 (3) & 4 (4) & 4 (4) & 19/25 \\
+Lingshu 32B & COCO & 6 (6) & 6 (6) & 6 (6) & 6 (6) & 6 (6) & 30/30 \\
+\midrule
+\textit{chest} & 6 blocks & 18 (16) & 17 (16) & 16 (14) & 18 (15) & 18 (15) & 76/95 \\
+COCO & 3 blocks & 17 (17) & 18 (18) & 18 (18) & 18 (18) & 18 (18) & 89/90 \\
+\bottomrule
+\end{tabular}
 \end{table}

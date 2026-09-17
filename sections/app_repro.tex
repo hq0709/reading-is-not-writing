@@ -1,68 +1,54 @@
 \section{Reproducibility specification}
 \label{app:repro}
 
-This appendix documents the hook paths, consumed-token mask, projection and probe, control constructions, cohort roles, and protocol record. Every statement below comes from the released adapters (\texttt{src/cftransfer/adapters/}), the registered protocol file, and the per-block artifacts.
+This appendix specifies the consumed block of every family, the consumed-token mask, the projection and probe, the control constructions, the cohort roles, and the protocol record at the level of the registered protocol; the released code implements each of them.
 
 \subsection{Consumed loci per family}
 \label{app:repro-loci}
 
-Table~\ref{tab:cf-loci} gives the primary and connector locus module paths exactly as the adapters name them, together with the rule for identifying the consumed final block. Each adapter resolves the block index at load time from the loaded checkpoint's own configuration. Each block's preflight file records the resolved path, hidden dimension, consumer, and any branch that bypasses the locus. Table~\ref{tab:cf-models} gives the consumed-token count per image at the primary locus for every checkpoint.
+The primary locus is the output of the last visual block whose output the consumer reads, and the connector locus is the consumer's output that enters the language model. The block is identified from each checkpoint's own configuration when the checkpoint is loaded, and each block's preflight record stores the identified block, its hidden dimension, its consumer, and any branch that bypasses it.
 
-\begin{table}[h]
-\centering
-\scriptsize
-\setlength{\tabcolsep}{4pt}
-\caption{\textbf{Hook paths per checkpoint family.} Module paths as the adapters name them under the loaded model. $n$ is the length of the block list of that checkpoint's tower; the adapter resolves it at load time and the block's preflight file records the resolved path.}
-\label{tab:cf-loci}
-\begin{tabular}{>{\raggedright\arraybackslash}p{0.15\textwidth}>{\raggedright\arraybackslash}p{0.25\textwidth}>{\raggedright\arraybackslash}p{0.20\textwidth}>{\raggedright\arraybackslash}p{0.28\textwidth}}
-\toprule
-Family (adapter) & Primary locus & Connector locus & Consumed final block identified by \\
-\midrule
-Qwen2.5-VL, Qwen3-VL, Lingshu (\texttt{qwen}) & \texttt{model.visual.blocks.}$(n{-}1)$ & \texttt{model.visual.merger} & The merger reads the last entry of \texttt{model.visual.blocks}: $n=32$ for Qwen2.5-VL and Lingshu, $24$ for Qwen3-VL 4B, $27$ for Qwen3-VL 8B and 32B. The Qwen3-VL DeepStack mergers read earlier blocks and are not hooked. \\
-\addlinespace[2pt]
-Gemma~3, MedGemma (\texttt{gemma}) & \texttt{model.vision\_tower.}\allowbreak\texttt{encoder.layers.26} & \texttt{model.}\allowbreak\texttt{multi\_modal\_projector} & The projector reads the last SigLIP encoder layer, 26 of 27. \texttt{post\_layernorm} sits between that layer and the projector. \\
-\addlinespace[2pt]
-InternVL3.5 (\texttt{internvl}) & \texttt{model.vision\_tower.}\allowbreak\texttt{encoder.layer.}$(n{-}1)$ & \texttt{model.}\allowbreak\texttt{multi\_modal\_projector} & The projector reads the last InternViT encoder layer, $n=24$ at 8B and 14B and $n=45$ at 38B, after \texttt{vision\_tower.layernorm}, which is an identity under the shipped \texttt{use\_mean\_pooling} configuration. \\
-\addlinespace[2pt]
-LLaVA-1.5, LLaVA-Med (\texttt{llava}) & \texttt{model.vision\_tower.}\allowbreak\texttt{encoder.layers.22} & \texttt{model.}\allowbreak\texttt{multi\_modal\_projector} & The checkpoint's \texttt{vision\_feature\_layer} is $-2$, so the projector reads CLIP encoder layer 22 of 24 and the final layer is computed and discarded. \\
-\addlinespace[2pt]
-Llama~3.2 Vision (\texttt{mllama}) & \texttt{model.vision\_model.}\allowbreak\texttt{global\_transformer.layers.7} & \texttt{model.}\allowbreak\texttt{multi\_modal\_projector} & The projector input concatenates the last global-transformer layer, 7 of 8, with the outputs of local layers 3, 7, 15, 23 and 30; those five bypass the primary locus. \\
-\bottomrule
-\end{tabular}
-\end{table}
-\FloatBarrier
+\begin{itemize}[leftmargin=*,itemsep=1pt,topsep=2pt]
+\item Qwen2.5-VL, Lingshu, and Qwen3-VL: the merger reads the last block of the vision transformer, which has 32 blocks in Qwen2.5-VL and Lingshu, 24 in Qwen3-VL 4B, and 27 in Qwen3-VL 8B and 32B. A Qwen2.5-VL or Lingshu image contributes 576 patch tokens, which the merger joins in $2\times2$ groups into 144; a Qwen3-VL image contributes at most 1{,}024. The Qwen3-VL DeepStack mergers, which read earlier blocks, are not written.
+\item Gemma~3 and MedGemma: the projector reads the last of the 27 SigLIP encoder layers through the tower's final layer normalisation, and consumes all 4{,}096 patch tokens of the $896\times896$ image.
+\item InternVL3.5: the projector reads the last InternViT encoder layer, of 24 at 8B and 14B and of 45 at 38B; the tower's final normalisation is an identity in the released configuration. An image contributes 1{,}024 patch tokens from a single $448\times448$ tile.
+\item LLaVA-1.5 and LLaVA-Med: the projector reads the penultimate of the 24 CLIP encoder layers, and the final layer is computed and discarded. An image contributes 576 patch tokens.
+\item Llama~3.2 Vision: the projector input concatenates the last of the eight global-encoder layers with five intermediate layers of the local encoder, which bypass the primary locus. An image contributes 1{,}601 tokens, the CLS token and 1{,}600 patches, from its one real $560\times560$ tile.
+\end{itemize}
+Table~\ref{tab:cf-models} lists the consumed-token count of every checkpoint.
 
 \subsection{The consumed-token mask}
 \label{app:repro-mask}
 
-The write of Equation~\ref{eq:intervention} changes only the entries of the hooked tensor corresponding to token positions the consumer reads at that locus. The adapter derives these positions for each batch from the processor's own outputs. Two tensor shapes occur. The Qwen family passes the merger a flat $(N,D)$ tensor in which every image occupies one contiguous slice. The adapter computes the slice bounds from \texttt{image\_grid\_thw} (the connector slice is a quarter of the length, one merged token per $2\times2$ patch group). Every other family passes the consumer a batched $(B,T,D)$ tensor. The adapter supplies one boolean mask per batch element:
+The write of Equation~\ref{eq:intervention} changes only the consumed tokens, the token positions the consumer reads at the locus. They are derived for each batch from the processor's outputs for that batch:
 
 \begin{itemize}[leftmargin=*,itemsep=1pt,topsep=2pt]
-\item Gemma~3 and MedGemma: all 4{,}096 patch rows; the tower produces no CLS row. The mask length is checked against the count of \texttt{<image\_soft\_token>} placeholders in the language-model input.
-\item InternVL3.5: index 0 is the CLS row, which the consumer drops, so it is excluded; the remaining rows of the single $448\times448$ tile are written. The mask length is checked against the count of \texttt{<IMG\_CONTEXT>} placeholders.
-\item LLaVA-1.5 and LLaVA-Med: index 0 is the CLS row, which the checkpoint's \texttt{vision\_}\allowbreak\texttt{feature\_}\allowbreak\texttt{select\_}\allowbreak\texttt{strategy} drops under its \texttt{default} setting, so it is excluded; rows 1 to 576 are written.
-\item Llama~3.2 Vision: the 1{,}601 rows (CLS and 1{,}600 patches) of the one real $560\times560$ tile. The seven zero-padding rows of each tile and the three padding tiles are excluded, and the mask is checked against \texttt{aspect\_ratio\_mask} and the last position of \texttt{cross\_attention\_mask}.
+\item Qwen2.5-VL, Lingshu, and Qwen3-VL: the tokens of all images in a batch form one sequence in which every image occupies one contiguous span, whose bounds follow from the image's patch grid. At the connector locus the span is a quarter as long, one merged token per $2\times2$ patch group.
+\item Gemma~3 and MedGemma: all 4{,}096 patch tokens; the tower produces no CLS token. The number of written tokens must equal the number of image placeholder tokens in the language-model input.
+\item InternVL3.5: the patch tokens of the single $448\times448$ tile. The CLS token, which the consumer drops, is excluded. The number of written tokens must equal the number of image placeholder tokens.
+\item LLaVA-1.5 and LLaVA-Med: the 576 patch tokens. The CLS token, which the checkpoint's feature selection drops, is excluded.
+\item Llama~3.2 Vision: the 1{,}601 tokens, CLS and 1{,}600 patches, of the one real $560\times560$ tile. The seven padding tokens of each tile and the three padding tiles are excluded, in agreement with the model's own aspect-ratio and cross-attention masks.
 \end{itemize}
 
-The hook raises an error rather than falling back when a flat layout does not exactly cover the hooked tensor, a mask length differs from the token-axis length, a batch element has no consumed token, or the hooked module fires more than once in one forward pass.
+Scoring stops with an error, rather than falling back, when an image span does not exactly cover the locus, a mask length differs from the number of tokens at the locus, an image has no consumed token, or the locus is reached more than once in one forward pass.
 
-Preflight check (C) verifies the mask. It captures the locus tensor on a clean pass and a pass steered at $\alpha=+0.25$ along the first concept direction. It reports the largest absolute difference outside the mask and the largest absolute changes in the consumer's output and answer logits. Across all \cfBlocks{} blocks, the change outside the consumed tokens is $0$ at both loci, while both the consumer's output and the answer logits change. The same files record a bitwise-identical repeated clean pass (check A) and a bitwise-identical $\alpha=0$ pass (check B) for every block.
+Preflight check (C) verifies the mask. It captures the locus tensor on a clean pass and a pass steered at $\alpha=+0.25$ along the first concept direction. It reports the largest absolute difference outside the mask and the largest absolute changes in the consumer's output and answer logits. Across all \cfBlocks{} blocks, the change outside the consumed tokens is $0$ at both loci, while both the consumer's output and the answer logits change. The same records show a bitwise-identical repeated clean pass (check A) and a bitwise-identical $\alpha=0$ pass (check B) for every block.
 
 \subsection{Projection, lift, scaler, and probe}
 \label{app:repro-probe}
 
-The projection $R\in\R^{D\times512}$ is one draw of \texttt{PCG64(0).standard\_normal((D,512))} divided by $\sqrt{512}$ and stored in float32. Its entries are independent $\mathcal{N}(0,1/512)$ variates. The seed is $0$ for every checkpoint, dataset, and locus; $D$ is the family's hidden dimension. We neither normalise nor orthogonalise the columns of $R$. We normalise the lifted direction of Equation~\ref{eq:lift} once, in model space, to unit $\ell_2$ norm. The Gram matrix $R^{\top}R/D$ has full rank 512 in every one of the \cfAltdirdBlocks{} blocks that carry the displacement module, with condition number \cfAltdirdCondMin{}--\cfAltdirdCondMax{}. Table~\ref{tab:cf-altdird} reports its eigenvalue range.
+The projection $R\in\R^{D\times512}$ is one draw of standard normal variates from a PCG64 generator seeded with $0$, divided by $\sqrt{512}$ and stored in float32, so its entries are independent $\mathcal{N}(0,1/512)$ variates. The seed is $0$ for every checkpoint, dataset, and locus; $D$ is the family's hidden dimension. We neither normalise nor orthogonalise the columns of $R$. We normalise the lifted direction of Equation~\ref{eq:lift} once, in model space, to unit $\ell_2$ norm. The Gram matrix $R^{\top}R/D$ has full rank 512 in every one of the \cfAltdirdBlocks{} blocks that carry the displacement module, with eigenvalues $\cfAltdirdEigMin$--$\cfAltdirdEigMax$ and condition number \cfAltdirdCondMin{}--\cfAltdirdCondMax{}.
 
-The token-mean read vector $\hvec_i$ yields projected features $R^{\top}\hvec_i$. A \texttt{StandardScaler} fitted only on training rows supplies the featurewise scale $\boldsymbol s$ and mean. Every row is standardised as $(R^{\top}\hvec-\boldsymbol\mu)\oslash\max(\boldsymbol s,10^{-8})$. Each concept probe uses \texttt{LogisticRegression} with $C=1$, \texttt{solver="lbfgs"}, \texttt{max\_iter=2000}, \texttt{class\_weight=None}, and \texttt{random\_state=0}, fitted on training rows with a known label for that concept. The positive-class coefficient fixes the clinical pole of the direction. For each of the two refit seeds, we resample training units with replacement, retain every row of each sampled unit at that unit's multiplicity, and refit the scaler and six probes using the same projection. The random family, shams, and control probes remain at seed 0.
+The token-mean read vector $\hvec_i$ yields projected features $R^{\top}\hvec_i$. A featurewise standardiser fitted only on training rows supplies the mean $\boldsymbol\mu$ and the scale $\boldsymbol s$, and every row is standardised as $(R^{\top}\hvec-\boldsymbol\mu)\oslash\max(\boldsymbol s,10^{-8})$. Each concept probe is an $\ell_2$-regularised logistic regression with inverse regularisation strength $C=1$, fitted by L-BFGS for at most 2{,}000 iterations with unweighted classes and seed $0$ on the training rows with a known label for that concept. The positive-class coefficient fixes the clinical pole of the direction. For each of the two refit seeds, we resample training units with replacement, retain every row of each sampled unit at that unit's multiplicity, and refit the scaler and six probes using the same projection. The random family, shams, and control probes remain at seed 0.
 
 \subsection{Control constructions}
 \label{app:repro-controls}
 
-\paragraph{Random directions.} We draw one $119\times D$ standard-normal matrix with \texttt{PCG64(0)} and normalise each row to unit $\ell_2$ norm. The same 119 directions serve every question in the block.
+\paragraph{Random directions.} We draw one $119\times D$ standard-normal matrix from a PCG64 generator seeded with $0$ and normalise each row to unit $\ell_2$ norm. The same 119 directions serve every question in the block.
 
 \paragraph{Coordinate-permutation sham.} Immediately after the random draw, the same generator produces one permutation of $\{0,\dots,D{-}1\}$ per concept in protocol concept order. Concept $c$'s sham is $\hat\wvec_c$ with its coordinates rearranged by concept $c$'s own permutation. The sham preserves the direction's coordinate multiset and unit norm. Each question is written with its own sham.
 
-\paragraph{Matched random-label probes.} Each row has a type identifier: view $\times$ sex $\times$ age decade on the chest sets, and aspect-ratio $\times$ area buckets on COCO. For control seed $k\in\{0,\dots,19\}$, we traverse the sorted type names and draw one label per type from \texttt{PCG64($k$).integers(0,2)}; if all types receive the same label, we flip the first entry. Every row of a type receives that type's label. We fit each control probe on the same training rows and known-label subset, with the same hyperparameters as the concept probe, giving it the concept probe's capacity and nuisance structure. A block fits control probes when its training rows span at least eight types. Selectivity is Equation~\ref{eq:selectivity}. Its bootstrap over calibration units keeps a draw when the real AUROC is finite and at least ten of the twenty control AUROCs are finite. We grade a cell for readability when at least 1{,}900 of the 2{,}000 draws are kept.
+\paragraph{Matched random-label probes.} Each row has a type: view $\times$ sex $\times$ age decade on the chest sets, and aspect-ratio $\times$ area buckets on COCO. For control seed $k\in\{0,\dots,19\}$, we traverse the types in sorted order and draw one label per type, uniformly from $\{0,1\}$, from a PCG64 generator seeded with $k$; if all types receive the same label, we flip the first. Every row of a type receives that type's label. We fit each control probe on the same training rows and known-label subset, with the same hyperparameters as the concept probe, giving it the concept probe's capacity and nuisance structure. A block fits control probes when its training rows span at least eight types. Selectivity is Equation~\ref{eq:selectivity}. Its bootstrap over calibration units keeps a draw when the real AUROC is finite and at least ten of the twenty control AUROCs are finite. We grade a cell for readability when at least 1{,}900 of the 2{,}000 draws are kept.
 
 \subsection{Cohort roles}
 \label{app:repro-cohorts}
@@ -92,7 +78,7 @@ valid & -- & \cfValidRows{} (\cfValidRows{}) & -- & The regrade on radiologist c
 \subsection{Protocol record and amendments}
 \label{app:repro-protocol}
 
-Each block writes a run record containing the protocol identifier \texttt{cf-transfer-v1}, the run identifier \texttt{cf-transfer-v1:<checkpoint>:<dataset>:mayo}, the evaluation-code commit that produced the block, the pinned checkpoint and processor revisions, the library versions, the dtypes, and the resolved processing settings, including the rendered chat template. All \cfBlocks{} blocks carry the protocol identifier \texttt{cf-transfer-v1}. The protocol file registers its own code reference commit \texttt{763072d3}.
+Each block writes a run record containing the protocol identifier \texttt{cf-transfer-v1}, a run identifier that names the checkpoint and the dataset, the version of the evaluation code that produced the block, the pinned checkpoint and processor revisions, the library versions, the numeric precisions, and the resolved processing settings, including the rendered chat template. All \cfBlocks{} blocks carry the protocol identifier \texttt{cf-transfer-v1}, and the protocol file registers the code version it was frozen against.
 
 Table~\ref{tab:cf-amendments} lists additions to the protocol file after the first wave and the date of each addition. The six planned modules and the connector calibration derived from them carry no amendment date. The robustness tables in Appendix~\ref{app:cf-robustness} identify the blocks that carry each amendment module.
 
@@ -100,7 +86,7 @@ Table~\ref{tab:cf-amendments} lists additions to the protocol file after the fir
 \centering
 \scriptsize
 \setlength{\tabcolsep}{5pt}
-\caption{\textbf{Protocol amendments.} Each entry is dated by the \texttt{added} field of the registered protocol file; the first two carry the identifiers of the execution log.}
+\caption{\textbf{Protocol amendments.} Each entry carries the date the registered protocol file records for it; the first two carry the identifiers of the execution log.}
 \label{tab:cf-amendments}
 \begin{tabular}{ll>{\raggedright\arraybackslash}p{0.58\textwidth}}
 \toprule

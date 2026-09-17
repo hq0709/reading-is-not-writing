@@ -2,16 +2,35 @@
 \centering
 \scriptsize
 \setlength{\tabcolsep}{4pt}
-\caption{\textbf{Ownership under five direction constructions.} For every block with the alternative-direction module, cells owned (fixed-family advantage with the steering reference, the paper's rule applied within each family) and the median $O_q$, per dataset and family; the last column counts cells owned under at least one family. Difference-of-means and pattern directions are built from the same projected, train-scaled features as the logistic normal; the orthogonalised normal has the other five normals' span removed; the residualised normal is refitted on features residualised against the other five labels.}
+\caption{\textbf{Ownership under alternative directions, lifts, token weights, and competitor families.} Cells owned under the paper's rule within each family, and the median $O_q$, per dataset; each panel repeats the reference write on its own blocks. Appendix~\ref{app:cf-robustness} defines every construction.}
 \label{tab:cf-altdir}
-\resizebox{\textwidth}{!}{\begin{tabular}{lrrrrrrrrrrrr}
+\begin{tabular}{llrrrrrr}
 \toprule
-Dataset & blocks & \multicolumn{2}{c}{logistic} & \multicolumn{2}{c}{diff.\ of means} & \multicolumn{2}{c}{pattern} & \multicolumn{2}{c}{orthogonalised} & \multicolumn{2}{c}{residualised} & any \\
- & & owned & med.\ $O$ & owned & med.\ $O$ & owned & med.\ $O$ & owned & med.\ $O$ & owned & med.\ $O$ & \\
+ & & \multicolumn{2}{c}{NIH ChestX-ray14} & \multicolumn{2}{c}{CheXpert Plus} & \multicolumn{2}{c}{COCO} \\
+\cmidrule(lr){3-4}\cmidrule(lr){5-6}\cmidrule(lr){7-8}
+Direction & Lift & owned & med.\ $O_q$ & owned & med.\ $O_q$ & owned & med.\ $O_q$ \\
 \midrule
-NIH ChestX-ray14 & 20 & 7/120 & -0.03 & 16/120 & -0.02 & 17/120 & -0.02 & 8/120 & -0.02 & 8/120 & -0.02 & 25/120 \\
-CheXpert Plus & 20 & 19/120 & -0.01 & 18/120 & -0.01 & 17/120 & -0.01 & 14/120 & -0.01 & 13/120 & -0.01 & 41/120 \\
-COCO & 20 & 101/120 & +0.18 & 62/120 & +0.02 & 53/120 & +0.01 & 98/120 & +0.13 & 102/120 & +0.20 & 108/120 \\
+\multicolumn{8}{l}{\textit{Direction construction (20 blocks per dataset)}} \\
+\quad logistic normal & coefficient & 7/120 & -0.03 & 19/120 & -0.01 & 101/120 & +0.18 \\
+\quad difference of means & coefficient & 16/120 & -0.02 & 18/120 & -0.01 & 62/120 & +0.02 \\
+\quad Haufe pattern & coefficient & 17/120 & -0.02 & 17/120 & -0.01 & 53/120 & +0.01 \\
+\quad orthogonalised normal & coefficient & 8/120 & -0.02 & 14/120 & -0.01 & 98/120 & +0.13 \\
+\quad residualised normal & coefficient & 8/120 & -0.02 & 13/120 & -0.01 & 102/120 & +0.20 \\
+\quad owned under at least one &  & 25/120 & -- & 41/120 & -- & 108/120 & -- \\
+\midrule
+\multicolumn{8}{l}{\textit{Displacement lift (19 blocks per dataset)}} \\
+\quad logistic normal & coefficient & 7/114 & -0.03 & 19/114 & -0.01 & 100/114 & +0.19 \\
+\quad difference of means & displacement & 21/114 & -0.03 & 19/114 & -0.00 & 58/114 & +0.02 \\
+\quad Haufe pattern & displacement & 17/114 & -0.02 & 17/114 & -0.00 & 49/114 & +0.01 \\
+\midrule
+\multicolumn{8}{l}{\textit{Token weights of the logistic normal (4 NIH, 2 CheXpert, 2 COCO blocks)}} \\
+\quad uniform & coefficient & 3/24 & -0.08 & 5/12 & +0.00 & 12/12 & +0.60 \\
+\quad softmax of the probe score & coefficient & 0/24 & -0.01 & 0/12 & -0.00 & 12/12 & +0.16 \\
+\quad top quarter of tokens & coefficient & 2/24 & -0.12 & 3/12 & -0.05 & 12/12 & +0.57 \\
+\midrule
+\multicolumn{8}{l}{\textit{Competitor family of the logistic normal (5 NIH, 4 CheXpert blocks)}} \\
+\quad six clinical directions & coefficient & 3/30 & -0.07 & 8/24 & -0.07 & -- & -- \\
+\quad with every extra dataset label & coefficient & 3/30 & -0.07 & 5/24 & -0.10 & -- & -- \\
 \bottomrule
-\end{tabular}}
+\end{tabular}
 \end{table}
