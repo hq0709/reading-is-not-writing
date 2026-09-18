@@ -693,8 +693,12 @@ def validfit_macros(M: dict, wb: dict, warn: list) -> None:
     def med(key):
         xs = [v[key] for _, _, v, _ in cells if v.get(key) is not None and v[key] == v[key]]
         return fx(statistics.median(xs), 2)
-    M["cfValidfitCosRaw"] = med("cos_to_report_model"); M["cfValidfitCosWhitened"] = med("cos_to_report_whitened")
-    M["cfValidfitAurocExpert"] = med("auroc_expert_heldout"); M["cfValidfitAurocReportDir"] = med("report_direction_auroc_expert")
+    # One source for the expert arm: the dedicated per-arm analysis, which the arm macros also read, so the two can
+    # never round apart. The per-cell medians here would otherwise be recomputed by a second code path.
+    VF = json.loads((ci.RUNS / "robustness" / "validfit.json").read_text())["aggregate"]["per_arm"]["expert_valid200"]
+    M["cfValidfitCosRaw"] = fx(VF["cos_model"], 2); M["cfValidfitCosWhitened"] = fx(VF["cos_whitened"], 2)
+    M["cfValidfitAurocExpert"] = fx(VF["auroc_expert_labels"], 2)
+    M["cfValidfitAurocReportDir"] = med("report_direction_auroc_expert")
     M["cfValidfitOwnedExpert"] = sum(bool(v["owned"]) for _, _, v, _ in cells)
     M["cfValidfitOwnedReport"] = sum(ci.owned(c) for _, _, _, c in cells)
     if M["cfValidfitOwnedExpert"] > M["cfValidfitOwnedReport"]:

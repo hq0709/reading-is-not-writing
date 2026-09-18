@@ -49,6 +49,16 @@ Checkpoint & Vision tower & Tokens & Image & Templates & Revision & $\bar S$ & $
 \midrule
 \multicolumn{6}{l}{\textbf{Llama 3.2 Vision}~\citep{meta2024llama32vision}} & 0.119 & 0.688 & \cellcolor{cfSlate1}0/12 & \cellcolor{cfSlate2}1/6 \\
 \quad Llama 3.2 Vision 11B & ViT-H/14 & 1601 & $560^2$ & IBWB & \texttt{9eb2daa} & & & & \\
+\midrule
+\multicolumn{6}{l}{\textbf{CheXagent} (medical)} & 0.143 & 0.796 & \cellcolor{cfSlate3}2/12 & -- \\
+\quad CheXagent-2-3B & XraySigLIP ViT-L/16 & 1024 & $512^2$ & IYWYIAWA & \texttt{} & & & & \\
+\quad CheXagent-8B & EVA-CLIP ViT 1.4B & 1025$\to$128 & $448^2$ & IYWYIAWA & \texttt{} & & & & \\
+\midrule
+\multicolumn{6}{l}{\textbf{LLaVA-Rad} (medical)} & 0.147 & 0.713 & \cellcolor{cfSlate1}0/6 & -- \\
+\quad LLaVA-Rad-7B & BiomedCLIP-CXR-518 & 1369 & $518^2$ & IYWY & \texttt{} & & & & \\
+\midrule
+\multicolumn{6}{l}{\textbf{HuatuoGPT-Vision} (medical)} & 0.084 & 0.712 & \cellcolor{cfSlate3}1/6 & -- \\
+\quad HuatuoGPT-Vision-7B & CLIP ViT-L/14-336 & 576 & $336^2$ & all & \texttt{} & & & & \\
 \bottomrule
 \end{tabular}
 \end{table}

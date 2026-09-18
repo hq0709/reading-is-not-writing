@@ -9,24 +9,24 @@
  & NIH ChestX-ray14 & CheXpert Plus & both chest sets & COCO \\
 \midrule
 \multicolumn{5}{l}{\textit{Geometry of the six directions and the six labels}} \\
-\quad mean off-diagonal cosine between the directions & 0.018 & 0.232 & -- & 0.040 \\
-\quad mean off-diagonal $|\cos|$ between the directions & 0.099 & 0.234 & -- & 0.056 \\
-\quad mean $|\cos|$ between random unit directions & 0.023 & 0.023 & -- & 0.023 \\
+\quad mean off-diagonal cosine between the directions & 0.019 & 0.232 & -- & 0.040 \\
+\quad mean off-diagonal $|\cos|$ between the directions & 0.093 & 0.234 & -- & 0.056 \\
+\quad mean $|\cos|$ between random unit directions & 0.024 & 0.023 & -- & 0.023 \\
 \quad mean off-diagonal $\phi$ between the labels & 0.026 & 0.381 & -- & 0.022 \\
 \midrule
 \multicolumn{5}{l}{\textit{Cells whose strongest competitor is (chance: one in five)}} \\
-\quad the most similar direction & 24/126 & 27/120 & 51/246 & 23/120 \\
-\quad the label with the largest $\phi$ & 28/126 & 28/120 & 56/246 & 22/120 \\
-\quad the most co-occurring label & 21/126 & 26/120 & 47/246 & 16/120 \\
+\quad the most similar direction & 31/150 & 27/120 & 58/270 & 23/120 \\
+\quad the label with the largest $\phi$ & 35/150 & 28/120 & 63/270 & 22/120 \\
+\quad the most co-occurring label & 24/150 & 26/120 & 50/270 & 16/120 \\
 \midrule
 \multicolumn{5}{l}{\textit{Spearman $\rho$ over off-diagonal cells of $W_{q,d}-W_{q,q}$ with}} \\
-\quad the cosine between the two directions & 0.089 & 0.049 & 0.045 & 0.001 \\
-\quad the $\phi$ between the two labels & 0.043 & 0.024 & 0.008 & 0.013 \\
+\quad the cosine between the two directions & 0.085 & 0.049 & 0.040 & 0.001 \\
+\quad the $\phi$ between the two labels & 0.036 & 0.024 & 0.000 & 0.013 \\
 \midrule
 \multicolumn{5}{l}{\textit{Sign of $O_q$}} \\
-\quad cells with $O_q>0$ & 32/126 & 33/120 & 65/246 & 110/120 \\
-\quad cells with $O_q>0$ without the strongest competitor & 50/126 & 58/120 & 108/246 & 113/120 \\
-\quad cells with at least two competitors above the own write & 76/126 & 62/120 & 138/246 & 7/120 \\
+\quad cells with $O_q>0$ & 38/150 & 33/120 & 71/270 & 110/120 \\
+\quad cells with $O_q>0$ without the strongest competitor & 62/150 & 58/120 & 120/270 & 113/120 \\
+\quad cells with at least two competitors above the own write & 88/150 & 62/120 & 150/270 & 7/120 \\
 \bottomrule
 \end{tabular}
 \end{table}
