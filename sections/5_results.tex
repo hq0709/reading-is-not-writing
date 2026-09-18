@@ -80,6 +80,17 @@ The held-out test finds no added predictive value about these endpoints ($p=\cfS
 
 Ownership on the chest sets is concentrated among a few readers and varies by concept and dataset (Figure~\ref{fig:ladders}; Table~\ref{tab:cf-models}). Qwen2.5-VL owns no concepts at 3B or 7B. At 32B, it owns Cardiomegaly. At 72B, it owns Atelectasis ($O=\cfOQwenSeventyTwoAtel$), Cardiomegaly, and Mass. Effusion is anti-owned at every size. Lingshu, the medical Qwen2.5-VL derivative, owns three CheXpert concepts at 7B. At 32B, it owns five, the highest clinical ownership in the grid. InternVL3.5 answers every NIH question at every size. On the chest sets, its writes remain within $\cfInternvlWqqMax$ of zero. LLaVA-1.5 reads the chest concepts. It answers none above chance. It owns none.
 
+\subsection{Medical and chest-specialised checkpoints}
+\label{sec:specialisation}
+
+Four checkpoints put the medical training on the vision side. CheXagent-2-3B, CheXagent-8B, and LLaVA-Rad-7B carry vision towers trained on chest radiographs. HuatuoGPT-Vision-7B tunes on medical data over a stock CLIP tower. All four are scored on NIH.
+
+The chest-trained towers are the grid's best readers. Their median probe AUROC across \cfSpecTowerProbeN{} NIH cells is \cfSpecTowerProbeAuroc{}, compared with \cfSpecStockProbeAuroc{} for HuatuoGPT-Vision's stock CLIP tower and \cfSpecRestProbeAuroc{} across the \cfSpecRestProbeN{} remaining NIH cells. They read \cfSpecTowerReadable{} of \cfSpecTowerN{} chest cells and answer \cfSpecTowerAnswerable{}.
+
+Ownership rates differ by dataset across the three groups. Across the chest sets, medically tuned checkpoints own \cfSpecMedOwned{} of \cfSpecMedN{} cells, chest-trained towers \cfSpecTowerOwned{} of \cfSpecTowerN{}, and general checkpoints \cfSpecGenOwned{} of \cfSpecGenN{}. On NIH, where all four new checkpoints are evaluated, the respective counts are \cfSpecNihMedOwned{} of \cfSpecNihMedN{}, \cfSpecNihTowerOwned{} of \cfSpecNihTowerN{}, and \cfSpecNihGenOwned{} of \cfSpecNihGenN{}. Median clean-answer AUROC is \cfSpecMedAnsAuroc{}, \cfSpecTowerAnsAuroc{}, and \cfSpecGenAnsAuroc{}, respectively.
+
+MAIRA-2 \citep{bannur2024maira} has no answer interface to grade. It answers ``No'' to every finding on all \cfSpecUngradedRows{} preflight images and ``A'' to every forced choice. All \cfSpecUngradedTemplatesWord{} templates fail the image-free mapping gate, so the block produces no outcomes (Appendix~\ref{app:cf-gates}).
+
 \subsection{Controls and alternatives}
 \label{sec:controls}
 

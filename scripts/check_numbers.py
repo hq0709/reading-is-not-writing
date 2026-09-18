@@ -12,6 +12,7 @@ from __future__ import annotations
 import json
 import re
 import shutil
+import statistics
 import subprocess
 import sys
 from pathlib import Path
@@ -91,6 +92,48 @@ def main():
     expect("cfChestOwned", M["cfChestOwned"], C["chest"]["owned"])
     expect("cfCocoOwned/N", (M["cfCocoOwned"], M["cfCocoOwnedN"]), (C["coco"]["owned"], C["coco"]["write_cells"]))
     expect("cfCells", M["cfCells"], C["all"]["write_cells"])
+    # Section 5.8: the chest cells grouped by what the checkpoint was trained on, recounted here from the manifest
+    # rows and the block summaries rather than read back from build_numbers.
+    from build_numbers import CHEST_TOWER, MEDICAL_TUNED, GENERAL, SPEC_STOCK_TOWER, SPEC_UNGRADED, SPEC_TEMPLATES   # noqa: E402
+    print("specialisation macros vs a recount of the chest cells:")
+    grp = {m: g for g, ms in (("Tower", CHEST_TOWER), ("Med", MEDICAL_TUNED), ("Gen", GENERAL)) for m in ms}
+    expect("specialisation: every checkpoint is grouped exactly once",
+           sorted(grp), sorted({r["model_key"] for r in rows}))
+    chest = [r for r in rows if r["cell"] == "true" and r["dataset"] in ci.CHEST]
+    for g in ("Tower", "Med", "Gen"):
+        wm = [r for r in chest if grp[r["model_key"]] == g and r["block_included"] == "true"]
+        pg = [r for r in chest if grp[r["model_key"]] == g and r["probe_graded"] == "true" and r["readable"] != ""]
+        expect(f"cfSpec{g}N / Owned", (M[f"cfSpec{g}N"], M[f"cfSpec{g}Owned"]),
+               (len(wm), sum(r["owned"] == "true" for r in wm)))
+        expect(f"cfSpec{g}Readable / Answerable", (M[f"cfSpec{g}Readable"], M[f"cfSpec{g}Answerable"]),
+               (sum(r["readable"] == "true" for r in pg), sum(r["answer_capable"] == "true" for r in wm)))
+        expect(f"cfSpec{g}AnsAuroc", M[f"cfSpec{g}AnsAuroc"],
+               f"{statistics.median(float(r['answer_auroc']) for r in wm):.3f}")
+        nih = [r for r in wm if r["dataset"] == "nih"]
+        expect(f"cfSpecNih{g}N / Owned", (M[f"cfSpecNih{g}N"], M[f"cfSpecNih{g}Owned"]),
+               (len(nih), sum(r["owned"] == "true" for r in nih)))
+    expect("specialisation: the three groups are the chest cells",
+           (sum(M[f"cfSpec{g}N"] for g in ("Tower", "Med", "Gen")), sum(M[f"cfSpec{g}Owned"] for g in ("Tower", "Med", "Gen"))),
+           (C["chest"]["write_cells"], C["chest"]["owned"]))
+    blocks = ci.load_runs(); nih_mks = {m for (m, d), b in blocks.items() if d == "nih" and b["included"]}
+    for name, mks in (("Tower", set(CHEST_TOWER)), ("Stock", {SPEC_STOCK_TOWER}), ("Rest", nih_mks - set(CHEST_TOWER))):
+        xs = [v["auroc_real"] for (m, d), b in blocks.items() if d == "nih" and b["included"] and m in mks
+              for v in ci.calibration(b).values()]
+        expect(f"cfSpec{name}ProbeAuroc / N", (M[f"cfSpec{name}ProbeAuroc"], M[f"cfSpec{name}ProbeN"]),
+               (f"{statistics.median(xs):.3f}", len(xs)))
+    expect("specialisation: the chest-trained towers read best on NIH",
+           float(M["cfSpecTowerProbeAuroc"]) > max(float(M["cfSpecStockProbeAuroc"]), float(M["cfSpecRestProbeAuroc"])), True)
+    d = ci.RUNS / SPEC_UNGRADED / "nih"
+    elig = json.loads((d / "template_eligibility.json").read_text())
+    pr = json.loads((d / "answer_interface_probe.json").read_text())
+    expect(f"{SPEC_UNGRADED}: every template ineligible",
+           (len(elig), sum(v.get("eligible", False) for v in elig.values())), (M["cfSpecUngradedTemplates"], 0))
+    expect(f"{SPEC_UNGRADED}: preflight images and the one answer given",
+           (len(pr["with_image_IY"]), [x.strip("▁") for x in pr["with_image_IY_summary"]["distinct_top1_tokens"]]),
+           (M["cfSpecUngradedRows"], ["No"]))
+    expect(f"{SPEC_UNGRADED}: the forced choices",
+           sorted({c["top_tokens"][0]["token"].strip("▁") for tpl in SPEC_TEMPLATES if tpl[1] in "AB"
+                   for c in pr["image_free_by_template"][tpl]}), ["A"])
     # Table cf-prevalence (label counts per cohort) against the frozen data manifests, and the support macros against it
     from build_numbers import cohort_counts   # noqa: E402
     pv = (ROOT / "tables" / "table_cf_prevalence.tex").read_text()

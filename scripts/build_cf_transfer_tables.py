@@ -70,12 +70,14 @@ META = {
     "llama32-11":  ("Llama 3.2 Vision 11B", "Llama 3.2 Vision", 11, "ViT-H/14",          "1601",         "$560^2$",  False),
 }
 ORDER = list(META)
-REV = {'q25-3': '6628554', 'q25-7': 'cc59489', 'q25-32': '7cfb30d', 'q25-72': '89c8620', 'q3-4': 'ebb281e', 'q3-8': '0c351dd', 'q3-32': '0cfaf48', 'iv35-8': '741a7d0', 'iv35-14': '226b96d', 'iv35-38': '7c830fc', 'gemma3-4': '093f9f3', 'gemma3-12': '96b6f1e', 'gemma3-27': '005ad34', 'medgemma-4': '290cda5', 'medgemma-27': '2d3e00e', 'llama32-11': '9eb2daa', 'llava15-7': 'b234b80', 'llava15-13': '5dda288', 'lingshu-7': 'b98aecd', 'lingshu-32': '36b9827', 'llavamed-7': '91bb16c'}   # Hugging Face revision (7-char) of every checkpoint
+REV = {'q25-3': '6628554', 'q25-7': 'cc59489', 'q25-32': '7cfb30d', 'q25-72': '89c8620', 'q3-4': 'ebb281e', 'q3-8': '0c351dd', 'q3-32': '0cfaf48', 'iv35-8': '741a7d0', 'iv35-14': '226b96d', 'iv35-38': '7c830fc', 'gemma3-4': '093f9f3', 'gemma3-12': '96b6f1e', 'gemma3-27': '005ad34', 'medgemma-4': '290cda5', 'medgemma-27': '2d3e00e', 'llama32-11': '9eb2daa', 'llava15-7': 'b234b80', 'llava15-13': '5dda288', 'lingshu-7': 'b98aecd', 'lingshu-32': '36b9827', 'llavamed-7': '91bb16c', 'chexagent-3': '8f19b53', 'chexagent-8': '4934e91', 'llavarad-7': 'dcdbc6c', 'huatuo-7': '34dfcdb'}   # Hugging Face revision (7-char) of every checkpoint
 FAMILY_ORDER = ["Qwen2.5-VL", "Qwen3-VL", "InternVL3.5", "Gemma 3", "MedGemma", "Lingshu", "LLaVA-1.5", "LLaVA-Med",
                 "Llama 3.2 Vision", "CheXagent", "LLaVA-Rad", "HuatuoGPT-Vision"]
 FAMILY_CITE = {"Qwen2.5-VL": "bai2025qwen25vl", "Qwen3-VL": "qwen2025qwen3vl", "InternVL3.5": "wang2025internvl35",
                "Gemma 3": "gemma2025gemma3", "MedGemma": "sellergren2025medgemma", "Lingshu": "lasa2025lingshu",
-               "LLaVA-1.5": "liu2024improved", "LLaVA-Med": "li2023llavamed", "Llama 3.2 Vision": "meta2024llama32vision"}   # release the checkpoints come from, cited on the family row of Table~\ref{tab:cf-models}
+               "LLaVA-1.5": "liu2024improved", "LLaVA-Med": "li2023llavamed", "Llama 3.2 Vision": "meta2024llama32vision",
+               "CheXagent": "chen2024chexagent", "LLaVA-Rad": "zambranochaves2025llavarad",
+               "HuatuoGPT-Vision": "chen2024huatuogptvision"}   # release the checkpoints come from, cited on the family row of Table~\ref{tab:cf-models}
 NAMES = {k: v[0] for k, v in META.items()}
 
 # --------------------------------------------------------------------------------------------- colours

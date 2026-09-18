@@ -869,6 +869,133 @@ def coverage_macros(M: dict, rows: list[dict], warn: list) -> None:
                     f"five additional templates alone, which is what Appendix A.4 says")
 
 
+# --------------------------------------------------------------------------- what the checkpoint was trained on
+# Three exhaustive, disjoint groups over the grid's checkpoints, declared by training data and not by size or family:
+# a vision tower trained on chest radiographs, medical instruction tuning on a general tower, and everything else.
+# specialisation_macros checks the rosters against the manifest's model keys and the group cell counts against the
+# chest totals, so a new checkpoint cannot be silently dropped into "general".
+CHEST_TOWER = ("chexagent-3", "chexagent-8", "llavarad-7")
+MEDICAL_TUNED = ("lingshu-7", "lingshu-32", "medgemma-4", "medgemma-27", "llavamed-7", "huatuo-7")
+GENERAL = ("q25-3", "q25-7", "q25-32", "q25-72", "q3-4", "q3-8", "q3-32", "iv35-8", "iv35-14", "iv35-38",
+           "gemma3-4", "gemma3-12", "gemma3-27", "llava15-7", "llava15-13", "llama32-11")
+SPEC_STOCK_TOWER = "huatuo-7"          # medical tuning on a stock CLIP tower: the tower-versus-training-data contrast
+SPEC_UNGRADED = "maira2-7"             # scored nowhere: every template fails the image-free mapping gate
+SPEC_TEMPLATES = ("IY", "WY", "IA", "IB", "WA", "WB")
+
+
+# The vision-tower design behind each tower string of the checkpoint table, so Section 4 counts designs and not
+# tower names. family_macros raises if a tower string of the table is missing here.
+TOWER_DESIGN = {"native ViT 675M": "native ViT", "Qwen2.5-VL ViT": "native ViT",
+                "SigLIP2-based": "SigLIP", "SigLIP-So400m": "SigLIP", "MedSigLIP": "SigLIP",
+                "XraySigLIP ViT-L/16": "SigLIP", "InternViT-300M": "InternViT", "InternViT-6B": "InternViT",
+                "CLIP ViT-L/14-336": "CLIP", "BiomedCLIP-CXR-518": "CLIP", "EVA-CLIP ViT 1.4B": "EVA-CLIP",
+                "ViT-H/14": "ViT-H/14"}
+
+
+def family_macros(M: dict, rows: list[dict], warn: list) -> None:
+    """Section 4: how many families, how many of them are medical fine-tunes, and how many vision-tower designs the
+    grid spans. All three come from the checkpoint sheet of Table~\\ref{tab:cf-models}
+    (scripts/build_cf_transfer_tables.py META), restricted to the checkpoints the manifest carries."""
+    import build_cf_transfer_tables as bt
+    keys = {r["model_key"] for r in rows}
+    if not keys <= set(bt.META):
+        raise RuntimeError(f"families: {sorted(keys - set(bt.META))} carry manifest rows but no checkpoint-sheet entry")
+    meta = {k: v for k, v in bt.META.items() if k in keys}
+    towers = {v[3] for v in meta.values()}
+    if not towers <= set(TOWER_DESIGN):
+        raise RuntimeError(f"families: {sorted(towers - set(TOWER_DESIGN))} have no declared vision-tower design")
+    fams = {v[1] for v in meta.values()}
+    med = {v[1] for v in meta.values() if v[6]}
+    designs = {TOWER_DESIGN[v[3]] for v in meta.values()}
+    M["cfFamilies"] = len(fams); M["cfFamiliesWord"] = WORD[len(fams)]
+    M["cfMedicalFamilies"] = len(med); M["cfMedicalFamiliesWord"] = WORD[len(med)]
+    M["cfTowerDesigns"] = len(designs); M["cfTowerDesignsWord"] = WORD[len(designs)]
+    if med != {bt.META[m][1] for m in MEDICAL_TUNED + CHEST_TOWER}:
+        warn.append(f"families: the checkpoint sheet's medical families {sorted(med)} are not the families of "
+                    f"CHEST_TOWER + MEDICAL_TUNED {sorted({bt.META[m][1] for m in MEDICAL_TUNED + CHEST_TOWER})}")
+    # consumed tokens per image: the count after the arrow where the sheet writes a reduction (576$\to$144)
+    tok = [int(str(v[4]).replace("$\\leq$", "").replace("{,}", "").split("$\\to$")[-1]) for v in meta.values()]
+    M["cfTokensMin"] = thou(min(tok)); M["cfTokensMax"] = thou(max(tok))
+
+
+def spec_group(model_key: str) -> str:
+    """'Tower' | 'Med' | 'Gen' for one model key, the grouping of Section~\\ref{sec:specialisation}."""
+    return "Tower" if model_key in CHEST_TOWER else ("Med" if model_key in MEDICAL_TUNED else "Gen")
+
+
+def specialisation_macros(M: dict, rows: list[dict], wb: dict, warn: list) -> None:
+    """Section 5.8: the chest cells of the grid grouped by what the checkpoint was trained on, plus the one checkpoint
+    with no gradable answer interface.
+
+    Counts run over exactly the cells counts() uses: write-matrix cells of included blocks for answerable and owned,
+    probe-graded cells for readable. Probe AUROC medians are the calibration sections' auroc_real, the same numbers
+    Table~\\ref{tab:cf-main} shades. MAIRA-2's numbers come from its run directory (template_eligibility.json,
+    answer_interface_probe.json); it enters no count because no template of it is eligible."""
+    cells = [r for r in rows if t(r["cell"]) and r["dataset"] in ci.CHEST]
+    keys = {r["model_key"] for r in rows}
+    declared = [m for g in (CHEST_TOWER, MEDICAL_TUNED, GENERAL) for m in g]
+    if len(declared) != len(set(declared)):
+        raise RuntimeError(f"specialisation: {sorted({m for m in declared if declared.count(m) > 1})} is in two groups")
+    if set(declared) != keys:
+        raise RuntimeError(f"specialisation: the three groups name {sorted(set(declared) - keys)} that the manifest does "
+                           f"not carry and leave {sorted(keys - set(declared))} ungrouped; Section 5.8 groups every checkpoint")
+    tot_wm = tot_own = 0
+    for g in ("Tower", "Med", "Gen"):
+        wm = [r for r in cells if spec_group(r["model_key"]) == g and t(r["block_included"])]
+        pg = [r for r in cells if spec_group(r["model_key"]) == g and t(r["probe_graded"]) and r["readable"] != ""]
+        auroc = [f(r["answer_auroc"]) for r in wm if r["answer_auroc"] != ""]
+        M[f"cfSpec{g}N"] = len(wm); M[f"cfSpec{g}Owned"] = sum(t(r["owned"]) for r in wm)
+        M[f"cfSpec{g}Answerable"] = sum(t(r["answer_capable"]) for r in wm)
+        M[f"cfSpec{g}ReadableN"] = len(pg); M[f"cfSpec{g}Readable"] = sum(t(r["readable"]) for r in pg)
+        M[f"cfSpec{g}Blocks"] = len({(r["model_key"], r["dataset"]) for r in wm})
+        M[f"cfSpec{g}AnsAuroc"] = fx(statistics.median(auroc), 3)
+        if len(auroc) != len(wm):
+            warn.append(f"specialisation: {len(wm) - len(auroc)} {g} chest cell(s) carry no clean-answer AUROC")
+        tot_wm += len(wm); tot_own += M[f"cfSpec{g}Owned"]
+        nih = [r for r in wm if r["dataset"] == "nih"]
+        M[f"cfSpecNih{g}N"] = len(nih); M[f"cfSpecNih{g}Owned"] = sum(t(r["owned"]) for r in nih)
+    if (tot_wm, tot_own) != (M["cfChestCellsN"], M["cfChestOwned"]):
+        raise RuntimeError(f"specialisation: the three groups hold {tot_wm} chest cells and {tot_own} owned, against "
+                           f"{M['cfChestCellsN']} and {M['cfChestOwned']} in the manifest; a checkpoint changed group")
+    if sum(M[f"cfSpecNih{g}N"] for g in ("Tower", "Med", "Gen")) != M["cfNihCells"] \
+            or sum(M[f"cfSpecNih{g}Owned"] for g in ("Tower", "Med", "Gen")) != M["cfNihOwned"]:
+        raise RuntimeError("specialisation: the three groups do not add up to the NIH cell and owned counts")
+    # probe AUROC on NIH: the three chest-trained towers, the stock-CLIP medical tune, and the rest of the NIH grid
+    def probe_auroc(mks):
+        xs = [v["auroc_real"] for (m, d), b in wb.items() if d == "nih" and m in mks
+              for v in ci.calibration(b).values()]
+        return xs
+    nih_mks = {m for (m, d) in wb if d == "nih"}
+    if not set(CHEST_TOWER) <= nih_mks or SPEC_STOCK_TOWER not in nih_mks:
+        raise RuntimeError(f"specialisation: {sorted(set(CHEST_TOWER + (SPEC_STOCK_TOWER,)) - nih_mks)} carry no scored NIH block")
+    for name, mks in (("Tower", set(CHEST_TOWER)), ("Stock", {SPEC_STOCK_TOWER}), ("Rest", nih_mks - set(CHEST_TOWER))):
+        xs = probe_auroc(mks)
+        M[f"cfSpec{name}ProbeAuroc"] = fx(statistics.median(xs), 3); M[f"cfSpec{name}ProbeN"] = len(xs)
+    if M["cfSpecTowerProbeN"] != M["cfSpecNihTowerN"]:
+        warn.append(f"specialisation: {M['cfSpecTowerProbeN']} chest-tower calibration cells against {M['cfSpecNihTowerN']} write cells")
+    if not (float(M["cfSpecTowerProbeAuroc"]) > float(M["cfSpecStockProbeAuroc"])
+            and float(M["cfSpecTowerProbeAuroc"]) > float(M["cfSpecRestProbeAuroc"])):
+        warn.append("specialisation: the chest-trained towers no longer read best; Section 5.8 says they do")
+    # the checkpoint with no gradable answer interface
+    d = ci.RUNS / SPEC_UNGRADED / "nih"
+    elig = json.loads((d / "template_eligibility.json").read_text())
+    probe = json.loads((d / "answer_interface_probe.json").read_text())
+    if sorted(elig) != sorted(SPEC_TEMPLATES) or any(v.get("eligible") for v in elig.values()):
+        raise RuntimeError(f"specialisation: {SPEC_UNGRADED} no longer fails every one of the {len(SPEC_TEMPLATES)} templates: "
+                           f"{ {k: v.get('eligible') for k, v in elig.items()} }")
+    if (SPEC_UNGRADED, "nih") in wb or any(r["model_key"] == SPEC_UNGRADED for r in rows):
+        raise RuntimeError(f"specialisation: {SPEC_UNGRADED} now carries manifest rows; it is described as ungraded")
+    M["cfSpecUngradedTemplates"] = len(SPEC_TEMPLATES)
+    M["cfSpecUngradedTemplatesWord"] = WORD[len(SPEC_TEMPLATES)]
+    M["cfSpecUngradedRows"] = len(probe["with_image_IY"])
+    tops = probe["with_image_IY_summary"]["distinct_top1_tokens"]
+    letters = {c["top_tokens"][0]["token"].strip("▁") for tpl in ("IA", "IB", "WA", "WB")
+               for c in probe["image_free_by_template"][tpl]}
+    if [x.strip("▁") for x in tops] != ["No"] or letters != {"A"}:
+        raise RuntimeError(f"specialisation: {SPEC_UNGRADED} answers {tops} with an image and {sorted(letters)} to the "
+                           f"forced choices; Section 5.8 says No and A")
+
+
 ATTR_LABEL = {"view_AP": "AP (portable) projection", "sex_F": "female sex", "age_60": r"age $\geq60$"}
 
 
@@ -1398,6 +1525,8 @@ def main() -> Path:
     coco_p = [pct(A["coco"][fam], A["coco"]["n"]) for fam in ("logistic",) + FAMILIES]
     M["cfAltdirChestPctMin"], M["cfAltdirChestPctMax"] = min(chest_p), max(chest_p)
     M["cfAltdirCocoPctMin"], M["cfAltdirCocoPctMax"] = min(coco_p), max(coco_p)
+    family_macros(M, rows, warn)
+    specialisation_macros(M, rows, wb, warn)
     robustness_macros(M, rows, wb, warn)
     round2_macros(M, rows, wb, warn)
     round3_macros(M, rows, wb, warn)
