@@ -8,3 +8,6 @@ main.pdf
 tmp/
 __pycache__/
 .omc/
+main.fdb_latexmk
+main.fls
+design-options/

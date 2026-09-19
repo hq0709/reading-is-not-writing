@@ -10,11 +10,11 @@
 \cmidrule(lr){2-4}\cmidrule(lr){5-6}\cmidrule(lr){7-8}\cmidrule(lr){9-10}
 Dataset & $p$ & $m$ & both & owned & other & med.\ $|\Delta O|$ & stable & primary & connector & $>$ p95 \\
 \midrule
-NIH ChestX-ray14 & 13/150 & 12/150 & 11 & 13/13 & 25/131 & 0.020 & 8/13 & 0.044 & 0.009 & 13/126 \\
-CheXpert Plus & 19/120 & 21/120 & 19 & 19/19 & 12/97 & 0.026 & 9/19 & 0.037 & 0.011 & 13/120 \\
-COCO & 101/120 & 102/120 & 100 & 93/94 & 9/19 & 0.023 & 95/101 & 0.238 & 0.008 & 87/120 \\
+NIH ChestX-ray14 & 13/150 & 12/150 & 11 & 13/13 & 25/131 & 0.020 & 8/13 & 0.032 & 0.008 & 15/150 \\
+CheXpert Plus & 23/132 & 25/132 & 23 & 23/23 & 13/105 & 0.021 & 10/23 & 0.035 & 0.010 & 14/132 \\
+COCO & 107/138 & 110/138 & 106 & 99/100 & 15/31 & 0.019 & 101/107 & 0.127 & 0.009 & 98/138 \\
 \midrule
-\multicolumn{11}{p{0.9\linewidth}}{\textit{Batch effects at the gates (61 blocks): batched-vs-single candidate-logit difference 0.00--1.84 (median 0.32); margin sign agreement in 55 of 61 blocks; owned cells in disagreeing blocks: 0.}} \\
+\multicolumn{11}{p{0.9\linewidth}}{\textit{Batch effects at the gates (61 blocks): batched-vs-single candidate-logit difference 0.00--1.84 (median 0.28); margin sign agreement in 55 of 61 blocks; owned cells in disagreeing blocks: 0.}} \\
 \bottomrule
 \end{tabular}
 
