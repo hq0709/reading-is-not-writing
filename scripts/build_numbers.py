@@ -960,6 +960,20 @@ def specialisation_macros(M: dict, rows: list[dict], wb: dict, warn: list) -> No
     if sum(M[f"cfSpecNih{g}N"] for g in ("Tower", "Med", "Gen")) != M["cfNihCells"] \
             or sum(M[f"cfSpecNih{g}Owned"] for g in ("Tower", "Med", "Gen")) != M["cfNihOwned"]:
         raise RuntimeError("specialisation: the three groups do not add up to the NIH cell and owned counts")
+    # The same three groups on COCO. A chest-specialised tower answers natural-image questions at chance, so its COCO
+    # block grades almost nothing; Section 5.8 says so, and the natural-image control of Section 5.4 rests on the
+    # checkpoints that do answer. Without these counts a reader meets two 0% COCO rows in Table 1 with no explanation.
+    coco = [r for r in rows if t(r["cell"]) and r["dataset"] == "coco"]
+    for g in ("Tower", "Med", "Gen"):
+        cw = [r for r in coco if spec_group(r["model_key"]) == g and t(r["block_included"])]
+        ca = [f(r["answer_auroc"]) for r in cw if r["answer_auroc"] != ""]
+        M[f"cfSpec{g}CocoN"] = len(cw); M[f"cfSpec{g}CocoOwned"] = sum(t(r["owned"]) for r in cw)
+        M[f"cfSpec{g}CocoAnswerable"] = sum(t(r["answer_capable"]) for r in cw)
+        M[f"cfSpec{g}CocoAnsAuroc"] = fx(statistics.median(ca), 3)
+    if M["cfSpecTowerCocoAnswerable"] / max(M["cfSpecTowerCocoN"], 1) >= \
+            M["cfSpecGenCocoAnswerable"] / max(M["cfSpecGenCocoN"], 1):
+        warn.append("specialisation: the chest-trained towers now answer COCO as often as the general checkpoints; "
+                    "Section 5.8 explains their COCO rows by the opposite")
     # probe AUROC on NIH: the three chest-trained towers, the stock-CLIP medical tune, and the rest of the NIH grid
     def probe_auroc(mks):
         xs = [v["auroc_real"] for (m, d), b in wb.items() if d == "nih" and m in mks
@@ -1449,9 +1463,14 @@ def main() -> Path:
     M["cfNihBlocks"] = C["nih"]["write_blocks"]; M["cfChexBlocks"] = C["chexpert"]["write_blocks"]; M["cfCocoBlocks"] = C["coco"]["write_blocks"]
     mks = {k[0] for k in wb}
     M["cfCheckpointsComplete"] = sum(all((m, d) in wb for d in ci.DATASETS) for m in mks)
-    M["cfCheckpointsCompleteWord"] = ["Zero", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten", "Eleven", "Twelve",
-                                      "Thirteen", "Fourteen", "Fifteen", "Sixteen", "Seventeen", "Eighteen", "Nineteen", "Twenty",
-                                      "Twenty-one", "Twenty-two"][M["cfCheckpointsComplete"]]
+    COMPLETE_WORD = ["Zero", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten", "Eleven", "Twelve",
+                     "Thirteen", "Fourteen", "Fifteen", "Sixteen", "Seventeen", "Eighteen", "Nineteen", "Twenty",
+                     "Twenty-one", "Twenty-two", "Twenty-three", "Twenty-four", "Twenty-five", "Twenty-six", "Twenty-seven",
+                     "Twenty-eight", "Twenty-nine", "Thirty"]
+    if M["cfCheckpointsComplete"] >= len(COMPLETE_WORD):   # the grid outgrew the list rather than the count being wrong
+        raise RuntimeError(f"{M['cfCheckpointsComplete']} checkpoints are complete on all three datasets; "
+                           f"extend COMPLETE_WORD past {len(COMPLETE_WORD) - 1}")
+    M["cfCheckpointsCompleteWord"] = COMPLETE_WORD[M["cfCheckpointsComplete"]]
     # chest
     M["cfChestReadable"] = ch["readable"]; M["cfChestReadableN"] = ch["probe_cells"]; M["cfChestReadablePct"] = pct(ch["readable"], ch["probe_cells"])
     M["cfChestAnswerable"] = ch["answerable"]; M["cfChestAnswerableN"] = ch["write_cells"]; M["cfChestCellsN"] = ch["write_cells"]; M["cfChestAnswerablePct"] = pct(ch["answerable"], ch["write_cells"])
