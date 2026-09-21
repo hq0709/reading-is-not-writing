@@ -823,6 +823,9 @@ def cohort_macros(M: dict, warn: list) -> None:
         if overlap:
             warn.append(f"cohorts: two roles of {ds} share {overlap} units (Appendix F.5 says the roles are disjoint)")
     M["cfCohortMaxOverlap"] = max(M[f"cfCohort{D}MaxOverlap"] for D in DS_MACRO.values())
+    # the role pairs are reported as one checked invariant rather than a panel of zeros: the guard above already
+    # fires if any pair shares a unit, so the table needs the count of pairs and the largest overlap, not the grid
+    M["cfCohortPairsAll"] = sum(M[f"cfCohort{D}Pairs"] for D in DS_MACRO.values())
     multi = [(ds, role) for ds in counts for role, c in counts[ds].items() if max(c.values()) > 1]
     M["cfCohortMultiRoles"] = len(multi)
     if multi != [("nih", "train")]:

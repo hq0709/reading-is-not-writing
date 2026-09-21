@@ -542,18 +542,22 @@ def table_coverage():
     n_seven = sum(all(m in b["completed"] for m in PLANNED) for b in blocks.values())
     n_chex = sum(ds == "chexpert" and all(m in b["completed"] for m in CHEX_EXTENSION) for (mk, ds), b in blocks.items())
     legend = ", ".join(f"{a} = {MODULE_NAME[m]}" for m, a in MODULE_ABBR if any(m in b["completed"] or m in b["ineligible"] for b in blocks.values()))
-    L = [r"\begin{table}[h]", r"\centering", r"\scriptsize", r"\setlength{\tabcolsep}{4pt}",
+    # a longtable rather than a float: the 86-row ownership longtable follows a paragraph later, and a float queued
+    # in front of it is flushed onto a page of its own. Set inline, this table starts under the paragraph that
+    # introduces it and the page carries both.
+    L = [r"\begingroup", r"\centering", r"\scriptsize", r"\setlength{\tabcolsep}{4pt}",
+         r"\begin{longtable}{llll}",
          r"\caption{\textbf{Coverage.} Modules completed per block at packaging, from the campaign manifest. A module whose "
          r"template is ineligible reads inel., a block not run reads ``--'', and the primary template is named when it is not "
          r"the \emph{is}/yes-no template.}",
-         r"\label{tab:cf-coverage}",
-         r"\begin{tabular}{llll}", r"\toprule", r"Checkpoint & NIH ChestX-ray14 & CheXpert Plus & COCO \\", r"\midrule"]
+         r"\label{tab:cf-coverage} \\", r"\toprule", r"Checkpoint & NIH ChestX-ray14 & CheXpert Plus & COCO \\", r"\midrule",
+         r"\endfirsthead", r"\toprule", r"Checkpoint & NIH ChestX-ray14 & CheXpert Plus & COCO \\", r"\midrule", r"\endhead"]
     for m in ORDER:
         if not any((m, d) in blocks for d, _ in DATASETS):
             continue
         L.append(f"{NAMES[m]} & " + " & ".join(cell(blocks.get((m, d))) for d, _ in DATASETS) + r" \\")
     L += [r"\midrule", r"\multicolumn{4}{p{0.95\textwidth}}{\textit{Legend:} " + legend + r".} \\",
-          r"\bottomrule", r"\end{tabular}", r"\end{table}"]
+          r"\bottomrule", r"\end{longtable}", r"\endgroup"]
     (OUT / "table_cf_coverage.tex").write_text("\n".join(L) + "\n")
     print(f"table_cf_coverage.tex: {len(blocks)} blocks, {n_seven} with all seven planned modules, {n_chex} CheXpert with the extension modules")
     return n_seven, n_chex

@@ -22,6 +22,14 @@
 %% text; it keeps a float-dense manuscript from opening white gaps.
 \renewcommand{\topfraction}{0.95}
 \renewcommand{\textfraction}{0.05}
+\renewcommand{\bottomfraction}{0.7}
+%% the one that decides whether a float may claim a page of its own: at the default 0.5 every table
+%% taller than half a page becomes a float page, which is how a 55%-tall table ends up alone between
+%% two large white bands. At 0.85 only a genuinely page-sized float gets its own page.
+\renewcommand{\floatpagefraction}{0.85}
+\setcounter{topnumber}{3}
+\setcounter{bottomnumber}{2}
+\setcounter{totalnumber}{4}
 
 %% ---------------------------------------------------------- author-year citations
 \RequirePackage{natbib}

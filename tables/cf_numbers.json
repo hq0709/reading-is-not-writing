@@ -1294,6 +1294,7 @@
   "cfCohortCocoMaxOverlap": 0,
   "cfCohortCocoPairs": 6,
   "cfCohortMaxOverlap": 0,
+  "cfCohortPairsAll": 22,
   "cfCohortMultiRoles": 1,
   "cfCoveragePlannedModules": 7,
   "cfCoveragePlannedWord": "seven",
