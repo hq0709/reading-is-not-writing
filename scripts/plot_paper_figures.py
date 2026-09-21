@@ -613,6 +613,11 @@ def fig2_overview(blocks):
         ax.plot(alphas, med, marker=DS_MK[ds], color=DS_COL[ds], ls="-", lw=1.5, ms=5, mec="white")
         ends[ds] = (alphas[-1], med[-1], len(rows))
     ax.axhline(0, color=fs.CHANCE, ls="--", lw=0.8); ax.axvline(0, color=fs.CHANCE, lw=0.6)
+    # every grade in the paper is read at alpha = +0.25; without this the reader cannot see which dose the rest of
+    # the paper stands on, and the curve looks like a sweep with no operating point
+    ax.axvline(0.25, color=fs.CHARCOAL, lw=0.8, zorder=2)
+    ax.annotate("dose every grade is read at", (0.25, 0.60), xytext=(-4, 0),
+                textcoords="offset points", ha="right", va="top", fontsize=6.8, color=fs.CHARCOAL)
     ax.set_xlabel(r"relative dose $\alpha$"); ax.set_ylabel("median ownership $O$ over questions")
     ax.set_xticks([-0.5, -0.25, 0, 0.25, 0.5]); ax.set_xlim(-0.58, 0.58); ax.set_ylim(-0.32, 0.66)
     ax.annotate(f"COCO, {ends['coco'][2]} blocks", (ends["coco"][0], ends["coco"][1]), xytext=(-2, 9), textcoords="offset points",
@@ -626,7 +631,8 @@ def fig2_overview(blocks):
     # (d) rank ECDF ---------------------------------------------------------------------------------------------
     ax = axes[1, 1]; xs = np.arange(1, 121)
     # direct labels in the empty regions: above the COCO curve, above-left of the CheXpert curve, below-right of NIH
-    lab_pos = {"coco": (1.5, 0.885, "left", "bottom"), "chexpert": (9.0, 0.66, "right", "top"), "nih": (50.0, 0.30, "left", "top")}
+    # anchored to the right edge: left-anchored here, the NIH label runs past the axis and loses its last character
+    lab_pos = {"coco": (1.5, 0.885, "left", "bottom"), "chexpert": (9.0, 0.66, "right", "top"), "nih": (118.0, 0.28, "right", "top")}
     for ds in DATASETS:
         ranks = np.array([v["rank_in_random_family"] for (mk, d), b in blocks.items() if d == ds
                           for v in b["s"]["core"]["per_question"].values() if v.get("rank_in_random_family")])
@@ -998,7 +1004,7 @@ def table1_order(blocks):
 
 
 def figA1_write_structure(blocks):
-    FW, FH = fs.WIDTH, 5.75; P = 1.23; gap = 0.5; x0 = 0.55
+    FW, FH = fs.WIDTH, 2.70; P = 1.23; gap = 0.5; x0 = 0.55
     f = plt.figure(figsize=(FW, FH))
     # ---- top row: median write matrix per dataset
     meds = {}
@@ -1027,9 +1033,15 @@ def figA1_write_structure(blocks):
     cax = f.add_axes(rect(FW, FH, 1.55, y_top - 0.50, 2.4, 0.07), label="cbar")
     heat_colorbar(f, cax, norm, "median $W_{q,d}$: change in $P(\\mathrm{yes}\\mid q)$ under the write of $d$ (column);  outlined: diagonal $d=q$",
                   ticks=[-vlim, -vlim / 2, 0, vlim / 2, vlim])
-    # ---- bottom: write-flow band charts ("where does the write go"), one per dataset
-    BAR_W_IN, GAP_FRAC, PH, PW = 0.05, 0.04, 2.3, 1.72
-    xl = 0.10; pgap = (FW - 2 * xl - 3 * PW) / 2; y0 = 0.36
+    check_overlaps(f, "figA1_write_structure")
+    fs.save(f, FIG / "figA1_write_structure")
+
+
+def flow_panels(f, blocks, FW, FH, y0, PH, PW, xl, letters):
+    """Band charts: where the positive answer change of each written direction lands. Drawn into an existing figure
+    so the body figure and any appendix reuse share one implementation and one own-share computation."""
+    BAR_W_IN, GAP_FRAC = 0.05, 0.04
+    pgap = (FW - 2 * xl - 3 * PW) / 2
     summary = {}
     for k, ds in enumerate(DATASETS):
         keys = [(mk, d) for (mk, d) in blocks if d == ds]
@@ -1089,16 +1101,25 @@ def figA1_write_structure(blocks):
         ax.text(0.5, -0.075, f"own-question share of the write: {100 * own_share:.0f}%", ha="center", va="center", fontsize=7.5, color=fs.INK)
         ax.text(-bar_w / 2, 1.025, "write $d$", ha="center", va="bottom", fontsize=7, color=fs.MUTED)
         ax.text(1 + bar_w / 2, 1.025, "question $q$", ha="center", va="bottom", fontsize=7, color=fs.MUTED)
-        ax.set_title(f"({'def'[k]})  {DS_LAB[ds].replace(' (control)', '')}\nwhere the write goes", fontsize=8, pad=3, linespacing=1.2)
-    f.text(0.5, 0.16 / FH, "coloured: write lands on its own question;   grey: write lands on another question", ha="center", va="center", fontsize=7, color=fs.INK)
+        ax.set_title(f"({letters[k]})  {DS_LAB[ds].replace(' (control)', '')}\nwhere the write goes", fontsize=8, pad=3, linespacing=1.2)
+    return summary
+
+
+def fig7_write_flow(blocks):
+    """The attribution deficit in one picture: on the chest sets most of the write leaves the question it names."""
+    FW, FH = fs.WIDTH, 3.30
+    f = plt.figure(figsize=(FW, FH))
+    summary = flow_panels(f, blocks, FW, FH, y0=0.44, PH=2.20, PW=1.72, xl=0.10, letters="abc")
+    f.text(0.5, 0.17 / FH, "coloured: the write lands on the question it names;   grey: it lands on another question",
+           ha="center", va="center", fontsize=7, color=fs.INK)
     (FIG / "figA1_own_share.json").write_text(json.dumps(summary, indent=1) + "\n")
-    print("  figA1 write flow (mean over checkpoints of max(W_qd, 0)):")
+    print("  write flow (mean over checkpoints of max(W_qd, 0)):")
     for ds, v in summary.items():
         print(f"    {ds:8s} n={v['n']} total={v['total']:.3f} diagonal={v['diag']:.3f} own_share={100 * v['own_share']:.1f}%")
         print("      outflow by written direction:", {c: round(x, 3) for c, x in v["outflow"].items()})
         print("      inflow by question:          ", {c: round(x, 3) for c, x in v["inflow"].items()})
-    check_overlaps(f, "figA1_write_structure")
-    fs.save(f, FIG / "figA1_write_structure")
+    check_overlaps(f, "fig7_write_flow")
+    fs.save(f, FIG / "fig7_write_flow")
 
 
 # ============================================================================================== figA2: per-image examples
@@ -1264,7 +1285,7 @@ def figA2_examples(blocks):
 
 # ============================================================================================== main
 KEEP = {"fig1_method", "fig2_overview", "fig3_example", "fig4_write_matrices", "fig5_same_write", "fig6_ladders",
-        "figA1_write_structure", "figA2_examples"}
+        "fig7_write_flow", "figA1_write_structure", "figA2_examples"}
 
 
 def main(only=None):
@@ -1273,6 +1294,7 @@ def main(only=None):
     jobs = {"fig1_method": lambda: fig1_method(blocks), "fig2_overview": lambda: fig2_overview(blocks),
             "fig3_example": lambda: fig3_example(blocks), "fig4_write_matrices": lambda: fig4_write_matrices(blocks),
             "fig5_same_write": lambda: fig5_same_write(blocks), "fig6_ladders": lambda: fig6_ladders(blocks),
+            "fig7_write_flow": lambda: fig7_write_flow(blocks),
             "figA1_write_structure": lambda: figA1_write_structure(blocks), "figA2_examples": lambda: figA2_examples(blocks)}
     # matrices_all (one matrix per checkpoint) is kept for reference but not part of the paper's figure set
     for name, fn in jobs.items():
