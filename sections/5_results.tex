@@ -98,7 +98,7 @@ Better chest representation raises ownership but does not confer it. Across the 
 
 The chest-trained towers are not natural-image models. Their COCO rows are not a second measurement of the write. They answer \cfSpecTowerCocoAnswerable{} of \cfSpecTowerCocoN{} COCO cells at a median clean-answer AUROC of \cfSpecTowerCocoAnsAuroc{}, leaving almost nothing for the grade to assess. They own \cfSpecTowerCocoOwned{}. The natural-image control in Section~\ref{sec:coco} rests on checkpoints that answer natural-image questions. The general group answers \cfSpecGenCocoAnswerable{} of \cfSpecGenCocoN{} COCO cells at \cfSpecGenCocoAnsAuroc{} and owns \cfSpecGenCocoOwned{}. The medically tuned group answers \cfSpecMedCocoAnswerable{} of \cfSpecMedCocoN{} at \cfSpecMedCocoAnsAuroc{} and owns \cfSpecMedCocoOwned{}.
 
-MAIRA-2 \citep{bannur2024maira} has no answer interface to grade. It answers ``No'' to every finding on all \cfSpecUngradedRows{} preflight images and ``A'' to every forced choice. All \cfSpecUngradedTemplatesWord{} templates fail the image-free mapping gate, so the block produces no outcomes (Appendix~\ref{app:cf-gates}).
+MAIRA-2 \citep{bannur2024maira} has no answer interface to grade. It answers ``No'' to every finding on all \cfSpecUngradedRows{} preflight images and ``A'' to every forced choice. All \cfSpecUngradedTemplatesWord{} templates fail the image-free mapping gate, so the block produces no outcomes (Appendix~\ref{app:cf-gates}). What the grade needs is an answer, and a chest-radiograph model built to emit a report supplies findings text instead; the discrete-diffusion report generator of \citet{chen2026echo} is the same shape.
 
 \subsection{Controls and alternatives}
 \label{sec:controls}
