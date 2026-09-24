@@ -11,3 +11,4 @@ __pycache__/
 main.fdb_latexmk
 main.fls
 design-options/
+main-*.png   # pdftohtml image spill when inspecting the built PDF
