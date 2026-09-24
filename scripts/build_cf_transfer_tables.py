@@ -413,8 +413,9 @@ def ownership_panel(blocks, ds, label, order):
             concepts = list(b["core"].keys()); break
     if concepts is None:
         concepts = list(blocks[(models[0], ds)]["cal"].keys())
-    L = [r"\multicolumn{7}{l}{\textbf{" + label + r"}} \\*", r"\midrule",
-         "Checkpoint & " + " & ".join(concepts) + r" \\*", r"\midrule"]
+    L = [r"\toprule",
+         "Checkpoint & " + " & ".join(r"\multicolumn{1}{c}{" + c + "}" for c in concepts) + r" \\",
+         r"\midrule"]
     n_own = {c: 0 for c in concepts}
     for m in models:
         b = blocks[(m, ds)]
@@ -438,28 +439,22 @@ def ownership_panel(blocks, ds, label, order):
 
 
 def table_ownership(blocks, order):
-    """The appendix ownership sheet: O_q per checkpoint and concept, one panel per dataset in the order of Table 1.
+    """The appendix ownership sheet, one table per dataset.
 
-    The three panels are 20 checkpoints each, so the merged sheet is taller than a page: it is a longtable rather
-    than a float, with the concept header repeated at every break. Side by side the 18 concept columns do not fit
-    the text width at \\scriptsize, and the paper scales no table with \\resizebox."""
-    L = [r"\clearpage", r"\begingroup", r"\scriptsize", r"\setlength{\tabcolsep}{4pt}", r"\renewcommand{\arraystretch}{1.0}",
-         r"\setlength{\LTcapwidth}{\textwidth}",
-         r"\begin{longtable}{lrrrrrr}",
-         r"\caption{\textbf{Ownership of every concept.} One panel per dataset. Each cell is the ownership contrast "
-         r"$O_q$ at $\alpha=+0.25$: bold is owned, a dagger marks a stronger competitor, a double dagger an unresolved "
-         r"verdict, and the last row counts the concept's owned cells.}" + "\n" + r"\label{tab:cf-own} \\", r"\toprule", r"\endfirsthead",
-         r"\multicolumn{7}{l}{\textit{Ownership of every concept (continued).}} \\*", r"\toprule", r"\endhead",
-         r"\bottomrule", r"\endlastfoot"]
-    # The three panels do not fit one page. The table starts on a fresh page and breaks between the second and the
-    # third, so every panel keeps its own concept header above its rows rather than continuing headerless.
-    for i, (ds, label) in enumerate(DATASETS):
-        if i == len(DATASETS) - 1:
-            L.append(r"\newpage")
-        elif i:
-            L.append(r"\addlinespace[5pt]")
+    Merged into a single sheet the three panels run past a page and the table has to seize pages of its own with
+    \\clearpage. Split, each dataset is about twenty-eight rows at \\scriptsize -- roughly two fifths of a page --
+    so the three sit in the text like any other float and each carries its own caption and label."""
+    CAP = {"nih": "NIH ChestX-ray14", "chexpert": "CheXpert Plus", "coco": "COCO"}
+    L = []
+    for ds, label in DATASETS:
+        L += [r"\begin{table}[htbp]", r"\centering", r"\scriptsize", r"\setlength{\tabcolsep}{4pt}",
+              r"\caption{\textbf{Ownership of every concept, " + CAP.get(ds, label) + r".} Each cell is the "
+              r"ownership contrast $O_q$ at $\alpha=+0.25$: bold is owned, a dagger marks a stronger competitor, "
+              r"a double dagger an unresolved verdict, and the last row counts the concept's owned cells.}",
+              r"\label{tab:cf-own-" + ds + "}",
+              r"\begin{tabular}{lrrrrrr}"]
         L += ownership_panel(blocks, ds, label, order)
-    L += [r"\end{longtable}", r"\endgroup"]
+        L += [r"\bottomrule", r"\end{tabular}", r"\end{table}", ""]
     (OUT / "table_cf_own.tex").write_text("\n".join(L) + "\n")
     for ds, _ in DATASETS:
         (OUT / f"table_cf_own_{ds}.tex").unlink(missing_ok=True)
@@ -578,4 +573,9 @@ if __name__ == "__main__":
         (OUT / f"table_cf_{ds}.tex").unlink(missing_ok=True)
     table_models(blocks, stats)
     table_coverage()
+
+    # one pass so every header sits the same way in its cell, rather than forty-nine inline spellings
+    import table_headers
+    n = sum(table_headers.restyle_file(f) for f in sorted(OUT.glob("table_cf_*.tex")))
+    print(f"headers restyled in {n} tables")
     print(f"{len(blocks)} blocks -> tables written to {OUT}")

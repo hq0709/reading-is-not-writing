@@ -6,9 +6,9 @@
 \label{tab:cf-semend}
 \begin{tabular}{lllcccc}
 \toprule
- & & & \multicolumn{2}{c}{label direction} & \multicolumn{2}{c}{answer direction} \\
+\multirow{2}{*}{Checkpoint} & \multirow{2}{*}{Dataset} & \multirow{2}{*}{Endpoint} & \multicolumn{2}{c}{label direction} & \multicolumn{2}{c}{answer direction}\\
 \cmidrule(lr){4-5}\cmidrule(lr){6-7}
-Checkpoint & Dataset & Endpoint & owned & reference & owned & reference \\
+&  &  & \multicolumn{1}{c}{owned} & \multicolumn{1}{c}{reference} & \multicolumn{1}{c}{owned} & \multicolumn{1}{c}{reference}\\
 \midrule
 Lingshu 32B & CheXpert Plus & negated question & 2/6 & 2/6 & 3/6 & 4/6 \\
 Lingshu 32B & CheXpert Plus & forced choice, finding first & 3/6 & 3/6 & 4/6 & 4/6 \\

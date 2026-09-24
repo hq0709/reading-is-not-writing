@@ -660,7 +660,7 @@ def towerswap():
     a, b_ = readers[0], readers[-1]
     cols = [(a, a), (b_, b_), (b_, a), (a, b_)]      # native, native, swapped, swapped
     heads = [f"{_short(t)}/{_short(r)}" for t, r in cols]
-    L = [r"\begin{table}[p]", r"\centering", r"\scriptsize", r"\setlength{\tabcolsep}{4pt}",
+    L = [r"\begin{table}[htbp]", r"\centering", r"\scriptsize", r"\setlength{\tabcolsep}{4pt}",
          r"\caption{\textbf{Crossing the tower and the reader.} The vision tower of one checkpoint runs behind the other's "
          r"connector and language model; " + _short(a) + r" is " + CKPT.get(a, a).replace(" 3 ", "~3 ") + r", " + _short(b_)
          + r" is " + CKPT.get(b_, b_) + r", and each column of the top two panels is tower/reader. The bottom panel holds one "
@@ -732,7 +732,7 @@ def semend():
     S = r3.semend(wb)
     CV = r3.semend_cv(wb)
     eps = [e for e in ("NY", "DA", "DB", "RF") if e in S["endpoints"]]
-    L = [r"\begin{table}[p]", r"\centering", r"\scriptsize", r"\setlength{\tabcolsep}{3pt}",
+    L = [r"\begin{table}[htbp]", r"\centering", r"\scriptsize", r"\setlength{\tabcolsep}{3pt}",
          r"\caption{\textbf{Four endpoints no direction was fitted against.} Both direction families of Section~"
          r"\ref{sec:ansdir} written at the primary dose and read at the negated question, the two presentation orders of a "
          r"forced choice, and a report continuation. The bottom panels add the ownership contrast to a regression of the "
@@ -806,7 +806,7 @@ def fgobj():
     difficulty-matched comparison of chest cells against natural-image cells (runs/robustness/round2.json fgobj section)."""
     F = r3.fgobj(ci.write_blocks(ci.load_runs()))
     P = F["pool"]
-    L = [r"\begin{table}[p]", r"\centering", r"\scriptsize", r"\setlength{\tabcolsep}{4pt}", r"\setlength{\abovecaptionskip}{2pt}", r"\setlength{\belowcaptionskip}{0pt}", r"\renewcommand{\arraystretch}{0.95}",
+    L = [r"\begin{table}[htbp]", r"\centering", r"\scriptsize", r"\setlength{\tabcolsep}{4pt}", r"\setlength{\abovecaptionskip}{2pt}", r"\setlength{\belowcaptionskip}{0pt}", r"\renewcommand{\arraystretch}{0.95}",
          r"\caption{\textbf{Small and fine-grained objects, and the difficulty-matched comparison.} Top and middle: the six "
          r"fine-grained categories graded like the six easy objects, against the easy objects of every COCO block and of the "
          + str(len(F["blocks"])) + r" blocks the fine-grained cells come from. Bottom: chest cells matched to natural-image "
@@ -866,7 +866,7 @@ def fgobj():
 def ledger():
     """The reference-and-rule ledger: one row per graded analysis, populated from the packaged artefacts."""
     rows = cl.ledger(ci.write_blocks(ci.load_runs()))
-    L = [r"\begin{table}[p]", r"\centering", r"\scriptsize", r"\setlength{\tabcolsep}{3pt}",
+    L = [r"\begin{table}[htbp]", r"\centering", r"\scriptsize", r"\setlength{\tabcolsep}{3pt}",
          r"\caption{\textbf{What each analysis scores its writes against.} One row per graded analysis: the cohort it "
          r"scores and its size, the steering test its own write must pass, the rule that decides its verdict, the "
          r"direction its sham permutes, and the number of graded (question, arm) cells.}",
@@ -898,3 +898,8 @@ if __name__ == "__main__":
     fgobj()
     for merged in ("altdird", "ansdirt", "extcomp", "tokenw", "rescue", "replay"):   # now panels of another table, or dropped for prose
         (OUT / f"table_cf_{merged}.tex").unlink(missing_ok=True)
+    # one pass so every header sits the same way in its cell, rather than forty-nine inline spellings
+    import table_headers
+    n = sum(table_headers.restyle_file(f) for f in sorted(OUT.glob("table_cf_*.tex")))
+    print(f"headers restyled in {n} tables")
+
