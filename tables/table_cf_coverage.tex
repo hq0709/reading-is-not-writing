@@ -1,18 +1,13 @@
-\begingroup
+\begin{table}[htbp]
 \centering
 \scriptsize
 \setlength{\tabcolsep}{4pt}
-\begin{longtable}{llll}
 \caption{\textbf{Coverage.} Modules completed per block at packaging, from the campaign manifest. A module whose template is ineligible reads inel., a block not run reads ``--'', and the primary template is named when it is not the \emph{is}/yes-no template.}
-\label{tab:cf-coverage} \\
+\label{tab:cf-coverage}
+\begin{tabular}{llll}
 \toprule
 Checkpoint & NIH ChestX-ray14 & CheXpert Plus & COCO\\
 \midrule
-\endfirsthead
-\toprule
-Checkpoint & NIH ChestX-ray14 & CheXpert Plus & COCO\\
-\midrule
-\endhead
 Qwen2.5-VL-3B & C Cal P D R L Lc A Ad & C Cal P D R L Lc A Ad & C Cal P D R L Lc A Ad \\
 Qwen2.5-VL-7B & C Cal P D R L Lc A Ad An E T Pr & C Cal P D R L Lc A Ad An E T & C Cal P D R L Lc A Ad An T Pr \\
 Qwen2.5-VL-32B & C Cal P D R L Lc A Ad & C Cal P D R L Lc A Ad & C Cal P D R L Lc A Ad \\
@@ -41,5 +36,5 @@ Llama 3.2 Vision 11B & C Cal P D R L Lc A [IB] & C Cal P D R L Lc A [IB] & C Cal
 \midrule
 \multicolumn{4}{p{0.95\textwidth}}{\textit{Legend:} C = write matrix, Cal = calibration pass, P = five additional templates, D = dose sweep, R = two probe refits, L = connector locus, Lc = connector-locus calibration, A = alternative direction constructions, Ad = displacement lifts, An = answer direction, E = extended competitor family, T = token-weighted writes, Pr = fp32 and batch-size-one rescoring.} \\
 \bottomrule
-\end{longtable}
-\endgroup
+\end{tabular}
+\end{table}

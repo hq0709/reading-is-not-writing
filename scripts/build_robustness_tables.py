@@ -576,17 +576,16 @@ def attr():
     ch = P["chest"]
     groups = [(ds, NAMES[ds]) for ds in dss] + ([("chest", r"\textit{chest}")] if len(dss) > 1 else [])
     mm = ch["max_median_abs_cos_pair"] or {}
-    L = [r"\begingroup", r"\scriptsize", r"\setlength{\tabcolsep}{4pt}",
-         r"\begin{longtable}{llrrccc}",
+    # a float, not a longtable. Its three panels come to about fifty-five rows at \scriptsize, which fits a page,
+    # and a longtable sets its caption inside the environment: the \scriptsize the rows need took the caption with
+    # it, and this was the one caption in the paper printing at the size of its own table body.
+    L = [r"\begin{table}[htbp]", r"\centering", r"\scriptsize", r"\setlength{\tabcolsep}{4pt}",
          r"\caption{\textbf{Non-clinical attributes of the same radiographs.} Top: per checkpoint and dataset, owned attribute "
          r"and owned clinical cells inside the same nine-direction family, and which attributes are owned. Bottom: per attribute "
          r"and dataset, medians over blocks of the probe AUROC, selectivity, clean-answer AUROC, and cosine to the clinical "
          r"normals.}",
-         r"\label{tab:cf-attr}\\*[2pt]",
-         r"\endfirsthead",
-         r"\multicolumn{7}{l}{\textit{Table~\ref{tab:cf-attr}, continued}} \\", r"\toprule",
-         r"Checkpoint & Dataset & attributes owned & findings owned & " + " & ".join(ATTR_SHORT[a] for a in attrs) + r" \\",
-         r"\midrule", r"\endhead",
+         r"\label{tab:cf-attr}",
+         r"\begin{tabular}{llrrccc}",
          r"\toprule",
          r"Checkpoint & Dataset & attributes owned & findings owned & " + " & ".join(ATTR_SHORT[a] for a in attrs) + r" \\", r"\midrule"]
     for b in sorted(B["blocks"], key=lambda b: _ckpt_key(b["block"])):
@@ -617,7 +616,7 @@ def attr():
         c = cmp_[mode]
         L.append(f"{label} & {unit} & {c['attr_cells']} & {c['attr_owned']} & {c['clin_cells']} & {c['clin_owned']} & "
                  f"{f2(c['attr_owned_share'] - c['clin_owned_share'], 3)} \\\\")
-    L += [r"\bottomrule", r"\end{longtable}", r"\endgroup"]
+    L += [r"\bottomrule", r"\end{tabular}", r"\end{table}"]
     (OUT / "table_cf_attr.tex").write_text("\n".join(L) + "\n")
     print("table_cf_attr.tex", {g: P[g]["blocks"] for g, _ in groups})
     # The stratification is its own table: with it appended, the float is taller than a page and its last rows fall off.
