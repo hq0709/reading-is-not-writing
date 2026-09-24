@@ -45,6 +45,47 @@ def split_cells(row: str) -> list[str]:
     return out
 
 
+def braced(s: str, i: int) -> tuple[str, int]:
+    """Contents of the balanced brace group starting at s[i] == '{', and the index just past it."""
+    depth, j = 0, i
+    while j < len(s):
+        if s[j] == "{":
+            depth += 1
+        elif s[j] == "}":
+            depth -= 1
+            if depth == 0:
+                return s[i + 1:j], j + 1
+        j += 1
+    raise ValueError("unbalanced braces in column specification")
+
+
+def column_aligns(spec: str) -> list[str]:
+    """The alignment of each column, reading a real column specification.
+
+    Matching the spec with {([^}]*)} stops at the first closing brace, which in
+    l@{\\hspace{3pt}}ccc... is the one inside the @-insert: the column count comes out wrong and the table is
+    skipped without saying so. Table 1 is exactly that shape, which is how it kept an uncentred header while
+    every other table was fixed."""
+    out, i = [], 0
+    while i < len(spec):
+        c = spec[i]
+        if c in "lcr":
+            out.append(c); i += 1
+        elif c in "pmb" and i + 1 < len(spec) and spec[i + 1] == "{":
+            _, i = braced(spec, i + 1); out.append("l")          # a paragraph column sets ragged-right text
+        elif c in "@!><" and i + 1 < len(spec) and spec[i + 1] == "{":
+            _, i = braced(spec, i + 1)                            # inserts and hooks are not columns
+        elif c == "*" and i + 1 < len(spec) and spec[i + 1] == "{":
+            n, i = braced(spec, i + 1)
+            sub, i = braced(spec, i)
+            out += column_aligns(sub) * int(n.strip())
+        elif c == "|" or c.isspace():
+            i += 1
+        else:
+            i += 1
+    return out
+
+
 def _spans(cells: list[str]) -> list[tuple[int, int, str]]:
     """(first column, width, text) for each cell, following \\multicolumn spans."""
     out, col = [], 0
@@ -81,14 +122,17 @@ def _centre(text: str, align: str) -> str:
 
 def restyle(tex: str) -> str:
     """Return the table source with its header rows centred horizontally and spanned vertically."""
+    # split at each \begin{tabular}/\begin{longtable} so a file holding several tables resolves each header
+    # against its own column specification. Searching the whole file finds the first one every time, and a
+    # second table with a different column count is silently left alone.
     out = []
-    for block in re.split(r"(?=\\toprule)", tex):
+    for block in re.split(r"(?=\\begin\{(?:tabular|longtable)\})", tex):
         m = re.search(r"\\toprule(.*?)\\midrule", block, re.S)
-        spec_m = re.search(r"\\begin\{(?:tabular|longtable)\}(?:\[[a-z]\])?\{([^}]*)\}", tex)
+        spec_m = re.search(r"\\begin\{(?:tabular|longtable)\}(?:\[[a-z]\])?(?=\{)", block)
         if not m or not spec_m:
             out.append(block)
             continue
-        aligns = [c for c in spec_m.group(1) if c in "lcr"]
+        aligns = column_aligns(braced(block, spec_m.end())[0])
         head = m.group(1)
         raw = head.split("\\\\")
         # a \cmidrule run carries no \\ of its own, so it arrives glued to the front of the next header row;
